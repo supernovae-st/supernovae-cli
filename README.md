@@ -6,6 +6,39 @@
 
 ---
 
+## 🦋 🐔 🐤 Mascots & Hierarchy
+
+Understanding the SuperNovae ecosystem:
+
+```
+                            🦋 NIKA (Papillon)
+                                 Runtime
+                      Orchestrates the 5 semantic verbs
+                                    │
+        ┌───────────────┬───────────┼───────────┬───────────────┐
+        │               │           │           │               │
+        ▼               ▼           ▼           ▼               ▼
+     infer:          exec:       fetch:     invoke:        agent: 🐔
+      LLM           Shell        HTTP         MCP       (Space Chicken)
+                                                              │
+                                                        spawn_agent
+                                                              │
+                                                  ┌───────────┼───────────┐
+                                                  ▼           ▼           ▼
+                                                 🐤          🐤          🐤
+                                            (Subagents - Poussins)
+```
+
+| Mascot | Role | What it does |
+|--------|------|--------------|
+| 🦋 **Nika** | **Runtime** | Executes workflows, runs chat UI, launches agents |
+| 🐔 **Agent** | **One verb** | Multi-turn loop with MCP tools, spawns subagents |
+| 🐤 **Subagent** | **Spawned** | Subtask execution, depth-limited |
+
+> **Important:** Nika is NOT an agent. Nika is the runtime that orchestrates agents.
+
+---
+
 ## Overview
 
 `spn` is the CLI for the SuperNovae ecosystem. It manages AI packages with a unique ownership model:
