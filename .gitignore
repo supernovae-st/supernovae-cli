@@ -21,3 +21,6 @@ coverage/
 
 # Keep only CLAUDE.md public
 !CLAUDE.md
+
+# === LOCAL STATE ===
+.spn/
