@@ -1,0 +1,106 @@
+# SuperNovae CLI Release Workflow
+# Triggered on tag push (v*), builds cross-platform binaries and updates Homebrew formula
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross (Linux ARM64)
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build (native)
+        if: "!matrix.cross"
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build (cross)
+        if: matrix.cross
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Package
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar -czvf spn-${{ matrix.target }}.tar.gz spn
+          shasum -a 256 spn-${{ matrix.target }}.tar.gz > spn-${{ matrix.target }}.tar.gz.sha256
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: spn-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/release/spn-${{ matrix.target }}.tar.gz
+            target/${{ matrix.target }}/release/spn-${{ matrix.target }}.tar.gz.sha256
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: ls -R artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/spn-*/spn-*.tar.gz
+            artifacts/spn-*/spn-*.sha256
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      TAG_NAME: ${{ github.ref_name }}
+    steps:
+      - name: Update Homebrew formula
+        uses: mislav/bump-homebrew-formula-action@v3
+        with:
+          formula-name: spn
+          homebrew-tap: supernovae-st/homebrew-tap
+          download-url: https://github.com/supernovae-st/supernovae-cli/releases/download/${{ env.TAG_NAME }}/spn-x86_64-apple-darwin.tar.gz
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
