@@ -60,6 +60,9 @@ pub enum SpnError {
     #[error("Configuration error: {0}")]
     ConfigError(String),
 
+    #[error("Storage error: {0}")]
+    StorageError(#[from] crate::storage::StorageError),
+
     #[error("{0}")]
     Other(#[from] anyhow::Error),
 }

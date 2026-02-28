@@ -19,6 +19,7 @@ mod index;
 mod interop;
 mod manifest;
 mod storage;
+mod sync;
 
 use error::Result;
 
@@ -369,73 +370,35 @@ async fn main() -> Result<()> {
 
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter(if cli.verbose {
-            "spn=debug"
-        } else {
-            "spn=info"
-        })
+        .with_env_filter(if cli.verbose { "spn=debug" } else { "spn=info" })
         .init();
 
     match cli.command {
-        Commands::Add { package, r#type } => {
-            commands::add::run(&package, r#type.as_deref()).await
-        }
-        Commands::Remove { package } => {
-            commands::remove::run(&package).await
-        }
-        Commands::Install { frozen } => {
-            commands::install::run(frozen).await
-        }
-        Commands::Update { package } => {
-            commands::update::run(package.as_deref()).await
-        }
-        Commands::Outdated => {
-            commands::outdated::run().await
-        }
-        Commands::Search { query } => {
-            commands::search::run(&query).await
-        }
-        Commands::Info { package } => {
-            commands::info::run(&package).await
-        }
-        Commands::List => {
-            commands::list::run().await
-        }
-        Commands::Publish { dry_run } => {
-            commands::publish::run(dry_run).await
-        }
-        Commands::Version { bump } => {
-            commands::version::run(&bump).await
-        }
-        Commands::Skill { command } => {
-            commands::skill::run(command).await
-        }
-        Commands::Mcp { command } => {
-            commands::mcp::run(command).await
-        }
-        Commands::Nk { command } => {
-            commands::nk::run(command).await
-        }
-        Commands::Nv { command } => {
-            commands::nv::run(command).await
-        }
-        Commands::Sync { enable, disable, status, target, dry_run } => {
-            commands::sync::run(enable, disable, status, target, dry_run).await
-        }
-        Commands::Config { command } => {
-            commands::config::run(command).await
-        }
-        Commands::Schema { command } => {
-            commands::schema::run(command).await
-        }
-        Commands::Doctor => {
-            commands::doctor::run().await
-        }
-        Commands::Init { local, mcp } => {
-            commands::init::run(local, mcp).await
-        }
-        Commands::Help { topic } => {
-            commands::help::run(topic.as_deref()).await
-        }
+        Commands::Add { package, r#type } => commands::add::run(&package, r#type.as_deref()).await,
+        Commands::Remove { package } => commands::remove::run(&package).await,
+        Commands::Install { frozen } => commands::install::run(frozen).await,
+        Commands::Update { package } => commands::update::run(package.as_deref()).await,
+        Commands::Outdated => commands::outdated::run().await,
+        Commands::Search { query } => commands::search::run(&query).await,
+        Commands::Info { package } => commands::info::run(&package).await,
+        Commands::List => commands::list::run().await,
+        Commands::Publish { dry_run } => commands::publish::run(dry_run).await,
+        Commands::Version { bump } => commands::version::run(&bump).await,
+        Commands::Skill { command } => commands::skill::run(command).await,
+        Commands::Mcp { command } => commands::mcp::run(command).await,
+        Commands::Nk { command } => commands::nk::run(command).await,
+        Commands::Nv { command } => commands::nv::run(command).await,
+        Commands::Sync {
+            enable,
+            disable,
+            status,
+            target,
+            dry_run,
+        } => commands::sync::run(enable, disable, status, target, dry_run).await,
+        Commands::Config { command } => commands::config::run(command).await,
+        Commands::Schema { command } => commands::schema::run(command).await,
+        Commands::Doctor => commands::doctor::run().await,
+        Commands::Init { local, mcp } => commands::init::run(local, mcp).await,
+        Commands::Help { topic } => commands::help::run(topic.as_deref()).await,
     }
 }
