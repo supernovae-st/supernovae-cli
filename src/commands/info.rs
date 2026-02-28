@@ -1,8 +1,9 @@
-//! Command implementation stub.
+//! Info command implementation.
 
 use crate::error::Result;
 
-pub async fn run(_args: impl std::any::Any) -> Result<()> {
-    println!("Command not yet implemented");
+pub async fn run(package: &str) -> Result<()> {
+    println!("ℹ️  Package info: {}", package);
+    println!("⚠️  Command not yet implemented");
     Ok(())
 }
