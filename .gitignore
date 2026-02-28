@@ -15,3 +15,9 @@ Thumbs.db
 # Test artifacts
 *.profraw
 coverage/
+
+# === PRIVATE DX (symlinked to supernovae-agi/dx/.claude/) ===
+.claude/
+
+# Keep only CLAUDE.md public
+!CLAUDE.md
