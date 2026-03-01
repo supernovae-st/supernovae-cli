@@ -12,20 +12,61 @@ use thiserror::Error;
 /// Maps short names to npm packages.
 pub fn mcp_aliases() -> HashMap<&'static str, &'static str> {
     HashMap::from([
-        ("neo4j", "@neo4j/mcp-server-neo4j"),
-        ("filesystem", "@anthropic/mcp-server-filesystem"),
-        ("github", "@anthropic/mcp-server-github"),
-        ("postgres", "@anthropic/mcp-server-postgres"),
-        ("sqlite", "@anthropic/mcp-server-sqlite"),
-        ("memory", "@anthropic/mcp-server-memory"),
-        ("puppeteer", "@anthropic/mcp-server-puppeteer"),
-        ("brave-search", "@anthropic/mcp-server-brave-search"),
-        ("google-maps", "@anthropic/mcp-server-google-maps"),
-        ("fetch", "@anthropic/mcp-server-fetch"),
+        // Anthropic official
+        ("filesystem", "@modelcontextprotocol/server-filesystem"),
+        ("github", "@modelcontextprotocol/server-github"),
+        ("postgres", "@modelcontextprotocol/server-postgres"),
+        ("sqlite", "@modelcontextprotocol/server-sqlite"),
+        ("memory", "@modelcontextprotocol/server-memory"),
+        ("puppeteer", "@modelcontextprotocol/server-puppeteer"),
+        ("brave-search", "@modelcontextprotocol/server-brave-search"),
+        ("google-maps", "@modelcontextprotocol/server-google-maps"),
+        ("fetch", "@modelcontextprotocol/server-fetch"),
+        ("slack", "@modelcontextprotocol/server-slack"),
+        ("gdrive", "@modelcontextprotocol/server-gdrive"),
+        ("sentry", "@modelcontextprotocol/server-sentry"),
+        ("gitlab", "@modelcontextprotocol/server-gitlab"),
+        ("git", "@modelcontextprotocol/server-git"),
+        ("everart", "@modelcontextprotocol/server-everart"),
+        ("aws-kb-retrieval", "@modelcontextprotocol/server-aws-kb-retrieval"),
         (
             "sequential-thinking",
-            "@anthropic/mcp-server-sequential-thinking",
+            "@modelcontextprotocol/server-sequential-thinking",
         ),
+        // Third-party popular
+        ("neo4j", "@neo4j/mcp-server-neo4j"),
+        ("perplexity", "perplexity-mcp"),
+        ("firecrawl", "firecrawl-mcp"),
+        ("browserbase", "@browserbasehq/mcp-server-browserbase"),
+        ("cloudflare", "@cloudflare/mcp-server-cloudflare"),
+        ("stripe", "@stripe/mcp-server-stripe"),
+        ("supabase", "@supabase/mcp-server-supabase"),
+        ("linear", "@linear/mcp-server-linear"),
+        ("notion", "@notionhq/mcp-server-notion"),
+        ("airtable", "@airtable/mcp-server-airtable"),
+        ("vercel", "@vercel/mcp-server-vercel"),
+        ("neon", "@neondatabase/mcp-server-neon"),
+        ("planetscale", "@planetscale/mcp-server-planetscale"),
+        ("axiom", "@axiomhq/mcp-server-axiom"),
+        ("e2b", "@e2b/mcp-server-e2b"),
+        ("context7", "context7-mcp"),
+        ("exa", "exa-mcp-server"),
+        ("tavily", "tavily-mcp"),
+        ("qdrant", "@qdrant/mcp-server-qdrant"),
+        ("milvus", "@milvus/mcp-server-milvus"),
+        ("pinecone", "@pinecone-database/mcp-server-pinecone"),
+        ("weaviate", "@weaviate/mcp-server-weaviate"),
+        // Developer tools
+        ("docker", "mcp-server-docker"),
+        ("kubernetes", "mcp-server-kubernetes"),
+        ("raygun", "@raygun/mcp-server-raygun"),
+        ("saucelabs", "@saucelabs/mcp-server-saucelabs"),
+        ("circleci", "@circleci/mcp-server-circleci"),
+        // Analytics & monitoring
+        ("grafana", "@grafana/mcp-server-grafana"),
+        ("datadog", "@datadog/mcp-server-datadog"),
+        ("splunk", "@splunk/mcp-server-splunk"),
+        ("21st", "@21st-dev/magic-mcp"),
     ])
 }
 
@@ -207,8 +248,10 @@ mod tests {
         assert_eq!(aliases.get("neo4j"), Some(&"@neo4j/mcp-server-neo4j"));
         assert_eq!(
             aliases.get("filesystem"),
-            Some(&"@anthropic/mcp-server-filesystem")
+            Some(&"@modelcontextprotocol/server-filesystem")
         );
+        // Verify we have 48 aliases
+        assert_eq!(aliases.len(), 48);
     }
 
     #[test]
@@ -217,6 +260,10 @@ mod tests {
 
         // Known alias
         assert_eq!(client.resolve_alias("neo4j"), "@neo4j/mcp-server-neo4j");
+        assert_eq!(
+            client.resolve_alias("github"),
+            "@modelcontextprotocol/server-github"
+        );
 
         // Unknown name (pass through)
         assert_eq!(

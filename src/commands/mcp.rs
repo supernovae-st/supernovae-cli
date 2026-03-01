@@ -107,12 +107,19 @@ mod tests {
         let aliases = mcp_aliases();
         assert!(aliases.contains_key("neo4j"));
         assert!(aliases.contains_key("filesystem"));
+        assert!(aliases.contains_key("github"));
+        assert!(aliases.contains_key("perplexity"));
+        assert_eq!(aliases.len(), 48);
     }
 
     #[test]
     fn test_resolve_alias() {
         let client = NpmClient::new();
         assert_eq!(client.resolve_alias("neo4j"), "@neo4j/mcp-server-neo4j");
+        assert_eq!(
+            client.resolve_alias("filesystem"),
+            "@modelcontextprotocol/server-filesystem"
+        );
         assert_eq!(client.resolve_alias("custom-pkg"), "custom-pkg");
     }
 }

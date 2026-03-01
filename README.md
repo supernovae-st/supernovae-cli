@@ -242,16 +242,18 @@ sync:
 
 ## MCP Aliases
 
-120 MCP servers are available via short aliases:
+48 MCP servers are available via short aliases:
 
 ```bash
 spn mcp add neo4j       # → @neo4j/mcp-server-neo4j
-spn mcp add perplexity  # → @perplexity/mcp-server
+spn mcp add github      # → @modelcontextprotocol/server-github
 spn mcp add filesystem  # → @modelcontextprotocol/server-filesystem
-spn mcp add playwright  # → @anthropic/mcp-server-playwright
+spn mcp add perplexity  # → perplexity-mcp
+spn mcp add firecrawl   # → firecrawl-mcp
+spn mcp add supabase    # → @supabase/mcp-server-supabase
 ```
 
-See `spn help mcp` for full alias list.
+See `spn mcp list` for all available aliases.
 
 ---
 
