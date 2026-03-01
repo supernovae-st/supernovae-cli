@@ -2,7 +2,7 @@
 
 > Package manager for AI workflows, schemas, skills, and MCP servers.
 
-**Status:** Pre-release | **Version:** 0.1.0
+**Status:** Pre-release | **Version:** 0.3.0
 
 ---
 
