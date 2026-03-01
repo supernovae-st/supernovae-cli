@@ -63,6 +63,21 @@ pub enum SpnError {
     #[error("Storage error: {0}")]
     StorageError(#[from] crate::storage::StorageError),
 
+    #[error("Manifest error: {0}")]
+    ManifestError(#[from] crate::manifest::spn_yaml::ManifestError),
+
+    #[error("Not found: {0}")]
+    NotFound(String),
+
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
+    #[error("Command failed: {0}")]
+    CommandFailed(String),
+
     #[error("{0}")]
     Other(#[from] anyhow::Error),
 }
+
+/// Alias for backward compatibility and consistency.
+pub type CliError = SpnError;
