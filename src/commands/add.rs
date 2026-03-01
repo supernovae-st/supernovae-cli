@@ -47,7 +47,7 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
     // 1. Load or create manifest
     let manifest_path = find_manifest()?;
     let mut manifest = if manifest_path.exists() {
-        SpnManifest::from_file(&manifest_path).map_err(|e| SpnError::ManifestNotFound)?
+        SpnManifest::from_file(&manifest_path).map_err(|_| SpnError::ManifestNotFound)?
     } else {
         println!("   {} Creating new spn.yaml", "→".blue());
         SpnManifest::default()
@@ -168,7 +168,6 @@ fn find_manifest() -> Result<std::path::PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_add_options_defaults() {

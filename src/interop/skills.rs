@@ -138,7 +138,7 @@ impl SkillsClient {
             let entry = entry?;
             let path = entry.path();
 
-            if path.extension().map_or(false, |ext| ext == "md") {
+            if path.extension().is_some_and(|ext| ext == "md") {
                 if let Some(name) = path.file_stem() {
                     skills.push(name.to_string_lossy().to_string());
                 }

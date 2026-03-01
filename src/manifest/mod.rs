@@ -7,8 +7,6 @@
 pub mod lockfile;
 pub mod spn_yaml;
 
-// Re-export main types for convenience
-pub use lockfile::{
-    DEFAULT_REGISTRY, LOCKFILE_VERSION, LockfileError, ResolvedPackage, SpnLockfile,
-};
-pub use spn_yaml::{Dependency, DetailedDependency, ManifestError, SpnManifest, VersionOp};
+// Re-export types used by other modules
+pub use lockfile::{ResolvedPackage, SpnLockfile};
+pub use spn_yaml::{Dependency, SpnManifest};

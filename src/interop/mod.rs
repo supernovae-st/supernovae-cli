@@ -8,5 +8,3 @@
 pub mod binary;
 pub mod npm;
 pub mod skills;
-
-pub use binary::{BinaryRunner, BinaryType};
