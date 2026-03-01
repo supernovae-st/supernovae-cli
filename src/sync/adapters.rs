@@ -116,8 +116,48 @@ impl IdeAdapter for ClaudeCodeAdapter {
             synced.push(SyncedItem::McpServer(server_name));
         }
 
-        // TODO: Add skills sync (symlink to .claude/skills/)
-        // TODO: Add hooks sync (symlink to .claude/hooks/)
+        // Sync skills directories
+        let claude_dir = project_root.join(".claude");
+        for skill_dir in &manifest.skills {
+            let source = package_path.join(skill_dir);
+            if source.exists() && source.is_dir() {
+                // Create symlink: .claude/skills/<package-name> -> package skills dir
+                let link_name = mcp_server_name(package_name);
+                let target = claude_dir.join("skills").join(&link_name);
+
+                if let Err(e) = create_symlink(&source, &target) {
+                    return SyncResult {
+                        package: package_name.to_string(),
+                        target: self.target(),
+                        success: false,
+                        synced,
+                        error: Some(format!("Failed to create skills symlink: {}", e)),
+                    };
+                }
+                synced.push(SyncedItem::Skills(target));
+            }
+        }
+
+        // Sync hooks directories
+        for hook_dir in &manifest.hooks {
+            let source = package_path.join(hook_dir);
+            if source.exists() && source.is_dir() {
+                // Create symlink: .claude/hooks/<package-name> -> package hooks dir
+                let link_name = mcp_server_name(package_name);
+                let target = claude_dir.join("hooks").join(&link_name);
+
+                if let Err(e) = create_symlink(&source, &target) {
+                    return SyncResult {
+                        package: package_name.to_string(),
+                        target: self.target(),
+                        success: false,
+                        synced,
+                        error: Some(format!("Failed to create hooks symlink: {}", e)),
+                    };
+                }
+                synced.push(SyncedItem::Hooks(target));
+            }
+        }
 
         // Write updated settings
         if let Err(e) = write_json_file(&config_path, &settings) {
@@ -338,6 +378,52 @@ fn build_mcp_config(package_path: &Path, mcp: &McpConfig) -> Value {
     config
 }
 
+/// Create a symlink from source to target.
+///
+/// On Unix, creates a symbolic link. On Windows, creates a junction.
+#[cfg(unix)]
+fn create_symlink(source: &Path, target: &Path) -> Result<(), std::io::Error> {
+    // Remove existing symlink/file if present
+    if target.exists() || target.is_symlink() {
+        if target.is_dir() && !target.is_symlink() {
+            std::fs::remove_dir_all(target)?;
+        } else {
+            std::fs::remove_file(target)?;
+        }
+    }
+
+    // Ensure parent directory exists
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    std::os::unix::fs::symlink(source, target)
+}
+
+#[cfg(windows)]
+fn create_symlink(source: &Path, target: &Path) -> Result<(), std::io::Error> {
+    // Remove existing symlink/file if present
+    if target.exists() {
+        if target.is_dir() {
+            std::fs::remove_dir_all(target)?;
+        } else {
+            std::fs::remove_file(target)?;
+        }
+    }
+
+    // Ensure parent directory exists
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    // On Windows, use junction for directories (doesn't require admin privileges)
+    if source.is_dir() {
+        std::os::windows::fs::symlink_dir(source, target)
+    } else {
+        std::os::windows::fs::symlink_file(source, target)
+    }
+}
+
 /// Write JSON to file with pretty formatting.
 fn write_json_file(path: &Path, value: &Value) -> Result<(), std::io::Error> {
     if let Some(parent) = path.parent() {
@@ -431,5 +517,101 @@ mod tests {
             "/home/user/.spn/packages/test/1.0.0/dist/mcp.js"
         );
         assert_eq!(config["env"]["API_KEY"], "secret");
+    }
+
+    #[test]
+    fn test_claude_code_sync_skills() {
+        let temp = TempDir::new().unwrap();
+        let claude_dir = temp.path().join(".claude");
+        std::fs::create_dir(&claude_dir).unwrap();
+
+        // Create package with skills directory
+        let package_path = temp.path().join("packages/test-skills/1.0.0");
+        let skills_source = package_path.join("skills");
+        std::fs::create_dir_all(&skills_source).unwrap();
+        std::fs::write(skills_source.join("my-skill.md"), "# Skill").unwrap();
+
+        let manifest = PackageManifest {
+            name: "@test/skills-pkg".to_string(),
+            version: "1.0.0".to_string(),
+            skills: vec!["skills".to_string()],
+            ..Default::default()
+        };
+
+        let adapter = ClaudeCodeAdapter;
+        let result =
+            adapter.sync_package(temp.path(), "@test/skills-pkg", &package_path, &manifest);
+
+        assert!(result.success, "Sync failed: {:?}", result.error);
+        assert_eq!(result.synced.len(), 1);
+
+        // Verify symlink was created
+        let skills_link = claude_dir.join("skills").join("test-skills-pkg");
+        assert!(skills_link.exists() || skills_link.is_symlink());
+    }
+
+    #[test]
+    fn test_claude_code_sync_hooks() {
+        let temp = TempDir::new().unwrap();
+        let claude_dir = temp.path().join(".claude");
+        std::fs::create_dir(&claude_dir).unwrap();
+
+        // Create package with hooks directory
+        let package_path = temp.path().join("packages/test-hooks/1.0.0");
+        let hooks_source = package_path.join("hooks");
+        std::fs::create_dir_all(&hooks_source).unwrap();
+        std::fs::write(hooks_source.join("pre-commit.sh"), "#!/bin/bash").unwrap();
+
+        let manifest = PackageManifest {
+            name: "@test/hooks-pkg".to_string(),
+            version: "1.0.0".to_string(),
+            hooks: vec!["hooks".to_string()],
+            ..Default::default()
+        };
+
+        let adapter = ClaudeCodeAdapter;
+        let result =
+            adapter.sync_package(temp.path(), "@test/hooks-pkg", &package_path, &manifest);
+
+        assert!(result.success, "Sync failed: {:?}", result.error);
+        assert_eq!(result.synced.len(), 1);
+
+        // Verify symlink was created
+        let hooks_link = claude_dir.join("hooks").join("test-hooks-pkg");
+        assert!(hooks_link.exists() || hooks_link.is_symlink());
+    }
+
+    #[test]
+    fn test_claude_code_sync_all_integrations() {
+        let temp = TempDir::new().unwrap();
+        let claude_dir = temp.path().join(".claude");
+        std::fs::create_dir(&claude_dir).unwrap();
+
+        // Create package with all integrations
+        let package_path = temp.path().join("packages/full-pkg/1.0.0");
+        std::fs::create_dir_all(package_path.join("skills")).unwrap();
+        std::fs::create_dir_all(package_path.join("hooks")).unwrap();
+        std::fs::write(package_path.join("skills/test.md"), "# Test").unwrap();
+        std::fs::write(package_path.join("hooks/hook.sh"), "#!/bin/bash").unwrap();
+
+        let manifest = PackageManifest {
+            name: "@test/full-pkg".to_string(),
+            version: "1.0.0".to_string(),
+            mcp: Some(McpConfig {
+                command: "node".to_string(),
+                args: vec!["dist/mcp.js".to_string()],
+                env: HashMap::new(),
+            }),
+            skills: vec!["skills".to_string()],
+            hooks: vec!["hooks".to_string()],
+            ..Default::default()
+        };
+
+        let adapter = ClaudeCodeAdapter;
+        let result =
+            adapter.sync_package(temp.path(), "@test/full-pkg", &package_path, &manifest);
+
+        assert!(result.success, "Sync failed: {:?}", result.error);
+        assert_eq!(result.synced.len(), 3); // MCP + skills + hooks
     }
 }

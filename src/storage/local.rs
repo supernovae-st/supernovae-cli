@@ -40,6 +40,9 @@ pub enum StorageError {
 
     #[error("Failed to extract package: {0}")]
     ExtractError(String),
+
+    #[error("Invalid path: {0}")]
+    InvalidPath(String),
 }
 
 /// Record of an installed package.
@@ -163,7 +166,39 @@ impl LocalStorage {
         Ok(())
     }
 
-    /// Get the installation path for a package.
+    /// Validate that a path component doesn't contain traversal sequences.
+    pub fn validate_path_component(&self, component: &str) -> Result<(), StorageError> {
+        if component.contains("..") {
+            return Err(StorageError::InvalidPath(
+                "Path traversal detected".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Get the installation path for a package (validated).
+    pub fn safe_package_path(&self, name: &str, version: &str) -> Result<PathBuf, StorageError> {
+        // Validate no path traversal
+        self.validate_path_component(name)?;
+        self.validate_path_component(version)?;
+
+        let path = name
+            .replace('@', "")
+            .replace('/', std::path::MAIN_SEPARATOR_STR);
+        let full_path = self.packages_dir.join(&path).join(version);
+
+        // Ensure path stays within packages_dir
+        if !full_path.starts_with(&self.packages_dir) {
+            return Err(StorageError::InvalidPath(
+                "Path escapes packages directory".to_string(),
+            ));
+        }
+
+        Ok(full_path)
+    }
+
+    /// Get the installation path for a package (legacy, unchecked).
+    #[allow(dead_code)]
     pub fn package_path(&self, name: &str, version: &str) -> PathBuf {
         // Convert @scope/path to directory structure
         let path = name
@@ -177,19 +212,46 @@ impl LocalStorage {
         &self,
         downloaded: &DownloadedPackage,
     ) -> Result<InstalledPackage, StorageError> {
-        let install_path = self.package_path(&downloaded.name, &downloaded.version);
+        // Use validated path
+        let install_path = self.safe_package_path(&downloaded.name, &downloaded.version)?;
 
         // Create installation directory
         std::fs::create_dir_all(&install_path)?;
 
-        // Extract tarball
+        // Extract tarball with path validation
         let file = std::fs::File::open(&downloaded.tarball_path)?;
         let decoder = flate2::read::GzDecoder::new(file);
         let mut archive = tar::Archive::new(decoder);
 
-        archive
-            .unpack(&install_path)
-            .map_err(|e| StorageError::ExtractError(e.to_string()))?;
+        // Disable potentially dangerous features
+        archive.set_preserve_permissions(false);
+        archive.set_unpack_xattrs(false);
+
+        // Validate each entry before extraction
+        for entry in archive
+            .entries()
+            .map_err(|e| StorageError::ExtractError(e.to_string()))?
+        {
+            let mut entry = entry.map_err(|e| StorageError::ExtractError(e.to_string()))?;
+            let path = entry
+                .path()
+                .map_err(|e| StorageError::ExtractError(e.to_string()))?;
+
+            // Check for path traversal in tarball
+            if path
+                .components()
+                .any(|c| matches!(c, std::path::Component::ParentDir))
+            {
+                return Err(StorageError::InvalidPath(format!(
+                    "Tarball contains path traversal: {}",
+                    path.display()
+                )));
+            }
+
+            entry
+                .unpack_in(&install_path)
+                .map_err(|e| StorageError::ExtractError(e.to_string()))?;
+        }
 
         let installed = InstalledPackage {
             name: downloaded.name.clone(),

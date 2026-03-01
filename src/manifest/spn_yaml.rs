@@ -72,20 +72,20 @@ impl Dependency {
     pub fn parse_constraint(&self) -> Result<(VersionOp, semver::Version), ManifestError> {
         let version_str = self.version();
 
-        let (op, version_part) = if version_str.starts_with("^") {
-            (VersionOp::Caret, &version_str[1..])
-        } else if version_str.starts_with("~") {
-            (VersionOp::Tilde, &version_str[1..])
-        } else if version_str.starts_with(">=") {
-            (VersionOp::Gte, &version_str[2..])
-        } else if version_str.starts_with('>') {
-            (VersionOp::Gt, &version_str[1..])
-        } else if version_str.starts_with("<=") {
-            (VersionOp::Lte, &version_str[2..])
-        } else if version_str.starts_with('<') {
-            (VersionOp::Lt, &version_str[1..])
-        } else if version_str.starts_with('=') {
-            (VersionOp::Exact, &version_str[1..])
+        let (op, version_part) = if let Some(v) = version_str.strip_prefix('^') {
+            (VersionOp::Caret, v)
+        } else if let Some(v) = version_str.strip_prefix('~') {
+            (VersionOp::Tilde, v)
+        } else if let Some(v) = version_str.strip_prefix(">=") {
+            (VersionOp::Gte, v)
+        } else if let Some(v) = version_str.strip_prefix('>') {
+            (VersionOp::Gt, v)
+        } else if let Some(v) = version_str.strip_prefix("<=") {
+            (VersionOp::Lte, v)
+        } else if let Some(v) = version_str.strip_prefix('<') {
+            (VersionOp::Lt, v)
+        } else if let Some(v) = version_str.strip_prefix('=') {
+            (VersionOp::Exact, v)
         } else {
             (VersionOp::Exact, version_str)
         };
