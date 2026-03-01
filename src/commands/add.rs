@@ -9,6 +9,51 @@ use crate::index::{Downloader, IndexClient};
 use crate::manifest::{ResolvedPackage, SpnLockfile, SpnManifest};
 use crate::storage::LocalStorage;
 
+/// Package types in the registry.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PackageType {
+    Workflow,
+    Agent,
+    Skill,
+    Prompt,
+    Job,
+    Schema,
+}
+
+impl PackageType {
+    /// Parse from string.
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "workflow" => Some(Self::Workflow),
+            "agent" => Some(Self::Agent),
+            "skill" => Some(Self::Skill),
+            "prompt" => Some(Self::Prompt),
+            "job" => Some(Self::Job),
+            "schema" => Some(Self::Schema),
+            _ => None,
+        }
+    }
+
+    /// Infer type from package scope.
+    pub fn from_scope(package: &str) -> Option<Self> {
+        if package.starts_with("@workflows/") || package.starts_with("@nika/") {
+            Some(Self::Workflow)
+        } else if package.starts_with("@agents/") {
+            Some(Self::Agent)
+        } else if package.starts_with("@skills/") {
+            Some(Self::Skill)
+        } else if package.starts_with("@prompts/") {
+            Some(Self::Prompt)
+        } else if package.starts_with("@jobs/") {
+            Some(Self::Job)
+        } else if package.starts_with("@schemas/") || package.starts_with("@novanet/") {
+            Some(Self::Schema)
+        } else {
+            None
+        }
+    }
+}
+
 /// Options for the add command.
 pub struct AddOptions {
     /// Package name (e.g., "@workflows/dev-productivity/code-review").
@@ -16,6 +61,9 @@ pub struct AddOptions {
 
     /// Optional version constraint (e.g., "^0.1", "1.0.0").
     pub version: Option<String>,
+
+    /// Package type (workflow, agent, skill, prompt, job, schema).
+    pub package_type: Option<PackageType>,
 
     /// Add as dev dependency.
     pub dev: bool,
@@ -25,10 +73,20 @@ pub struct AddOptions {
 }
 
 /// Run the add command.
-pub async fn run(package: &str, _type: Option<&str>) -> Result<()> {
+pub async fn run(package: &str, pkg_type: Option<&str>) -> Result<()> {
+    // Parse or infer package type
+    let package_type = pkg_type
+        .and_then(PackageType::from_str)
+        .or_else(|| PackageType::from_scope(package));
+
+    if let Some(ref pt) = package_type {
+        println!("   {} Type: {:?}", "→".blue(), pt);
+    }
+
     let options = AddOptions {
         package: package.to_string(),
         version: None,
+        package_type,
         dev: false,
         manifest_only: false,
     };
@@ -174,12 +232,38 @@ mod tests {
         let options = AddOptions {
             package: "@test/pkg".to_string(),
             version: None,
+            package_type: None,
             dev: false,
             manifest_only: false,
         };
 
         assert_eq!(options.package, "@test/pkg");
         assert!(options.version.is_none());
+        assert!(options.package_type.is_none());
         assert!(!options.dev);
+    }
+
+    #[test]
+    fn test_package_type_from_str() {
+        assert_eq!(PackageType::from_str("workflow"), Some(PackageType::Workflow));
+        assert_eq!(PackageType::from_str("agent"), Some(PackageType::Agent));
+        assert_eq!(PackageType::from_str("skill"), Some(PackageType::Skill));
+        assert_eq!(PackageType::from_str("prompt"), Some(PackageType::Prompt));
+        assert_eq!(PackageType::from_str("job"), Some(PackageType::Job));
+        assert_eq!(PackageType::from_str("schema"), Some(PackageType::Schema));
+        assert_eq!(PackageType::from_str("unknown"), None);
+    }
+
+    #[test]
+    fn test_package_type_from_scope() {
+        assert_eq!(PackageType::from_scope("@workflows/test"), Some(PackageType::Workflow));
+        assert_eq!(PackageType::from_scope("@agents/test"), Some(PackageType::Agent));
+        assert_eq!(PackageType::from_scope("@skills/test"), Some(PackageType::Skill));
+        assert_eq!(PackageType::from_scope("@prompts/test"), Some(PackageType::Prompt));
+        assert_eq!(PackageType::from_scope("@jobs/test"), Some(PackageType::Job));
+        assert_eq!(PackageType::from_scope("@schemas/test"), Some(PackageType::Schema));
+        assert_eq!(PackageType::from_scope("@novanet/test"), Some(PackageType::Schema));
+        assert_eq!(PackageType::from_scope("@nika/test"), Some(PackageType::Workflow));
+        assert_eq!(PackageType::from_scope("unknown"), None);
     }
 }
