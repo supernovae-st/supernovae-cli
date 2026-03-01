@@ -10,6 +10,7 @@ use crate::manifest::{ResolvedPackage, SpnLockfile, SpnManifest};
 use crate::storage::LocalStorage;
 
 /// Options for the install command.
+#[derive(Default)]
 pub struct InstallOptions {
     /// Use exact versions from spn.lock (error if missing).
     pub frozen: bool,
@@ -21,15 +22,6 @@ pub struct InstallOptions {
     pub production: bool,
 }
 
-impl Default for InstallOptions {
-    fn default() -> Self {
-        Self {
-            frozen: false,
-            dry_run: false,
-            production: false,
-        }
-    }
-}
 
 /// Run the install command.
 pub async fn run(frozen: bool) -> Result<()> {

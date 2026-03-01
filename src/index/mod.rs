@@ -9,7 +9,6 @@ pub mod client;
 pub mod downloader;
 pub mod types;
 
-// Re-export main types for convenience
-pub use client::{IndexClient, IndexError, RegistryConfig};
-pub use downloader::{DownloadError, DownloadedPackage, Downloader};
-pub use types::{IndexDependency, IndexEntry, PackageScope};
+// Re-export types used by other modules
+pub use client::IndexClient;
+pub use downloader::{DownloadedPackage, Downloader};

@@ -11,7 +11,3 @@
 pub mod adapters;
 pub mod config;
 pub mod types;
-
-pub use adapters::IdeAdapter;
-pub use config::SyncConfig;
-pub use types::{IdeTarget, PackageManifest, SyncResult};

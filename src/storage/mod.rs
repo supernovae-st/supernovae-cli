@@ -7,5 +7,5 @@
 
 pub mod local;
 
-// Re-export main types
-pub use local::{InstalledPackage, LocalStorage, StorageError, StorageState};
+// Re-export types used by other modules
+pub use local::{LocalStorage, StorageError};

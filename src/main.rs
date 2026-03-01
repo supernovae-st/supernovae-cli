@@ -10,6 +10,9 @@
 //! spn doctor                       # System diagnostic
 //! ```
 
+// Allow dead code during early development - scaffolded API surface for future use
+#![allow(dead_code)]
+
 use clap::{Parser, Subcommand};
 
 mod commands;
