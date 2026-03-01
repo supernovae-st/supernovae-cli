@@ -174,10 +174,10 @@ enum Commands {
         mcp: bool,
     },
 
-    /// Show help for a topic
-    Help {
-        /// Topic name (config, scopes, mcp)
-        topic: Option<String>,
+    /// Show detailed help for a topic (config, scopes, mcp, sync, workflows, registry)
+    Topic {
+        /// Topic name
+        name: Option<String>,
     },
 }
 
@@ -399,6 +399,6 @@ async fn main() -> Result<()> {
         Commands::Schema { command } => commands::schema::run(command).await,
         Commands::Doctor => commands::doctor::run().await,
         Commands::Init { local, mcp } => commands::init::run(local, mcp).await,
-        Commands::Help { topic } => commands::help::run(topic.as_deref()).await,
+        Commands::Topic { name } => commands::help::run(name.as_deref()).await,
     }
 }

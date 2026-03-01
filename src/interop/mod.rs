@@ -6,7 +6,7 @@
 //! - Error handling for missing binaries
 
 pub mod binary;
-pub mod skills;
 pub mod npm;
+pub mod skills;
 
 pub use binary::{BinaryRunner, BinaryType};
