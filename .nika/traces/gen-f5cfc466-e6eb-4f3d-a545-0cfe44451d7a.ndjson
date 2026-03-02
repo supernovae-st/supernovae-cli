@@ -1,0 +1,9 @@
+{"id":0,"timestamp_ms":5,"kind":{"type":"workflow_started","task_count":1,"generation_id":"gen-f5cfc466-e6eb-4f3d-a545-0cfe44451d7a","workflow_hash":"11a021315efe6644","nika_version":"0.17.0"}}
+{"id":1,"timestamp_ms":6,"kind":{"type":"task_scheduled","task_id":"hello","dependencies":[]}}
+{"id":2,"timestamp_ms":6,"kind":{"type":"task_started","task_id":"hello","verb":"infer","inputs":{}}}
+{"id":3,"timestamp_ms":6,"kind":{"type":"template_resolved","task_id":"hello","template":"Say 'Hello from test package!'","result":"Say 'Hello from test package!'"}}
+{"id":4,"timestamp_ms":6,"kind":{"type":"context_assembled","task_id":"hello","sources":[],"excluded":[],"total_tokens":7,"budget_used_pct":0.0,"truncated":false}}
+{"id":5,"timestamp_ms":8,"kind":{"type":"provider_called","task_id":"hello","provider":"claude","model":"claude-sonnet-4-6","prompt_len":30}}
+{"id":6,"timestamp_ms":782,"kind":{"type":"provider_responded","task_id":"hello","request_id":null,"input_tokens":15,"output_tokens":8,"cache_read_tokens":0,"ttft_ms":null,"finish_reason":"stop","cost_usd":0.0}}
+{"id":7,"timestamp_ms":782,"kind":{"type":"task_completed","task_id":"hello","output":"Hello from test package!","duration_ms":775}}
+{"id":8,"timestamp_ms":782,"kind":{"type":"workflow_completed","final_output":"Hello from test package!","total_duration_ms":778}}
