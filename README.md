@@ -1,15 +1,17 @@
 <div align="center">
 
 ```
-███████╗██████╗ ███╗   ██╗     ██████╗██╗     ██╗
-██╔════╝██╔══██╗████╗  ██║    ██╔════╝██║     ██║
-███████╗██████╔╝██╔██╗ ██║    ██║     ██║     ██║
-╚════██║██╔═══╝ ██║╚██╗██║    ██║     ██║     ██║
-███████║██║     ██║ ╚████║    ╚██████╗███████╗██║
-╚══════╝╚═╝     ╚═╝  ╚═══╝     ╚═════╝╚══════╝╚═╝
+   ███████╗██████╗ ███╗   ██╗     ██████╗██╗     ██╗
+   ██╔════╝██╔══██╗████╗  ██║    ██╔════╝██║     ██║
+   ███████╗██████╔╝██╔██╗ ██║    ██║     ██║     ██║
+   ╚════██║██╔═══╝ ██║╚██╗██║    ██║     ██║     ██║
+   ███████║██║     ██║ ╚████║    ╚██████╗███████╗██║
+   ╚══════╝╚═╝     ╚═╝  ╚═══╝     ╚═════╝╚══════╝╚═╝
 ```
 
-### 🏴‍☠️ ✨ SUPERNOVAE ✨ 🏴‍☠️ Package Manager for AI Workflows, Schemas & Agents
+## 🏴‍☠️ ✨ SUPERNOVAE ✨ 🏴‍☠️
+
+### Package Manager for AI Workflows, Schemas & Agents
 
 [![Version](https://img.shields.io/badge/v0.6.0-black?style=for-the-badge&logo=github&logoColor=white)](https://github.com/supernovae-st/supernovae-cli/releases)
 [![Crates.io](https://img.shields.io/crates/v/spn?style=for-the-badge&logo=rust&logoColor=white&color=orange)](https://crates.io/crates/spn)
