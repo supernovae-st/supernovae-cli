@@ -12,6 +12,7 @@ pub mod mcp;
 pub mod nk;
 pub mod nv;
 pub mod outdated;
+pub mod provider;
 pub mod publish;
 pub mod remove;
 pub mod schema;

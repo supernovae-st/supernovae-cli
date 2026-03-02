@@ -2,7 +2,7 @@
 //!
 //! Proxies MCP server installation via npm/npx.
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::path::PathBuf;
 use std::process::{Command, ExitStatus, Stdio};
 
@@ -10,8 +10,8 @@ use thiserror::Error;
 
 /// Known MCP server aliases.
 /// Maps short names to npm packages.
-pub fn mcp_aliases() -> HashMap<&'static str, &'static str> {
-    HashMap::from([
+pub fn mcp_aliases() -> FxHashMap<&'static str, &'static str> {
+    FxHashMap::from_iter([
         // Anthropic official
         ("filesystem", "@modelcontextprotocol/server-filesystem"),
         ("github", "@modelcontextprotocol/server-github"),

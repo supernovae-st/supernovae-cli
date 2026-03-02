@@ -1,6 +1,6 @@
 [package]
 name = "spn"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 authors = ["SuperNovae Studio <hello@supernovae.studio>"]
 description = "CLI for SuperNovae package registry - manage workflows, schemas, skills, and MCP servers"
@@ -61,6 +61,15 @@ indicatif = "0.17"
 console = "0.15"
 dialoguer = "0.11"
 colored = "2.1"
+
+# Security (v0.6.0)
+keyring = "3"                                         # OS keychain (macOS/Win/Linux)
+secrecy = { version = "0.10", features = ["serde"] }  # Secret wrappers
+zeroize = { version = "1", features = ["derive"] }    # Memory wipe on drop
+dotenvy = "0.15"                                      # Safe .env loading
+
+# Performance (v0.6.0)
+rustc-hash = "2.1"                                    # FxHashMap (2-5x faster)
 
 [dev-dependencies]
 assert_cmd = "2.0"
