@@ -3,7 +3,11 @@
 //! Fetches package metadata from the sparse index using HTTP or local files.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
+use dashmap::DashMap;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use thiserror::Error;
 
 use super::types::{IndexEntry, PackageScope};
@@ -84,7 +88,9 @@ impl RegistryConfig {
 /// Client for fetching package metadata from the sparse index.
 pub struct IndexClient {
     config: RegistryConfig,
-    http_client: Option<reqwest::Client>,
+    http_client: Option<ClientWithMiddleware>,
+    /// Cache: package name → Vec<IndexEntry>
+    cache: Arc<DashMap<String, Vec<IndexEntry>>>,
 }
 
 impl IndexClient {
@@ -96,7 +102,16 @@ impl IndexClient {
     /// Create a new index client with custom config.
     pub fn with_config(config: RegistryConfig) -> Self {
         let http_client = if !config.is_local() {
-            Some(reqwest::Client::new())
+            // Create retry policy: 3 retries with exponential backoff
+            let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+            let retry_middleware = RetryTransientMiddleware::new_with_policy(retry_policy);
+
+            // Build client with retry middleware
+            let client = ClientBuilder::new(reqwest::Client::new())
+                .with(retry_middleware)
+                .build();
+
+            Some(client)
         } else {
             None
         };
@@ -104,18 +119,39 @@ impl IndexClient {
         Self {
             config,
             http_client,
+            cache: Arc::new(DashMap::new()),
         }
+    }
+
+    /// Clear the package cache.
+    pub fn clear_cache(&self) {
+        self.cache.clear();
+    }
+
+    /// Get cache statistics.
+    pub fn cache_size(&self) -> usize {
+        self.cache.len()
     }
 
     /// Fetch all versions of a package from the index.
     pub async fn fetch_package(&self, name: &str) -> Result<Vec<IndexEntry>, IndexError> {
+        // Check cache first
+        if let Some(cached) = self.cache.get(name) {
+            return Ok(cached.clone());
+        }
+
         let scope = PackageScope::parse(name)
             .ok_or_else(|| IndexError::InvalidPackageName(name.to_string()))?;
 
         let index_path = scope.index_path();
         let content = self.fetch_index_file(&index_path).await?;
 
-        self.parse_index_content(&content, name)
+        let entries = self.parse_index_content(&content, name)?;
+
+        // Store in cache
+        self.cache.insert(name.to_string(), entries.clone());
+
+        Ok(entries)
     }
 
     /// Fetch the latest non-yanked version of a package.
@@ -137,6 +173,49 @@ impl IndexClient {
             .into_iter()
             .find(|e| e.version == version)
             .ok_or_else(|| IndexError::PackageNotFound(format!("{}@{}", name, version)))
+    }
+
+    /// Search for packages matching a query (case-insensitive).
+    ///
+    /// This searches through cached packages only. For comprehensive search,
+    /// populate cache by calling fetch_package() on known packages first.
+    ///
+    /// Returns latest non-yanked version of each matching package.
+    pub fn search(&self, query: &str) -> Vec<IndexEntry> {
+        let query_lower = query.to_lowercase();
+        let mut results = Vec::new();
+
+        // Search through cached packages
+        for entry in self.cache.iter() {
+            let package_name = entry.key();
+
+            // Case-insensitive substring match
+            if package_name.to_lowercase().contains(&query_lower) {
+                // Get latest non-yanked version
+                if let Some(latest) = entry
+                    .value()
+                    .iter()
+                    .filter(|e| e.is_available())
+                    .max_by(|a, b| a.semver().ok().cmp(&b.semver().ok()))
+                {
+                    results.push(latest.clone());
+                }
+            }
+        }
+
+        // Sort by relevance: exact match first, then alphabetically
+        results.sort_by(|a, b| {
+            let a_exact = a.name.to_lowercase() == query_lower;
+            let b_exact = b.name.to_lowercase() == query_lower;
+
+            match (a_exact, b_exact) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => a.name.cmp(&b.name),
+            }
+        });
+
+        results
     }
 
     /// Get the tarball download URL for a package version.
@@ -374,5 +453,97 @@ mod tests {
             .unwrap();
         // Should get 1.0.0, not yanked 2.0.0
         assert_eq!(latest.version, "1.0.0");
+    }
+
+    #[tokio::test]
+    async fn test_cache_functionality() {
+        let (_temp, config) = setup_local_index();
+        let client = IndexClient::with_config(config);
+
+        // Initial cache should be empty
+        assert_eq!(client.cache_size(), 0);
+
+        // Fetch package - should populate cache
+        let _ = client
+            .fetch_package("@workflows/data/json-transformer")
+            .await
+            .unwrap();
+
+        // Cache should now have 1 entry
+        assert_eq!(client.cache_size(), 1);
+
+        // Fetch same package again - should use cache
+        let start = std::time::Instant::now();
+        let _ = client
+            .fetch_package("@workflows/data/json-transformer")
+            .await
+            .unwrap();
+        let duration = start.elapsed();
+
+        // Second fetch should be much faster (< 1ms for cached)
+        assert!(duration.as_millis() < 10);
+
+        // Clear cache
+        client.clear_cache();
+        assert_eq!(client.cache_size(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_search_functionality() {
+        let (_temp, config) = setup_local_index();
+        let client = IndexClient::with_config(config);
+
+        // Search on empty cache returns empty
+        let results = client.search("json");
+        assert_eq!(results.len(), 0);
+
+        // Populate cache
+        let _ = client
+            .fetch_package("@workflows/data/json-transformer")
+            .await
+            .unwrap();
+
+        // Search should find the package
+        let results = client.search("json");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "@workflows/data/json-transformer");
+
+        // Partial match should work
+        let results = client.search("transformer");
+        assert_eq!(results.len(), 1);
+
+        // Case-insensitive search
+        let results = client.search("JSON");
+        assert_eq!(results.len(), 1);
+
+        // No match returns empty
+        let results = client.search("nonexistent");
+        assert_eq!(results.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_search_returns_latest_version() {
+        let (temp, config) = setup_local_index();
+        let client = IndexClient::with_config(config);
+
+        // Add multiple versions
+        let pkg_path = temp.path().join("index/@w/data/json-transformer");
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&pkg_path)
+            .unwrap();
+        writeln!(file, r#"{{"name":"@workflows/data/json-transformer","vers":"1.1.0","deps":[],"cksum":"sha256:newer","features":{{}},"yanked":false}}"#).unwrap();
+        writeln!(file, r#"{{"name":"@workflows/data/json-transformer","vers":"1.2.0","deps":[],"cksum":"sha256:newest","features":{{}},"yanked":false}}"#).unwrap();
+
+        // Populate cache
+        let _ = client
+            .fetch_package("@workflows/data/json-transformer")
+            .await
+            .unwrap();
+
+        // Search should return only latest version
+        let results = client.search("json");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].version, "1.2.0");
     }
 }

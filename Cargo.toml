@@ -71,6 +71,11 @@ libc = "0.2"                                          # mlock/madvise for memory
 
 # Performance (v0.6.0)
 rustc-hash = "2.1"                                    # FxHashMap (2-5x faster)
+dashmap = "6.1"                                       # Concurrent HashMap for caching
+
+# HTTP retry logic (v0.7.0)
+reqwest-retry = "0.6"
+reqwest-middleware = "0.3"
 
 [dev-dependencies]
 assert_cmd = "2.0"
