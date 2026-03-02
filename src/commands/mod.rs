@@ -17,6 +17,7 @@ pub mod remove;
 pub mod schema;
 pub mod search;
 pub mod skill;
+pub mod status;
 pub mod sync;
 pub mod update;
 pub mod version;

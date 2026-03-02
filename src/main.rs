@@ -167,6 +167,13 @@ enum Commands {
     /// System diagnostic
     Doctor,
 
+    /// Show ecosystem status (MCP servers, packages, skills, editors)
+    Status {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Initialize a new project
     Init {
         /// Create local config template
@@ -444,6 +451,7 @@ async fn main() -> Result<()> {
         Commands::Config { command } => commands::config::run(command).await,
         Commands::Schema { command } => commands::schema::run(command).await,
         Commands::Doctor => commands::doctor::run().await,
+        Commands::Status { json } => commands::status::run(json).await,
         Commands::Init { local, mcp } => commands::init::run(local, mcp).await,
         Commands::Topic { name } => commands::help::run(name.as_deref()).await,
     }
