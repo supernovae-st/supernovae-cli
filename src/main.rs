@@ -190,6 +190,10 @@ enum Commands {
         /// Create MCP config template
         #[arg(long)]
         mcp: bool,
+
+        /// Initialize from a template (nika, novanet)
+        #[arg(long)]
+        template: Option<String>,
     },
 
     /// Show detailed help for a topic (config, scopes, mcp, sync, workflows, registry)
@@ -502,7 +506,7 @@ async fn main() -> Result<()> {
         Commands::Doctor => commands::doctor::run().await,
         Commands::Provider { command } => commands::provider::run(command).await,
         Commands::Status { json } => commands::status::run(json).await,
-        Commands::Init { local, mcp } => commands::init::run(local, mcp).await,
+        Commands::Init { local, mcp, template } => commands::init::run(local, mcp, template).await,
         Commands::Topic { name } => commands::help::run(name.as_deref()).await,
     }
 }
