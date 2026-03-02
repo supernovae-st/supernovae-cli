@@ -43,6 +43,9 @@ pub enum StorageError {
 
     #[error("Invalid path: {0}")]
     InvalidPath(String),
+
+    #[error("Directory walk error: {0}")]
+    WalkDirError(#[from] walkdir::Error),
 }
 
 /// Record of an installed package.
@@ -319,6 +322,55 @@ impl LocalStorage {
     pub fn list_installed(&self) -> Result<Vec<InstalledPackage>, StorageError> {
         let state = self.load_state()?;
         Ok(state.packages.values().cloned().collect())
+    }
+
+    /// Scan filesystem for packages (includes manually installed ones).
+    pub fn scan_filesystem(&self) -> Result<Vec<InstalledPackage>, StorageError> {
+        use walkdir::WalkDir;
+
+        let mut packages = Vec::new();
+
+        // Walk through packages directory
+        for entry in WalkDir::new(&self.packages_dir)
+            .min_depth(1)
+            .max_depth(5)
+            .follow_links(false)
+        {
+            let entry = entry?;
+            let path = entry.path();
+
+            // Look for manifest.yaml files
+            if path.is_file() && path.file_name() == Some(std::ffi::OsStr::new("manifest.yaml")) {
+                // Read manifest
+                if let Ok(content) = std::fs::read_to_string(path) {
+                    if let Ok(manifest) = serde_yaml::from_str::<serde_yaml::Value>(&content) {
+                        // Extract package info
+                        let name = manifest.get("name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("unknown")
+                            .to_string();
+
+                        let version = manifest.get("version")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("0.0.0")
+                            .to_string();
+
+                        // Package directory is parent of manifest.yaml
+                        let package_path = path.parent().unwrap().to_path_buf();
+
+                        packages.push(InstalledPackage {
+                            name,
+                            version,
+                            checksum: "filesystem".to_string(),
+                            path: package_path,
+                            installed_at: chrono::Utc::now().to_rfc3339(),
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(packages)
     }
 
     /// List all installed packages as (name, path) pairs.

@@ -14,9 +14,9 @@ pub async fn run() -> Result<()> {
     // Try to load manifest
     let manifest = SpnManifest::find_in_dir(&cwd).ok();
 
-    // Load installed packages from storage
+    // Scan filesystem for all packages (includes manually installed ones)
     let storage = LocalStorage::new()?;
-    let installed = storage.list_installed()?;
+    let installed = storage.scan_filesystem()?;
 
     println!("📦 Installed packages:\n");
 
