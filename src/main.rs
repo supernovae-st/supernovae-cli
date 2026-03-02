@@ -21,6 +21,8 @@ mod error;
 mod index;
 mod interop;
 mod manifest;
+mod mcp;
+mod secrets;
 mod storage;
 mod sync;
 
@@ -166,6 +168,19 @@ enum Commands {
     /// System diagnostic
     Doctor,
 
+    /// Manage API keys and secrets for providers
+    Provider {
+        #[command(subcommand)]
+        command: ProviderCommands,
+    },
+
+    /// Show ecosystem status (MCP servers, packages, skills, editors)
+    Status {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Initialize a new project
     Init {
         /// Create local config template
@@ -205,13 +220,55 @@ enum McpCommands {
     Add {
         /// Server alias or npm package
         name: String,
+
+        /// Install to global config (~/.spn/mcp.yaml)
+        #[arg(short, long)]
+        global: bool,
+
+        /// Install to project config (.spn/mcp.yaml)
+        #[arg(short, long)]
+        project: bool,
+
+        /// Skip syncing to editors
+        #[arg(long)]
+        no_sync: bool,
+
+        /// Sync only to specific editors (comma-separated)
+        #[arg(long)]
+        sync_to: Option<String>,
     },
     /// Remove an MCP server
-    Remove { name: String },
+    Remove {
+        /// Server name
+        name: String,
+
+        /// Remove from global config
+        #[arg(short, long)]
+        global: bool,
+
+        /// Remove from project config
+        #[arg(short, long)]
+        project: bool,
+    },
     /// List installed MCP servers
-    List,
+    List {
+        /// Show only global servers
+        #[arg(short, long)]
+        global: bool,
+
+        /// Show only project servers
+        #[arg(short, long)]
+        project: bool,
+
+        /// Show as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Test MCP server connection
-    Test { name: String },
+    Test {
+        /// Server name (or "all" to test all)
+        name: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -367,6 +424,48 @@ enum SchemaCommands {
     },
 }
 
+#[derive(Subcommand)]
+enum ProviderCommands {
+    /// List all stored API keys (masked)
+    List {
+        /// Show key sources (keychain, env, .env)
+        #[arg(long)]
+        show_source: bool,
+    },
+    /// Set API key for a provider
+    Set {
+        /// Provider name (anthropic, openai, gemini, etc.)
+        provider: String,
+        /// API key value (prompts securely if omitted)
+        #[arg(long)]
+        key: Option<String>,
+    },
+    /// Get masked API key for a provider
+    Get {
+        /// Provider name
+        provider: String,
+        /// Show full key (DANGEROUS - only for scripts)
+        #[arg(long)]
+        unmask: bool,
+    },
+    /// Delete API key for a provider
+    Delete {
+        /// Provider name
+        provider: String,
+    },
+    /// Migrate keys from env vars to OS keychain
+    Migrate {
+        /// Don't prompt, just migrate
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Test provider connection
+    Test {
+        /// Provider name (or "all")
+        provider: String,
+    },
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -401,6 +500,8 @@ async fn main() -> Result<()> {
         Commands::Config { command } => commands::config::run(command).await,
         Commands::Schema { command } => commands::schema::run(command).await,
         Commands::Doctor => commands::doctor::run().await,
+        Commands::Provider { command } => commands::provider::run(command).await,
+        Commands::Status { json } => commands::status::run(json).await,
         Commands::Init { local, mcp } => commands::init::run(local, mcp).await,
         Commands::Topic { name } => commands::help::run(name.as_deref()).await,
     }
