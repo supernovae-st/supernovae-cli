@@ -366,6 +366,73 @@ supernovae-index/
 | `spn init` | Initialize project |
 | `spn help [topic]` | Show help |
 
+### Provider/Secret Management (v0.6.0)
+
+| Command | Description |
+|---------|-------------|
+| `spn provider list` | List all API keys and their sources |
+| `spn provider list --show-source` | Show detailed source info |
+| `spn provider set <provider>` | Set API key (secure input) |
+| `spn provider get <provider>` | Get masked key |
+| `spn provider get <provider> --unmask` | Get full key (for scripts) |
+| `spn provider delete <provider>` | Delete key from keychain |
+| `spn provider migrate` | Migrate env vars to keychain |
+| `spn provider test <provider\|all>` | Validate key format |
+
+**Supported Providers:**
+
+| Type | Providers |
+|------|-----------|
+| **LLM** | `anthropic`, `openai`, `mistral`, `groq`, `deepseek`, `gemini`, `ollama` |
+| **MCP** | `neo4j`, `github`, `slack`, `perplexity`, `firecrawl`, `supadata` |
+
+---
+
+## Security (v0.6.0)
+
+`spn` provides defense-in-depth security for API keys and secrets:
+
+```
++-----------------------------------------------------------------------------+
+|  SECURITY ARCHITECTURE                                                       |
++-----------------------------------------------------------------------------+
+|                                                                              |
+|  Layer 1: Storage                                                            |
+|  +-- OS Keychain (macOS Keychain, Windows Credential, Linux Secret Service) |
+|  +-- Encrypted at rest, protected by OS login/biometrics                    |
+|                                                                              |
+|  Layer 2: Memory Protection                                                  |
+|  +-- Zeroizing<T>      Auto-clear memory on drop                            |
+|  +-- SecretString      Prevents Debug/Display exposure                      |
+|  +-- mlock()           Prevents swap to disk (Unix)                         |
+|  +-- MADV_DONTDUMP     Excludes from core dumps (Linux)                     |
+|                                                                              |
+|  Layer 3: Validation                                                         |
+|  +-- Provider-specific key format validation                                 |
+|  +-- Empty/whitespace rejection                                              |
+|  +-- Masked display (sk-ant...X)                                             |
+|                                                                              |
+|  Key Resolution Priority:                                                    |
+|  1. OS Keychain (most secure)                                                |
+|  2. Environment variable                                                     |
+|  3. .env file                                                                |
+|                                                                              |
++-----------------------------------------------------------------------------+
+```
+
+### Migrating to Keychain
+
+```bash
+# View current key sources
+spn provider list --show-source
+
+# Migrate all env vars to OS keychain
+spn provider migrate
+
+# Set a new key securely
+spn provider set anthropic
+```
+
 ---
 
 ## Configuration
