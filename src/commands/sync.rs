@@ -11,6 +11,7 @@ use std::path::PathBuf;
 
 use colored::Colorize;
 
+use crate::diff::DiffBatch;
 use crate::error::{Result, SpnError};
 use crate::storage::LocalStorage;
 use crate::sync::adapters::{detect_ides, get_adapter};
@@ -25,6 +26,7 @@ pub async fn run(
     status: bool,
     target: Option<String>,
     dry_run: bool,
+    interactive: bool,
 ) -> Result<()> {
     let mut config = SyncConfig::load().unwrap_or_default();
 
@@ -40,6 +42,11 @@ pub async fn run(
     // Handle status
     if status {
         return show_status(&config);
+    }
+
+    // Interactive mode: collect changes, show diffs, confirm
+    if interactive && !dry_run {
+        return run_interactive_sync(&config, target.as_deref()).await;
     }
 
     // Main sync operation
@@ -302,6 +309,135 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
     }
 
     Ok(())
+}
+
+/// Run sync with interactive diff preview and confirmation.
+async fn run_interactive_sync(config: &SyncConfig, target_filter: Option<&str>) -> Result<()> {
+    let cwd = std::env::current_dir().map_err(|e| SpnError::ConfigError(e.to_string()))?;
+
+    println!("{}", "🔍 Interactive Sync Mode".cyan().bold());
+    println!("{}", "Analyzing changes...".dimmed());
+    println!();
+
+    // Determine targets
+    let targets: Vec<IdeTarget> = if let Some(filter) = target_filter {
+        let target = IdeTarget::from_str(filter).ok_or_else(|| {
+            SpnError::ConfigError(format!("Unknown target: {}", filter))
+        })?;
+        vec![target]
+    } else if config.enabled_targets.is_empty() {
+        detect_ides(&cwd)
+    } else {
+        config.enabled_targets.iter().copied().collect()
+    };
+
+    if targets.is_empty() {
+        println!("{}", "⚠️  No IDE configurations found in current directory.".yellow());
+        return Ok(());
+    }
+
+    // Collect all config files that would be modified
+    let mut diff_batch = DiffBatch::new();
+
+    // Check MCP config files
+    let mcp_manager = crate::mcp::config_manager();
+    if let Ok(mcp_config) = mcp_manager.load_resolved() {
+        for target in &targets {
+            let config_path = match target {
+                IdeTarget::ClaudeCode => cwd.join(".claude").join("settings.json"),
+                IdeTarget::Cursor => cwd.join(".cursor").join("mcp.json"),
+                IdeTarget::Windsurf => cwd.join(".windsurf").join("mcp.json"),
+                IdeTarget::VsCode => continue,
+            };
+
+            if let Some(parent) = config_path.parent() {
+                if !parent.exists() {
+                    continue;
+                }
+            }
+
+            // Read existing content
+            let old_content = if config_path.exists() {
+                std::fs::read_to_string(&config_path).unwrap_or_default()
+            } else {
+                String::new()
+            };
+
+            // Generate what new content would be
+            let new_content = generate_mcp_config_preview(target, &mcp_config);
+
+            // Only add to diff if content changed
+            if old_content != new_content {
+                diff_batch.add(
+                    config_path.display().to_string(),
+                    old_content,
+                    new_content,
+                );
+            }
+        }
+    }
+
+    // If no changes, just inform the user
+    if diff_batch.is_empty() {
+        println!("{}", "✓ No changes detected".green());
+        println!("   All configurations are already up to date.");
+        return Ok(());
+    }
+
+    // Show diffs and ask for confirmation
+    if !diff_batch.confirm() {
+        println!("{}", "❌ Sync cancelled".yellow());
+        return Ok(());
+    }
+
+    println!();
+    println!("{}", "✅ Confirmed, applying changes...".green());
+    println!();
+
+    // Now run the actual sync
+    run_sync(config, target_filter, false).await
+}
+
+/// Generate MCP config preview for a target.
+fn generate_mcp_config_preview(
+    target: &IdeTarget,
+    mcp_config: &crate::mcp::McpConfig,
+) -> String {
+    use serde_json::json;
+
+    let mcp_servers: serde_json::Map<String, serde_json::Value> = mcp_config
+        .servers
+        .iter()
+        .map(|(name, server)| {
+            let mut server_json = json!({
+                "command": server.command,
+                "args": server.args,
+            });
+
+            if !server.env.is_empty() {
+                server_json["env"] = json!(server.env);
+            }
+
+            (name.clone(), server_json)
+        })
+        .collect();
+
+    match target {
+        IdeTarget::ClaudeCode => {
+            // Claude Code uses settings.json with mcpServers key
+            let settings = json!({
+                "mcpServers": mcp_servers
+            });
+            serde_json::to_string_pretty(&settings).unwrap_or_default()
+        }
+        _ => {
+            // Cursor and Windsurf use direct JSON format
+            let config = json!({
+                "mcpServers": mcp_servers
+            });
+            serde_json::to_string_pretty(&config).unwrap_or_default()
+        }
+    }
 }
 
 #[cfg(test)]

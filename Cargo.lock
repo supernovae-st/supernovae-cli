@@ -2009,6 +2009,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2",
+ "similar",
  "tar",
  "tempfile",
  "thiserror 1.0.69",

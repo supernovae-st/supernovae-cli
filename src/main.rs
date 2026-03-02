@@ -17,6 +17,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 mod config;
+mod diff;
 mod error;
 mod index;
 mod interop;
@@ -151,6 +152,10 @@ enum Commands {
         /// Show diff without modifying
         #[arg(long)]
         dry_run: bool,
+
+        /// Show interactive diff and ask for confirmation
+        #[arg(short, long)]
+        interactive: bool,
     },
 
     /// Configuration commands
@@ -500,7 +505,8 @@ async fn main() -> Result<()> {
             status,
             target,
             dry_run,
-        } => commands::sync::run(enable, disable, status, target, dry_run).await,
+            interactive,
+        } => commands::sync::run(enable, disable, status, target, dry_run, interactive).await,
         Commands::Config { command } => commands::config::run(command).await,
         Commands::Schema { command } => commands::schema::run(command).await,
         Commands::Doctor => commands::doctor::run().await,

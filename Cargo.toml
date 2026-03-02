@@ -62,6 +62,7 @@ indicatif = "0.17"
 console = "0.15"
 dialoguer = "0.11"
 colored = "2.1"
+similar = { version = "2.6", features = ["inline"] }
 
 # Security (v0.6.0)
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
