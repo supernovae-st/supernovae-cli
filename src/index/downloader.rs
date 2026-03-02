@@ -5,6 +5,7 @@
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
+use indicatif::{ProgressBar, ProgressStyle};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
@@ -140,11 +141,11 @@ impl Downloader {
         Ok(())
     }
 
-    /// Fetch from HTTP.
+    /// Fetch from HTTP with progress bar.
     async fn fetch_http(&self, url: &str, dest: &Path) -> Result<(), DownloadError> {
         let response = reqwest::Client::new()
             .get(url)
-            .header("User-Agent", "spn/0.1")
+            .header("User-Agent", "spn/0.6")
             .send()
             .await
             .map_err(|e| DownloadError::Http(e.to_string()))?;
@@ -157,18 +158,50 @@ impl Downloader {
             )));
         }
 
-        let bytes = response
-            .bytes()
-            .await
-            .map_err(|e| DownloadError::Http(e.to_string()))?;
+        // Get content length if available
+        let total_size = response.content_length();
 
+        // Create progress bar
+        let pb = if let Some(size) = total_size {
+            let pb = ProgressBar::new(size);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+                    .unwrap()
+                    .progress_chars("#>-"),
+            );
+            pb.set_message("📥 Downloading");
+            pb
+        } else {
+            let pb = ProgressBar::new_spinner();
+            pb.set_style(
+                ProgressStyle::default_spinner()
+                    .template("{spinner:.green} {msg} {bytes}")
+                    .unwrap(),
+            );
+            pb.set_message("📥 Downloading");
+            pb
+        };
+
+        // Stream response and write to file
         let mut file = std::fs::File::create(dest)?;
-        file.write_all(&bytes)?;
+        let mut downloaded: u64 = 0;
+        let mut stream = response.bytes_stream();
+
+        use futures_util::StreamExt;
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| DownloadError::Http(e.to_string()))?;
+            file.write_all(&chunk)?;
+            downloaded += chunk.len() as u64;
+            pb.set_position(downloaded);
+        }
+
+        pb.finish_with_message("✅ Downloaded");
 
         Ok(())
     }
 
-    /// Verify tarball checksum.
+    /// Verify tarball checksum with progress indicator.
     fn verify_checksum(
         &self,
         path: &Path,
@@ -180,10 +213,25 @@ impl Downloader {
             .strip_prefix("sha256:")
             .ok_or_else(|| DownloadError::InvalidChecksum(expected.to_string()))?;
 
+        // Get file size for progress bar
+        let metadata = std::fs::metadata(path)?;
+        let file_size = metadata.len();
+
+        // Create progress bar
+        let pb = ProgressBar::new(file_size);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes}")
+                .unwrap()
+                .progress_chars("#>-"),
+        );
+        pb.set_message("🔐 Verifying checksum");
+
         // Compute actual checksum
         let mut file = std::fs::File::open(path)?;
         let mut hasher = Sha256::new();
         let mut buffer = [0u8; 8192];
+        let mut processed: u64 = 0;
 
         loop {
             let n = file.read(&mut buffer)?;
@@ -191,7 +239,11 @@ impl Downloader {
                 break;
             }
             hasher.update(&buffer[..n]);
+            processed += n as u64;
+            pb.set_position(processed);
         }
+
+        pb.finish_with_message("✅ Checksum verified");
 
         let actual = hex::encode(hasher.finalize());
 
@@ -206,13 +258,22 @@ impl Downloader {
         Ok(())
     }
 
-    /// Extract tarball to destination directory.
+    /// Extract tarball to destination directory with progress.
     pub fn extract(
         &self,
         downloaded: &DownloadedPackage,
         dest: &Path,
     ) -> Result<(), DownloadError> {
         std::fs::create_dir_all(dest)?;
+
+        // Create progress spinner
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} {msg}")
+                .unwrap(),
+        );
+        pb.set_message(format!("📦 Extracting {}@{}", downloaded.name, downloaded.version));
 
         let file = std::fs::File::open(&downloaded.tarball_path)?;
         let decoder = flate2::read::GzDecoder::new(file);
@@ -221,6 +282,8 @@ impl Downloader {
         archive
             .unpack(dest)
             .map_err(|e| DownloadError::ExtractError(e.to_string()))?;
+
+        pb.finish_with_message(format!("✅ Extracted {}@{}", downloaded.name, downloaded.version));
 
         Ok(())
     }
