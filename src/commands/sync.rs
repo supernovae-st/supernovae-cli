@@ -1,13 +1,21 @@
 //! Sync command implementation.
 //!
-//! Syncs installed packages to IDE-specific configurations.
+//! Syncs installed packages and MCP servers to IDE-specific configurations.
+//!
+//! # MCP Sync
+//!
+//! Uses `~/.spn/mcp.yaml` as the single source of truth for MCP servers.
+//! Syncs to editor-specific configs (Claude Code, Cursor, Windsurf).
 
 use std::path::PathBuf;
+
+use colored::Colorize;
 
 use crate::error::{Result, SpnError};
 use crate::storage::LocalStorage;
 use crate::sync::adapters::{detect_ides, get_adapter};
 use crate::sync::config::SyncConfig;
+use crate::sync::mcp_sync::sync_mcp_to_editors;
 use crate::sync::types::{IdeTarget, PackageManifest, SyncedItem};
 
 /// Run the sync command.
@@ -144,103 +152,142 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
     };
 
     if targets.is_empty() {
-        println!("⚠️  No IDE configurations found in current directory.");
+        println!("{}", "⚠️  No IDE configurations found in current directory.".yellow());
         println!("   Create .claude/, .cursor/, .vscode/, or .windsurf/ to enable sync.");
         return Ok(());
     }
 
-    // Get installed packages
-    let storage = LocalStorage::new()?;
-    let packages = storage.list_packages()?;
-
-    if packages.is_empty() {
-        println!("⚠️  No packages installed. Run `spn install` first.");
-        return Ok(());
-    }
-
     if dry_run {
-        println!("🔍 Dry run - showing what would be synced:");
+        println!("{}", "🔍 Dry run - showing what would be synced:".cyan());
         println!();
     } else {
-        println!("🔄 Syncing packages to IDE configurations...");
+        println!("{}", "🔄 Syncing to IDE configurations...".cyan());
         println!();
     }
+
+    // PHASE 1: Sync MCP servers from ~/.spn/mcp.yaml
+    println!("{}", "MCP Servers".cyan().bold());
+    let mcp_results = sync_mcp_to_editors(&targets, Some(&cwd));
+    let mut mcp_synced = 0;
+    let mut mcp_errors = Vec::new();
+
+    for result in &mcp_results {
+        if result.success && result.servers_synced > 0 {
+            println!(
+                "  {} {} → {} servers",
+                "✓".green(),
+                result.target.display_name().bold(),
+                result.servers_synced
+            );
+            if !dry_run {
+                println!(
+                    "    {}",
+                    format!("({})", result.config_path.display()).dimmed()
+                );
+            }
+            mcp_synced += result.servers_synced;
+        } else if let Some(err) = &result.error {
+            println!(
+                "  {} {}: {}",
+                "✗".red(),
+                result.target.display_name(),
+                err
+            );
+            mcp_errors.push(err.clone());
+        }
+    }
+
+    if mcp_synced == 0 && mcp_errors.is_empty() {
+        println!("  {} No MCP servers configured", "→".dimmed());
+        println!("    Add with: {}", "spn mcp add <name>".cyan());
+    }
+
+    // PHASE 2: Sync packages (skills, hooks)
+    let storage = LocalStorage::new()?;
+    let packages = storage.list_packages()?;
 
     let mut total_synced = 0;
     let mut errors = Vec::new();
 
-    for target in targets {
-        let adapter = get_adapter(target);
+    if !packages.is_empty() {
+        println!();
+        println!("{}", "Packages".cyan().bold());
 
-        if !adapter.is_available(&cwd) {
-            continue;
-        }
+        for target in &targets {
+            let adapter = get_adapter(*target);
 
-        println!("📁 {}", target.display_name());
-
-        for (name, path) in &packages {
-            // Try to load package manifest
-            let manifest_path = path.join("spn.json");
-            let manifest = if manifest_path.exists() {
-                PackageManifest::from_file(&manifest_path).unwrap_or_default()
-            } else {
-                PackageManifest {
-                    name: name.clone(),
-                    version: "0.0.0".to_string(),
-                    ..Default::default()
-                }
-            };
-
-            if !manifest.has_integrations() {
+            if !adapter.is_available(&cwd) {
                 continue;
             }
 
-            if dry_run {
-                // Show what would be synced
-                if let Some(mcp) = &manifest.mcp {
-                    println!("   Would add MCP server: {} ({})", name, mcp.command);
-                }
-                if !manifest.skills.is_empty() {
-                    println!("   Would link {} skills", manifest.skills.len());
-                }
-                if !manifest.hooks.is_empty() {
-                    println!("   Would link {} hooks", manifest.hooks.len());
-                }
-            } else {
-                // Actually sync
-                let result = adapter.sync_package(&cwd, name, path, &manifest);
+            for (name, path) in &packages {
+                // Try to load package manifest
+                let manifest_path = path.join("spn.json");
+                let manifest = if manifest_path.exists() {
+                    PackageManifest::from_file(&manifest_path).unwrap_or_default()
+                } else {
+                    PackageManifest {
+                        name: name.clone(),
+                        version: "0.0.0".to_string(),
+                        ..Default::default()
+                    }
+                };
 
-                if result.success {
-                    for item in &result.synced {
-                        match item {
-                            SyncedItem::McpServer(name) => {
-                                println!("   ✅ MCP: {}", name);
-                            }
-                            SyncedItem::Skills(path) => {
-                                println!("   ✅ Skills: {}", path.display());
-                            }
-                            SyncedItem::Hooks(path) => {
-                                println!("   ✅ Hooks: {}", path.display());
-                            }
-                            SyncedItem::Command(name) => {
-                                println!("   ✅ Command: {}", name);
+                // Skip packages without skills/hooks (MCP is handled separately)
+                if manifest.skills.is_empty() && manifest.hooks.is_empty() {
+                    continue;
+                }
+
+                if dry_run {
+                    if !manifest.skills.is_empty() {
+                        println!("  Would link {} skills from {}", manifest.skills.len(), name);
+                    }
+                    if !manifest.hooks.is_empty() {
+                        println!("  Would link {} hooks from {}", manifest.hooks.len(), name);
+                    }
+                } else {
+                    let result = adapter.sync_package(&cwd, name, path, &manifest);
+
+                    if result.success {
+                        for item in &result.synced {
+                            match item {
+                                SyncedItem::McpServer(_) => {
+                                    // MCP handled in phase 1
+                                }
+                                SyncedItem::Skills(path) => {
+                                    println!("  {} Skills: {}", "✓".green(), path.display());
+                                    total_synced += 1;
+                                }
+                                SyncedItem::Hooks(path) => {
+                                    println!("  {} Hooks: {}", "✓".green(), path.display());
+                                    total_synced += 1;
+                                }
+                                SyncedItem::Command(name) => {
+                                    println!("  {} Command: {}", "✓".green(), name);
+                                    total_synced += 1;
+                                }
                             }
                         }
-                        total_synced += 1;
+                    } else if let Some(err) = result.error {
+                        println!("  {} {}: {}", "✗".red(), name, err);
+                        errors.push((name.clone(), err));
                     }
-                } else if let Some(err) = result.error {
-                    println!("   ❌ {}: {}", name, err);
-                    errors.push((name.clone(), err));
                 }
             }
         }
     }
 
+    // Summary
     println!();
     if dry_run {
-        println!("Run without --dry-run to apply changes.");
-    } else if errors.is_empty() {
-        println!("✅ Synced {} items successfully.", total_synced);
+        println!("Run without {} to apply changes.", "--dry-run".cyan());
+    } else if errors.is_empty() && mcp_errors.is_empty() {
+        let total = mcp_synced + total_synced;
+        if total > 0 {
+            println!("{} Synced {} items successfully.", "✓".green(), total);
+        } else {
+            println!("{}", "Nothing to sync.".dimmed());
+        }
 
         // Update last sync time
         let mut config = SyncConfig::load().unwrap_or_default();
@@ -248,9 +295,9 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
         let _ = config.save();
     } else {
         println!(
-            "⚠️  Synced {} items with {} errors.",
-            total_synced,
-            errors.len()
+            "{} Synced with {} errors.",
+            "⚠".yellow(),
+            errors.len() + mcp_errors.len()
         );
     }
 
