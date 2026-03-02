@@ -63,7 +63,7 @@ dialoguer = "0.11"
 colored = "2.1"
 
 # Security (v0.6.0)
-keyring = "3"                                         # OS keychain (macOS/Win/Linux)
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 secrecy = { version = "0.10", features = ["serde"] }  # Secret wrappers
 zeroize = { version = "1", features = ["derive"] }    # Memory wipe on drop
 dotenvy = "0.15"                                      # Safe .env loading
