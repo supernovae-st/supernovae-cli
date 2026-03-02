@@ -48,7 +48,7 @@ pub async fn run(package: Option<&str>) -> Result<()> {
     for name in &packages_to_update {
         let installed = state.packages.get(name).unwrap();
 
-        match client.fetch_latest(name) {
+        match client.fetch_latest(name).await {
             Ok(latest) => {
                 if latest.version == installed.version {
                     println!(
@@ -69,7 +69,7 @@ pub async fn run(package: Option<&str>) -> Result<()> {
                 );
 
                 // Download and install new version
-                let downloaded = downloader.download_entry(&latest).map_err(|e| {
+                let downloaded = downloader.download_entry(&latest).await.map_err(|e| {
                     SpnError::ConfigError(format!("Download failed: {}", e))
                 })?;
 

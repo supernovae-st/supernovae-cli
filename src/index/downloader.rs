@@ -74,23 +74,23 @@ impl Downloader {
     }
 
     /// Download a package by name (latest version).
-    pub fn download_latest(&self, name: &str) -> Result<DownloadedPackage, DownloadError> {
-        let entry = self.client.fetch_latest(name)?;
-        self.download_entry(&entry)
+    pub async fn download_latest(&self, name: &str) -> Result<DownloadedPackage, DownloadError> {
+        let entry = self.client.fetch_latest(name).await?;
+        self.download_entry(&entry).await
     }
 
     /// Download a specific version of a package.
-    pub fn download_version(
+    pub async fn download_version(
         &self,
         name: &str,
         version: &str,
     ) -> Result<DownloadedPackage, DownloadError> {
-        let entry = self.client.fetch_version(name, version)?;
-        self.download_entry(&entry)
+        let entry = self.client.fetch_version(name, version).await?;
+        self.download_entry(&entry).await
     }
 
     /// Download a package from an index entry.
-    pub fn download_entry(&self, entry: &IndexEntry) -> Result<DownloadedPackage, DownloadError> {
+    pub async fn download_entry(&self, entry: &IndexEntry) -> Result<DownloadedPackage, DownloadError> {
         let tarball_url = self.client.tarball_url(&entry.name, &entry.version)?;
 
         // Create cache directory structure
@@ -101,7 +101,7 @@ impl Downloader {
 
         // Download if not cached
         if !tarball_path.exists() {
-            self.fetch_tarball(&tarball_url, &tarball_path)?;
+            self.fetch_tarball(&tarball_url, &tarball_path).await?;
         }
 
         // Verify checksum
@@ -125,11 +125,11 @@ impl Downloader {
     }
 
     /// Fetch tarball from URL (HTTP or file://).
-    fn fetch_tarball(&self, url: &str, dest: &Path) -> Result<(), DownloadError> {
+    async fn fetch_tarball(&self, url: &str, dest: &Path) -> Result<(), DownloadError> {
         if url.starts_with("file://") {
             self.fetch_local(url, dest)
         } else {
-            self.fetch_http(url, dest)
+            self.fetch_http(url, dest).await
         }
     }
 
@@ -141,11 +141,12 @@ impl Downloader {
     }
 
     /// Fetch from HTTP.
-    fn fetch_http(&self, url: &str, dest: &Path) -> Result<(), DownloadError> {
-        let response = reqwest::blocking::Client::new()
+    async fn fetch_http(&self, url: &str, dest: &Path) -> Result<(), DownloadError> {
+        let response = reqwest::Client::new()
             .get(url)
             .header("User-Agent", "spn/0.1")
             .send()
+            .await
             .map_err(|e| DownloadError::Http(e.to_string()))?;
 
         if !response.status().is_success() {
@@ -158,6 +159,7 @@ impl Downloader {
 
         let bytes = response
             .bytes()
+            .await
             .map_err(|e| DownloadError::Http(e.to_string()))?;
 
         let mut file = std::fs::File::create(dest)?;
@@ -309,12 +311,12 @@ mod tests {
         (temp, config, checksum)
     }
 
-    #[test]
-    fn test_download_and_verify() {
+    #[tokio::test]
+    async fn test_download_and_verify() {
         let (temp, config, _) = setup_test_registry();
         let downloader = Downloader::with_config(config);
 
-        let result = downloader.download_latest("@workflows/data/json-transformer");
+        let result = downloader.download_latest("@workflows/data/json-transformer").await;
         assert!(result.is_ok(), "Download failed: {:?}", result.err());
 
         let pkg = result.unwrap();
@@ -323,8 +325,8 @@ mod tests {
         assert!(pkg.tarball_path.exists());
     }
 
-    #[test]
-    fn test_checksum_mismatch() {
+    #[tokio::test]
+    async fn test_checksum_mismatch() {
         let temp = TempDir::new().unwrap();
         let index_dir = temp.path().join("index");
         let releases_dir = temp.path().join("releases");
@@ -346,20 +348,21 @@ mod tests {
         let config = RegistryConfig::local(&index_dir, &releases_dir);
         let downloader = Downloader::with_config(config);
 
-        let result = downloader.download_latest("@workflows/data/bad-pkg");
+        let result = downloader.download_latest("@workflows/data/bad-pkg").await;
         assert!(matches!(
             result,
             Err(DownloadError::ChecksumMismatch { .. })
         ));
     }
 
-    #[test]
-    fn test_extract_tarball() {
+    #[tokio::test]
+    async fn test_extract_tarball() {
         let (temp, config, _) = setup_test_registry();
         let downloader = Downloader::with_config(config);
 
         let pkg = downloader
             .download_latest("@workflows/data/json-transformer")
+            .await
             .unwrap();
 
         let extract_dir = temp.path().join("extracted");
@@ -368,19 +371,21 @@ mod tests {
         assert!(extract_dir.join("README.md").exists());
     }
 
-    #[test]
-    fn test_cache_reuse() {
+    #[tokio::test]
+    async fn test_cache_reuse() {
         let (temp, config, _) = setup_test_registry();
         let downloader = Downloader::with_config(config);
 
         // First download
         let pkg1 = downloader
             .download_latest("@workflows/data/json-transformer")
+            .await
             .unwrap();
 
         // Second download should use cache
         let pkg2 = downloader
             .download_latest("@workflows/data/json-transformer")
+            .await
             .unwrap();
 
         assert_eq!(pkg1.tarball_path, pkg2.tarball_path);

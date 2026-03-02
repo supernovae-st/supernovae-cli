@@ -29,7 +29,7 @@ pub async fn run() -> Result<()> {
 
     println!();
     for (name, installed) in &state.packages {
-        match client.fetch_latest(name) {
+        match client.fetch_latest(name).await {
             Ok(latest) => {
                 if latest.version != installed.version {
                     println!(

@@ -17,6 +17,7 @@ pub async fn run(package: &str) -> Result<()> {
     // Fetch all versions
     let entries = client
         .fetch_package(package)
+        .await
         .map_err(|e| SpnError::PackageNotFound(format!("{}: {}", package, e)))?;
 
     if entries.is_empty() {

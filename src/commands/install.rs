@@ -107,13 +107,14 @@ pub async fn run_with_options(options: InstallOptions) -> Result<()> {
                     SpnError::ConfigError(format!("Package {} not in lockfile (frozen mode)", name))
                 })?;
 
-            client.fetch_version(name, &locked.version).map_err(|e| {
+            client.fetch_version(name, &locked.version).await.map_err(|e| {
                 SpnError::PackageNotFound(format!("{}@{}: {}", name, locked.version, e))
             })?
         } else {
             // Resolve latest matching version
             client
                 .fetch_latest(name)
+                .await
                 .map_err(|e| SpnError::PackageNotFound(format!("{}: {}", name, e)))?
         };
 
@@ -147,6 +148,7 @@ pub async fn run_with_options(options: InstallOptions) -> Result<()> {
         // Download and install
         let downloaded = downloader
             .download_entry(&entry)
+            .await
             .map_err(|e| SpnError::ConfigError(format!("Download failed for {}: {}", name, e)))?;
 
         let installed = storage

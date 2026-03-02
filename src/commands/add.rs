@@ -114,9 +114,9 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
     // 2. Fetch package info from registry
     let client = IndexClient::new();
     let entry = if let Some(ref version) = options.version {
-        client.fetch_version(&options.package, version)
+        client.fetch_version(&options.package, version).await
     } else {
-        client.fetch_latest(&options.package)
+        client.fetch_latest(&options.package).await
     }
     .map_err(|e| SpnError::PackageNotFound(format!("{}: {}", options.package, e)))?;
 
@@ -158,6 +158,7 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
         let downloader = Downloader::new();
         let downloaded = downloader
             .download_entry(&entry)
+            .await
             .map_err(|e| SpnError::ConfigError(format!("Download failed: {}", e)))?;
 
         println!(

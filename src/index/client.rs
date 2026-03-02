@@ -84,7 +84,7 @@ impl RegistryConfig {
 /// Client for fetching package metadata from the sparse index.
 pub struct IndexClient {
     config: RegistryConfig,
-    http_client: Option<reqwest::blocking::Client>,
+    http_client: Option<reqwest::Client>,
 }
 
 impl IndexClient {
@@ -96,7 +96,7 @@ impl IndexClient {
     /// Create a new index client with custom config.
     pub fn with_config(config: RegistryConfig) -> Self {
         let http_client = if !config.is_local() {
-            Some(reqwest::blocking::Client::new())
+            Some(reqwest::Client::new())
         } else {
             None
         };
@@ -108,19 +108,19 @@ impl IndexClient {
     }
 
     /// Fetch all versions of a package from the index.
-    pub fn fetch_package(&self, name: &str) -> Result<Vec<IndexEntry>, IndexError> {
+    pub async fn fetch_package(&self, name: &str) -> Result<Vec<IndexEntry>, IndexError> {
         let scope = PackageScope::parse(name)
             .ok_or_else(|| IndexError::InvalidPackageName(name.to_string()))?;
 
         let index_path = scope.index_path();
-        let content = self.fetch_index_file(&index_path)?;
+        let content = self.fetch_index_file(&index_path).await?;
 
         self.parse_index_content(&content, name)
     }
 
     /// Fetch the latest non-yanked version of a package.
-    pub fn fetch_latest(&self, name: &str) -> Result<IndexEntry, IndexError> {
-        let entries = self.fetch_package(name)?;
+    pub async fn fetch_latest(&self, name: &str) -> Result<IndexEntry, IndexError> {
+        let entries = self.fetch_package(name).await?;
 
         entries
             .into_iter()
@@ -130,8 +130,8 @@ impl IndexClient {
     }
 
     /// Fetch a specific version of a package.
-    pub fn fetch_version(&self, name: &str, version: &str) -> Result<IndexEntry, IndexError> {
-        let entries = self.fetch_package(name)?;
+    pub async fn fetch_version(&self, name: &str, version: &str) -> Result<IndexEntry, IndexError> {
+        let entries = self.fetch_package(name).await?;
 
         entries
             .into_iter()
@@ -152,11 +152,11 @@ impl IndexClient {
     }
 
     /// Fetch the raw index file content.
-    fn fetch_index_file(&self, index_path: &str) -> Result<String, IndexError> {
+    async fn fetch_index_file(&self, index_path: &str) -> Result<String, IndexError> {
         if self.config.is_local() {
             self.fetch_local(index_path)
         } else {
-            self.fetch_http(index_path)
+            self.fetch_http(index_path).await
         }
     }
 
@@ -177,7 +177,7 @@ impl IndexClient {
     }
 
     /// Fetch from HTTP.
-    fn fetch_http(&self, index_path: &str) -> Result<String, IndexError> {
+    async fn fetch_http(&self, index_path: &str) -> Result<String, IndexError> {
         let url = format!("{}/{}", self.config.index_url, index_path);
 
         let client = self
@@ -189,6 +189,7 @@ impl IndexClient {
             .get(&url)
             .header("User-Agent", "spn/0.1")
             .send()
+            .await
             .map_err(|e| IndexError::HttpError(e.to_string()))?;
 
         if response.status() == reqwest::StatusCode::NOT_FOUND {
@@ -205,6 +206,7 @@ impl IndexClient {
 
         response
             .text()
+            .await
             .map_err(|e| IndexError::HttpError(e.to_string()))
     }
 
@@ -274,20 +276,21 @@ mod tests {
         (temp, config)
     }
 
-    #[test]
-    fn test_fetch_package_local() {
+    #[tokio::test]
+    async fn test_fetch_package_local() {
         let (_temp, config) = setup_local_index();
         let client = IndexClient::with_config(config);
 
         let entries = client
             .fetch_package("@workflows/data/json-transformer")
+            .await
             .unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].version, "1.0.0");
     }
 
-    #[test]
-    fn test_fetch_latest() {
+    #[tokio::test]
+    async fn test_fetch_latest() {
         let (temp, config) = setup_local_index();
 
         // Add second version
@@ -301,12 +304,13 @@ mod tests {
         let client = IndexClient::with_config(config);
         let latest = client
             .fetch_latest("@workflows/data/json-transformer")
+            .await
             .unwrap();
         assert_eq!(latest.version, "1.1.0");
     }
 
-    #[test]
-    fn test_fetch_specific_version() {
+    #[tokio::test]
+    async fn test_fetch_specific_version() {
         let (temp, config) = setup_local_index();
 
         // Add second version
@@ -320,24 +324,25 @@ mod tests {
         let client = IndexClient::with_config(config);
         let v1 = client
             .fetch_version("@workflows/data/json-transformer", "1.0.0")
+            .await
             .unwrap();
         assert_eq!(v1.version, "1.0.0");
         assert_eq!(v1.cksum, "sha256:test123");
     }
 
-    #[test]
-    fn test_package_not_found() {
+    #[tokio::test]
+    async fn test_package_not_found() {
         let (_temp, config) = setup_local_index();
         let client = IndexClient::with_config(config);
 
-        let result = client.fetch_package("@workflows/nonexistent/package");
+        let result = client.fetch_package("@workflows/nonexistent/package").await;
         assert!(matches!(result, Err(IndexError::PackageNotFound(_))));
     }
 
-    #[test]
-    fn test_invalid_package_name() {
+    #[tokio::test]
+    async fn test_invalid_package_name() {
         let client = IndexClient::new();
-        let result = client.fetch_package("no-at-sign");
+        let result = client.fetch_package("no-at-sign").await;
         assert!(matches!(result, Err(IndexError::InvalidPackageName(_))));
     }
 
@@ -350,8 +355,8 @@ mod tests {
         assert!(url.contains("@w/data/json-transformer/1.0.0.tar.gz"));
     }
 
-    #[test]
-    fn test_yanked_version_excluded_from_latest() {
+    #[tokio::test]
+    async fn test_yanked_version_excluded_from_latest() {
         let (temp, config) = setup_local_index();
 
         // Add yanked version
@@ -365,6 +370,7 @@ mod tests {
         let client = IndexClient::with_config(config);
         let latest = client
             .fetch_latest("@workflows/data/json-transformer")
+            .await
             .unwrap();
         // Should get 1.0.0, not yanked 2.0.0
         assert_eq!(latest.version, "1.0.0");
