@@ -1,12 +1,12 @@
 <div align="center">
 
 ```
-    ███████╗██████╗ ███╗   ██╗     ██████╗██╗     ██╗
-    ██╔════╝██╔══██╗████╗  ██║    ██╔════╝██║     ██║
-    ███████╗██████╔╝██╔██╗ ██║    ██║     ██║     ██║
-    ╚════██║██╔═══╝ ██║╚██╗██║    ██║     ██║     ██║
-    ███████║██║     ██║ ╚████║    ╚██████╗███████╗██║
-    ╚══════╝╚═╝     ╚═╝  ╚═══╝     ╚═════╝╚══════╝╚═╝
+ ███████╗██████╗ ███╗   ██╗    ██████╗ ██╗     ██╗
+ ██╔════╝██╔══██╗████╗  ██║   ██╔════╝ ██║     ██║
+ ███████╗██████╔╝██╔██╗ ██║   ██║      ██║     ██║
+ ╚════██║██╔═══╝ ██║╚██╗██║   ██║      ██║     ██║
+ ███████║██║     ██║ ╚████║   ╚██████╗ ███████╗██║
+ ╚══════╝╚═╝     ╚═╝  ╚═══╝    ╚═════╝ ╚══════╝╚═╝
 ```
 
 ### 🏴‍☠️ ✨ SUPERNOVAE ✨ 🏴‍☠️ Package Manager for AI Workflows, Schemas & Agents
@@ -14,7 +14,6 @@
 [![Version](https://img.shields.io/badge/v0.6.0-black?style=for-the-badge&logo=github&logoColor=white)](https://github.com/supernovae-st/supernovae-cli/releases)
 [![Crates.io](https://img.shields.io/crates/v/spn?style=for-the-badge&logo=rust&logoColor=white&color=orange)](https://crates.io/crates/spn)
 [![License](https://img.shields.io/badge/MIT-green?style=for-the-badge)](LICENSE)
-[![Build](https://img.shields.io/github/actions/workflow/status/supernovae-st/supernovae-cli/ci.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/supernovae-st/supernovae-cli/actions)
 [![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/supernovae)
 
 **The unified CLI for the SuperNovae ecosystem**
