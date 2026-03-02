@@ -12,8 +12,9 @@
 
 use crate::error::Result;
 use crate::secrets::{
-    mask_api_key, migrate_env_to_keyring, provider_env_var, resolve_api_key, security_audit,
-    validate_key_format, SecretSource, SpnKeyring, MCP_SECRET_TYPES, SUPPORTED_PROVIDERS,
+    mask_api_key, migrate_env_to_keyring, mlock_available, mlock_limit, provider_env_var,
+    resolve_api_key, security_audit, validate_key_format, SecretSource, SpnKeyring,
+    MCP_SECRET_TYPES, SUPPORTED_PROVIDERS,
 };
 use crate::ProviderCommands;
 
@@ -63,6 +64,31 @@ async fn run_list(show_source: bool) -> Result<()> {
         }
         if in_dotenv > 0 {
             println!("  {} {} in .env files", "📄".yellow(), in_dotenv);
+        }
+
+        // Memory protection status
+        println!();
+        println!("{}", "Memory Protection:".bold());
+        if mlock_available() {
+            let limit = mlock_limit().map(|l| {
+                if l == u64::MAX {
+                    "unlimited".to_string()
+                } else {
+                    format!("{} KB", l / 1024)
+                }
+            });
+            println!(
+                "  {} {} {}",
+                "🔒".green(),
+                "mlock available".green(),
+                format!("(limit: {})", limit.unwrap_or("unknown".into())).dimmed()
+            );
+        } else {
+            println!(
+                "  {} {}",
+                "⚠".yellow(),
+                "mlock unavailable (secrets may be swapped to disk)".yellow()
+            );
         }
 
         if in_env > 0 || in_dotenv > 0 {

@@ -9,12 +9,12 @@
 //! │                     SECRETS MANAGEMENT                                      │
 //! ├─────────────────────────────────────────────────────────────────────────────┤
 //! │                                                                             │
-//! │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐ │
-//! │  │   keyring    │   │   secrecy    │   │   zeroize    │   │   dotenvy    │ │
-//! │  │  (storage)   │   │  (wrapping)  │   │ (mem wipe)   │   │  (.env load) │ │
-//! │  └──────┬───────┘   └──────┬───────┘   └──────┬───────┘   └──────┬───────┘ │
-//! │         │                  │                  │                  │          │
-//! │         ▼                  ▼                  ▼                  ▼          │
+//! │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────┐│
+//! │  │  keyring   │  │  secrecy   │  │  zeroize   │  │  dotenvy   │  │  libc  ││
+//! │  │ (storage)  │  │ (wrapping) │  │ (mem wipe) │  │ (.env)     │  │ (mlock)││
+//! │  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └───┬────┘│
+//! │        │               │               │               │              │     │
+//! │        ▼               ▼               ▼               ▼              ▼     │
 //! │  ┌─────────────────────────────────────────────────────────────────────────┐│
 //! │  │                         SpnKeyring                                      ││
 //! │  │  • OS keychain storage (macOS/Windows/Linux)                            ││
@@ -22,6 +22,14 @@
 //! │  │  • SecretString wrapping (prevent accidental exposure)                  ││
 //! │  │  • Validation per provider format                                       ││
 //! │  │  • Migration from env vars                                              ││
+//! │  └─────────────────────────────────────────────────────────────────────────┘│
+//! │                                                                             │
+//! │  ┌─────────────────────────────────────────────────────────────────────────┐│
+//! │  │                        LockedBuffer / LockedString                      ││
+//! │  │  • mlock() - prevents memory from being swapped to disk                 ││
+//! │  │  • MADV_DONTDUMP - excludes from core dumps (Linux)                     ││
+//! │  │  • Automatic zeroize on drop                                            ││
+//! │  │  • Debug/Display redaction                                              ││
 //! │  └─────────────────────────────────────────────────────────────────────────┘│
 //! │                                                                             │
 //! │  Key Resolution Priority:                                                   │
@@ -64,12 +72,14 @@
 //! 4. **Validate early** - Keys are validated before storage
 
 mod keyring;
+pub mod memory;
 mod types;
 
 pub use keyring::{
     has_any_keys, mask_api_key, migrate_env_to_keyring, provider_env_var, resolve_api_key,
     security_audit, validate_key_format, KeyringError, MigrationReport, SpnKeyring,
 };
+pub use memory::{mlock_available, mlock_limit, LockedBuffer, LockedString, MemoryError};
 pub use types::{
     mask_key, ProviderKey, SecretSource, SecureBuffer, SecureString, MCP_SECRET_TYPES,
     SUPPORTED_PROVIDERS,

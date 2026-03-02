@@ -67,6 +67,7 @@ keyring = { version = "3", features = ["apple-native", "windows-native", "sync-s
 secrecy = { version = "0.10", features = ["serde"] }  # Secret wrappers
 zeroize = { version = "1", features = ["derive"] }    # Memory wipe on drop
 dotenvy = "0.15"                                      # Safe .env loading
+libc = "0.2"                                          # mlock/madvise for memory protection
 
 # Performance (v0.6.0)
 rustc-hash = "2.1"                                    # FxHashMap (2-5x faster)
