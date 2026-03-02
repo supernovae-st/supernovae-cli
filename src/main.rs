@@ -21,6 +21,7 @@ mod error;
 mod index;
 mod interop;
 mod manifest;
+mod mcp;
 mod storage;
 mod sync;
 
@@ -205,13 +206,55 @@ enum McpCommands {
     Add {
         /// Server alias or npm package
         name: String,
+
+        /// Install to global config (~/.spn/mcp.yaml)
+        #[arg(short, long)]
+        global: bool,
+
+        /// Install to project config (.spn/mcp.yaml)
+        #[arg(short, long)]
+        project: bool,
+
+        /// Skip syncing to editors
+        #[arg(long)]
+        no_sync: bool,
+
+        /// Sync only to specific editors (comma-separated)
+        #[arg(long)]
+        sync_to: Option<String>,
     },
     /// Remove an MCP server
-    Remove { name: String },
+    Remove {
+        /// Server name
+        name: String,
+
+        /// Remove from global config
+        #[arg(short, long)]
+        global: bool,
+
+        /// Remove from project config
+        #[arg(short, long)]
+        project: bool,
+    },
     /// List installed MCP servers
-    List,
+    List {
+        /// Show only global servers
+        #[arg(short, long)]
+        global: bool,
+
+        /// Show only project servers
+        #[arg(short, long)]
+        project: bool,
+
+        /// Show as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Test MCP server connection
-    Test { name: String },
+    Test {
+        /// Server name (or "all" to test all)
+        name: String,
+    },
 }
 
 #[derive(Subcommand)]
