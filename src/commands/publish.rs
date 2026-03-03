@@ -113,7 +113,10 @@ async fn publish_package(_dir: &Path, manifest: &SpnManifest) -> Result<()> {
     let scope = manifest.name.split('/').next().unwrap_or("");
 
     if !valid_scopes.contains(&scope) {
-        println!("   ⚠️  Scope '{}' is not a standard SuperNovae scope", scope);
+        println!(
+            "   ⚠️  Scope '{}' is not a standard SuperNovae scope",
+            scope
+        );
         println!("   Standard scopes: @nika, @novanet, @workflows, @shared");
     }
 

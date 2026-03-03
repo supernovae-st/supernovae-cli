@@ -14,12 +14,12 @@
 
 # 🌟 SuperNovae CLI
 
-### Universal Package Manager for AI Workflows
+### One config. Every AI tool.
 
-<sup>✨ One CLI to rule them all: Workflows, Skills, MCP Servers, and Agents ✨</sup>
+<sup>✨ MCP servers • LLM providers • Packages • Secrets — all in one CLI ✨</sup>
 
 <!-- Primary Badges -->
-[![Version](https://img.shields.io/badge/v0.8.0-000000?style=for-the-badge&logo=semver&logoColor=white&labelColor=6366f1)](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.8.0)
+[![Version](https://img.shields.io/badge/v0.8.1-000000?style=for-the-badge&logo=semver&logoColor=white&labelColor=6366f1)](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.8.1)
 [![Rust](https://img.shields.io/badge/rust_1.86+-f97316?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/MIT-10b981?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 [![Website](https://img.shields.io/badge/🌟_spn.sh-8b5cf6?style=for-the-badge)](https://supernovae.studio)
@@ -48,8 +48,8 @@
 
 ---
 
-**spn** is the universal package manager for the SuperNovae AI ecosystem.<br>
-Manage workflows, skills, MCP servers, and agents with a single command.
+**spn** — **One config. Every AI tool.**<br>
+MCP servers, LLM providers, packages, and secrets. Works with **Ollama**, **Claude**, **OpenAI**, and **any AI editor** (Claude Code, Cursor, Windsurf, Continue.dev).
 
 <br>
 
@@ -58,9 +58,10 @@ Manage workflows, skills, MCP servers, and agents with a single command.
     ║                                                                       ║
     ║   🌟  "One command. Infinite possibilities."                          ║
     ║                                                                       ║
-    ║       • Three-level config        • Selective sync                    ║
-    ║       • OS Keychain security      • 48 MCP aliases                    ║
-    ║       • 57K+ skills.sh            • Native Nika + NovaNet             ║
+    ║       • 7 LLM providers           • Any AI editor                     ║
+    ║       • 48 MCP server aliases     • OS Keychain secrets               ║
+    ║       • 57K+ skills.sh            • Three-level config                ║
+    ║       • Nika direct integration   • Open source first                 ║
     ║                                                                       ║
     ╚═══════════════════════════════════════════════════════════════════════╝
 ```
@@ -73,14 +74,14 @@ Manage workflows, skills, MCP servers, and agents with a single command.
 
 ## ✨ Highlights
 
-- 🚀 **Unified CLI** — One tool for [Nika](https://github.com/supernovae-st/nika) (runtime) + [NovaNet](https://github.com/supernovae-st/novanet) (knowledge graph)
+- 🦙 **Open Source First** — Works with [Ollama](https://ollama.ai), [Continue.dev](https://continue.dev), and local models out of the box
+- 🤖 **7 LLM Providers** — Claude, OpenAI, Mistral, Groq, DeepSeek, Gemini, Ollama
+- 🦋 **Nika Direct Integration** — MCP configs read directly from `~/.spn/mcp.yaml` (no sync needed)
 - 📦 **Rich Ecosystem** — 48 MCP server aliases, 57K+ skills from [skills.sh](https://skills.sh)
-- 🔐 **Secure by Design** — OS Keychain integration with memory protection (v0.6.0)
+- 🔐 **Secure by Design** — OS Keychain integration with memory protection
 - ⚡ **Cargo-style Index** — Sparse registry for lightning-fast package resolution
-- 🎯 **Three-Level Config** — Global/Team/Local scope hierarchy (v0.7.0)
-- 🔄 **Selective Sync** — Only sync what needs syncing (v0.7.0)
-- 🚀 **Onboarding Wizard** — Interactive setup for first-time users (v0.8.0)
-- 🔑 **Secrets Management** — Doctor, export, import with SOPS support (v0.8.0)
+- 🎯 **Three-Level Config** — Global/Team/Local scope hierarchy (like git)
+- 🔄 **Universal Sync** — Claude Code, Cursor, Windsurf, VS Code — any AI editor
 
 <br>
 
@@ -139,7 +140,7 @@ cargo install --path .
 ### Verify Installation
 
 ```bash
-spn --version  # spn 0.8.0
+spn --version  # spn 0.8.1
 spn doctor     # System diagnostic
 ```
 
@@ -908,17 +909,19 @@ spn setup --verbose
 4. Configures default providers
 5. Sets up MCP server aliases
 
-**Provider Information:**
+**Provider Information (Open Source First):**
 
-| Provider | Signup URL | Description |
-|:---------|:-----------|:------------|
-| Anthropic | [console.anthropic.com](https://console.anthropic.com/settings/keys) | Best for complex reasoning, coding, extended thinking |
-| OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | Versatile, great for chat and embeddings |
-| Mistral | [console.mistral.ai](https://console.mistral.ai/api-keys) | European, strong code generation |
-| Groq | [console.groq.com](https://console.groq.com/keys) | Fastest inference, great for real-time |
-| DeepSeek | [platform.deepseek.com](https://platform.deepseek.com/api_keys) | Cost-effective, strong reasoning |
-| Gemini | [aistudio.google.com](https://aistudio.google.com/app/apikey) | Google's model, multimodal capabilities |
-| Ollama | [ollama.ai](https://ollama.ai) | Local inference, no API key needed |
+| Provider | Signup URL | Description | Cost |
+|:---------|:-----------|:------------|:-----|
+| 🦙 **Ollama** | [ollama.ai](https://ollama.ai) | Local inference, full privacy, no API key | **Free** |
+| Anthropic | [console.anthropic.com](https://console.anthropic.com/settings/keys) | Best for complex reasoning, extended thinking | Paid |
+| OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | Versatile, great for chat and embeddings | Paid |
+| Mistral | [console.mistral.ai](https://console.mistral.ai/api-keys) | European, strong code generation | Paid |
+| Groq | [console.groq.com](https://console.groq.com/keys) | Fastest inference, great for real-time | Free tier |
+| DeepSeek | [platform.deepseek.com](https://platform.deepseek.com/api_keys) | Cost-effective, strong reasoning | Paid |
+| Gemini | [aistudio.google.com](https://aistudio.google.com/app/apikey) | Google's model, multimodal capabilities | Free tier |
+
+> 💡 **Tip:** Start with Ollama for local development — no API keys, no costs, full privacy.
 
 <br>
 
@@ -1209,23 +1212,23 @@ Connection test: Not implemented yet
 Key is valid and ready to use!
 ```
 
-**Supported Providers:**
+**Supported Providers (7 LLM + 6 MCP):**
 
-| Type | Provider | Environment Variable | Key Format |
-|:-----|:---------|:---------------------|:-----------|
-| LLM | anthropic | `ANTHROPIC_API_KEY` | `sk-ant-api03-...` |
-| LLM | openai | `OPENAI_API_KEY` | `sk-...` |
-| LLM | mistral | `MISTRAL_API_KEY` | `...` |
-| LLM | groq | `GROQ_API_KEY` | `gsk_...` |
-| LLM | deepseek | `DEEPSEEK_API_KEY` | `...` |
-| LLM | gemini | `GOOGLE_API_KEY` | `AI...` |
-| LLM | ollama | `OLLAMA_HOST` | `http://...` |
-| MCP | neo4j | `NEO4J_PASSWORD` | `...` |
-| MCP | github | `GITHUB_TOKEN` | `ghp_...` |
-| MCP | slack | `SLACK_TOKEN` | `xoxb-...` |
-| MCP | perplexity | `PERPLEXITY_API_KEY` | `...` |
-| MCP | firecrawl | `FIRECRAWL_API_KEY` | `fc-...` |
-| MCP | supadata | `SUPADATA_API_KEY` | `...` |
+| Type | Provider | Environment Variable | Key Format | Notes |
+|:-----|:---------|:---------------------|:-----------|:------|
+| 🦙 LLM | **ollama** | `OLLAMA_HOST` | `http://...` | Local, free, private |
+| LLM | anthropic | `ANTHROPIC_API_KEY` | `sk-ant-api03-...` | Claude models |
+| LLM | openai | `OPENAI_API_KEY` | `sk-...` | GPT models |
+| LLM | mistral | `MISTRAL_API_KEY` | `...` | EU provider |
+| LLM | groq | `GROQ_API_KEY` | `gsk_...` | Fast inference |
+| LLM | deepseek | `DEEPSEEK_API_KEY` | `...` | Cost-effective |
+| LLM | gemini | `GOOGLE_API_KEY` | `AI...` | Multimodal |
+| MCP | neo4j | `NEO4J_PASSWORD` | `...` | Graph database |
+| MCP | github | `GITHUB_TOKEN` | `ghp_...` | Code integration |
+| MCP | slack | `SLACK_TOKEN` | `xoxb-...` | Team messaging |
+| MCP | perplexity | `PERPLEXITY_API_KEY` | `...` | AI search |
+| MCP | firecrawl | `FIRECRAWL_API_KEY` | `fc-...` | Web scraping |
+| MCP | supadata | `SUPADATA_API_KEY` | `...` | Data API |
 
 <br>
 
@@ -1496,6 +1499,10 @@ Server is healthy and ready to use!
 
 ### 🦋 Nika Integration
 
+> 🎯 **Direct Integration:** Nika reads MCP configs **directly** from `~/.spn/mcp.yaml` — no sync required!
+>
+> This means your MCP servers are instantly available to Nika workflows without running `spn sync`.
+
 Commands for interacting with the Nika workflow runtime.
 
 #### `spn nk run <file>`
@@ -1659,6 +1666,10 @@ spn nv db reset
 
 ### 🔄 Sync & Editor Integration
 
+> 🦋 **Nika Exception:** Nika reads `~/.spn/mcp.yaml` **directly** — no sync required for Nika workflows.
+>
+> The sync command is only needed for **IDE integration** (Claude Code, Cursor, Windsurf).
+
 Commands for syncing packages to editor configurations.
 
 #### `spn sync [options]`
@@ -1813,7 +1824,7 @@ spn doctor
 🏥 SuperNovae System Diagnostic
 
 Installation:
-  ✅ spn v0.8.0 installed
+  ✅ spn v0.8.1 installed
   ✅ nika v0.17.5 available
   ✅ novanet v0.14.0 available
 
@@ -2083,7 +2094,7 @@ Resolved package versions (committed to git).
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818cf8', 'lineColor': '#a5b4fc', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#312e81'}}}%%
 flowchart TB
-    subgraph SPN["🌟 spn — Package Manager v0.8.0"]
+    subgraph SPN["🌟 spn — Package Manager v0.8.1"]
         direction LR
         subgraph OWNED["We Own"]
             W["📋 workflows/<br/>YAML DAGs"]
@@ -2141,11 +2152,11 @@ flowchart TB
 
 | Mascot | Role | Description |
 |--------|------|-------------|
+| **spn** 🌟 | CLI | One config. Every AI tool — MCP servers, providers, packages, secrets |
 | **Nika** 🦋 | Runtime | Orchestrates workflows via 5 semantic verbs: `infer`, `exec`, `fetch`, `invoke`, `agent` |
 | **NovaNet** 🧠 | Brain | Knowledge graph for localization, entities, and semantic relationships |
-| **spn** 🌟 | Manager | Unified package management with three-level config hierarchy |
 
-> **Note:** Nika is NOT an agent. Nika is the runtime that *orchestrates* agents.
+> **Note:** Nika reads MCP configs directly from `~/.spn/mcp.yaml` — no sync needed between spn and Nika.
 
 <br>
 
@@ -2419,6 +2430,6 @@ src/
 
 <br>
 
-<sup>v0.8.0 — Onboarding Wizard • Secrets Management • Setup Command • Provider Signup URLs</sup>
+<sup>v0.8.1 — Zero Clippy Warnings • Open Source First • Nika Direct Integration • 7 LLM Providers</sup>
 
 </div>

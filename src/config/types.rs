@@ -134,16 +134,14 @@ mod tests {
     #[test]
     fn test_config_merge() {
         let mut base = Config {
-            providers: FxHashMap::from_iter([
-                (
-                    "anthropic".to_string(),
-                    ProviderConfig {
-                        model: Some("claude-sonnet-4-5".to_string()),
-                        endpoint: None,
-                        extra: FxHashMap::default(),
-                    },
-                ),
-            ]),
+            providers: FxHashMap::from_iter([(
+                "anthropic".to_string(),
+                ProviderConfig {
+                    model: Some("claude-sonnet-4-5".to_string()),
+                    endpoint: None,
+                    extra: FxHashMap::default(),
+                },
+            )]),
             sync: SyncConfig {
                 enabled_editors: vec!["claude-code".to_string()],
                 auto_sync: false,
@@ -153,16 +151,14 @@ mod tests {
         };
 
         let override_config = Config {
-            providers: FxHashMap::from_iter([
-                (
-                    "anthropic".to_string(),
-                    ProviderConfig {
-                        model: Some("claude-opus-4-5".to_string()),
-                        endpoint: None,
-                        extra: FxHashMap::default(),
-                    },
-                ),
-            ]),
+            providers: FxHashMap::from_iter([(
+                "anthropic".to_string(),
+                ProviderConfig {
+                    model: Some("claude-opus-4-5".to_string()),
+                    endpoint: None,
+                    extra: FxHashMap::default(),
+                },
+            )]),
             sync: SyncConfig {
                 enabled_editors: vec![],
                 auto_sync: true,

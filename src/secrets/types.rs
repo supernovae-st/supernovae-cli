@@ -229,7 +229,9 @@ mod tests {
 
     #[test]
     fn test_secret_source_security_level() {
-        assert!(SecretSource::Keychain.security_level() > SecretSource::Environment.security_level());
+        assert!(
+            SecretSource::Keychain.security_level() > SecretSource::Environment.security_level()
+        );
         assert!(SecretSource::Environment.security_level() > SecretSource::DotEnv.security_level());
         assert!(SecretSource::DotEnv.security_level() > SecretSource::Inline.security_level());
     }

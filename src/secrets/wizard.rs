@@ -99,20 +99,17 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     println!();
     println!(
         "{}",
-        "╔═══════════════════════════════════════════════════════════════════════════════╗"
+        "╔═══════════════════════════════════════════════════════════════════════════════╗".cyan()
+    );
+    println!(
+        "{}",
+        "║  🔑 API KEY SETUP WIZARD                                                      ║"
+            .to_string()
             .cyan()
     );
     println!(
         "{}",
-        format!(
-            "║  🔑 API KEY SETUP WIZARD                                                      ║"
-        )
-        .cyan()
-    );
-    println!(
-        "{}",
-        "╠═══════════════════════════════════════════════════════════════════════════════╣"
-            .cyan()
+        "╠═══════════════════════════════════════════════════════════════════════════════╣".cyan()
     );
     println!(
         "{}",
@@ -125,8 +122,7 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     );
     println!(
         "{}",
-        "╚═══════════════════════════════════════════════════════════════════════════════╝"
-            .cyan()
+        "╚═══════════════════════════════════════════════════════════════════════════════╝".cyan()
     );
     println!();
 
@@ -145,7 +141,8 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     println!();
     println!(
         "{}",
-        "Where should this API key be stored? Each option has different security tradeoffs:".dimmed()
+        "Where should this API key be stored? Each option has different security tradeoffs:"
+            .dimmed()
     );
     println!();
 
@@ -153,7 +150,11 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     let items: Vec<String> = STORAGE_OPTIONS
         .iter()
         .map(|opt| {
-            let rec = if opt.recommended { " ← Recommended" } else { "" };
+            let rec = if opt.recommended {
+                " ← Recommended"
+            } else {
+                ""
+            };
             format!(
                 "{}{}\n      {}\n      {}",
                 opt.title,
@@ -360,8 +361,7 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
 
     println!(
         "{}",
-        "╭─────────────────────────────────────────────────────────────────────────────╮"
-            .cyan()
+        "╭─────────────────────────────────────────────────────────────────────────────╮".cyan()
     );
     println!(
         "{}",
@@ -369,8 +369,7 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     );
     println!(
         "{}",
-        "├─────────────────────────────────────────────────────────────────────────────┤"
-            .cyan()
+        "├─────────────────────────────────────────────────────────────────────────────┤".cyan()
     );
     println!(
         "{}",
@@ -398,8 +397,7 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     );
     println!(
         "{}",
-        "╰─────────────────────────────────────────────────────────────────────────────╯"
-            .cyan()
+        "╰─────────────────────────────────────────────────────────────────────────────╯".cyan()
     );
     println!();
 
@@ -430,12 +428,12 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
             println!();
             println!("{}", "Export command:".bold());
             println!();
-            println!(
-                "  {}",
-                format!("export {}='{}'", env_var, *api_key).cyan()
-            );
+            println!("  {}", format!("export {}='{}'", env_var, *api_key).cyan());
             println!();
-            println!("{}", "Copy this command and add it to your shell profile:".dimmed());
+            println!(
+                "{}",
+                "Copy this command and add it to your shell profile:".dimmed()
+            );
             println!("  • {} for Zsh", "~/.zshrc".cyan());
             println!("  • {} for Bash", "~/.bashrc".cyan());
             println!();
@@ -528,11 +526,7 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
 }
 
 /// Run a quick non-interactive setup (for scripting).
-pub fn run_quick_setup(
-    provider: &str,
-    key: &str,
-    storage: StorageBackend,
-) -> Result<WizardResult> {
+pub fn run_quick_setup(provider: &str, key: &str, storage: StorageBackend) -> Result<WizardResult> {
     let api_key = Zeroizing::new(key.to_string());
 
     // Validate

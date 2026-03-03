@@ -11,11 +11,11 @@ use std::path::PathBuf;
 use colored::Colorize;
 
 use crate::error::Result;
+use crate::interop::skills::SkillsClient;
 use crate::mcp::config_manager;
 use crate::storage::LocalStorage;
 use crate::sync::adapters::detect_ides;
 use crate::sync::config::SyncConfig;
-use crate::interop::skills::SkillsClient;
 
 /// Run the status command.
 pub async fn run(json: bool) -> Result<()> {
@@ -77,10 +77,7 @@ async fn run_display() -> Result<()> {
         println!("    Install with: {}", "spn add <package>".cyan());
     } else {
         for (name, path) in &packages {
-            let version = path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("?");
+            let version = path.file_name().and_then(|s| s.to_str()).unwrap_or("?");
             println!("  {} {} {}", "✓".green(), name.bold(), version.dimmed());
         }
     }
@@ -107,7 +104,10 @@ async fn run_display() -> Result<()> {
     let sync_config = SyncConfig::load().unwrap_or_default();
 
     if detected.is_empty() {
-        println!("  {} No editors detected in current directory", "→".dimmed());
+        println!(
+            "  {} No editors detected in current directory",
+            "→".dimmed()
+        );
     } else {
         for target in detected {
             let enabled = if sync_config.is_enabled(target) {
@@ -115,7 +115,12 @@ async fn run_display() -> Result<()> {
             } else {
                 "○".dimmed()
             };
-            println!("  {} {} {}", enabled, target.display_name().bold(), target.config_dir().dimmed());
+            println!(
+                "  {} {} {}",
+                enabled,
+                target.display_name().bold(),
+                target.config_dir().dimmed()
+            );
         }
     }
 
@@ -123,7 +128,13 @@ async fn run_display() -> Result<()> {
     println!();
     println!("{}", "Config Files".cyan().bold());
     let global_mcp = crate::mcp::McpConfigManager::default_global_path();
-    let exists_badge = |exists: bool| if exists { "✓".green() } else { "○".dimmed() };
+    let exists_badge = |exists: bool| {
+        if exists {
+            "✓".green()
+        } else {
+            "○".dimmed()
+        }
+    };
 
     println!(
         "  {} {} {}",

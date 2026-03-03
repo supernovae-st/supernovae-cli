@@ -159,7 +159,10 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
     };
 
     if targets.is_empty() {
-        println!("{}", "⚠️  No IDE configurations found in current directory.".yellow());
+        println!(
+            "{}",
+            "⚠️  No IDE configurations found in current directory.".yellow()
+        );
         println!("   Create .claude/, .cursor/, .vscode/, or .windsurf/ to enable sync.");
         return Ok(());
     }
@@ -194,12 +197,7 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
             }
             mcp_synced += result.servers_synced;
         } else if let Some(err) = &result.error {
-            println!(
-                "  {} {}: {}",
-                "✗".red(),
-                result.target.display_name(),
-                err
-            );
+            println!("  {} {}: {}", "✗".red(), result.target.display_name(), err);
             mcp_errors.push(err.clone());
         }
     }
@@ -266,7 +264,11 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
 
                 if dry_run {
                     if !manifest.skills.is_empty() {
-                        println!("  Would link {} skills from {}", manifest.skills.len(), name);
+                        println!(
+                            "  Would link {} skills from {}",
+                            manifest.skills.len(),
+                            name
+                        );
                     }
                     if !manifest.hooks.is_empty() {
                         println!("  Would link {} hooks from {}", manifest.hooks.len(), name);
@@ -340,9 +342,8 @@ async fn run_interactive_sync(config: &SyncConfig, target_filter: Option<&str>) 
 
     // Determine targets
     let targets: Vec<IdeTarget> = if let Some(filter) = target_filter {
-        let target = IdeTarget::from_str(filter).ok_or_else(|| {
-            SpnError::ConfigError(format!("Unknown target: {}", filter))
-        })?;
+        let target = IdeTarget::from_str(filter)
+            .ok_or_else(|| SpnError::ConfigError(format!("Unknown target: {}", filter)))?;
         vec![target]
     } else if config.enabled_targets.is_empty() {
         detect_ides(&cwd)
@@ -351,7 +352,10 @@ async fn run_interactive_sync(config: &SyncConfig, target_filter: Option<&str>) 
     };
 
     if targets.is_empty() {
-        println!("{}", "⚠️  No IDE configurations found in current directory.".yellow());
+        println!(
+            "{}",
+            "⚠️  No IDE configurations found in current directory.".yellow()
+        );
         return Ok(());
     }
 
@@ -387,11 +391,7 @@ async fn run_interactive_sync(config: &SyncConfig, target_filter: Option<&str>) 
 
             // Only add to diff if content changed
             if old_content != new_content {
-                diff_batch.add(
-                    config_path.display().to_string(),
-                    old_content,
-                    new_content,
-                );
+                diff_batch.add(config_path.display().to_string(), old_content, new_content);
             }
         }
     }
@@ -418,10 +418,7 @@ async fn run_interactive_sync(config: &SyncConfig, target_filter: Option<&str>) 
 }
 
 /// Generate MCP config preview for a target.
-fn generate_mcp_config_preview(
-    target: &IdeTarget,
-    mcp_config: &crate::mcp::McpConfig,
-) -> String {
+fn generate_mcp_config_preview(target: &IdeTarget, mcp_config: &crate::mcp::McpConfig) -> String {
     use serde_json::json;
 
     let mcp_servers: serde_json::Map<String, serde_json::Value> = mcp_config

@@ -34,7 +34,8 @@ pub async fn run(query: &str) -> Result<()> {
     let query_lower = query.to_lowercase();
 
     // Fetch registry metadata to get package list
-    let registry_url = "https://raw.githubusercontent.com/supernovae-st/supernovae-registry/main/registry.json";
+    let registry_url =
+        "https://raw.githubusercontent.com/supernovae-st/supernovae-registry/main/registry.json";
 
     let http_client = reqwest::Client::new();
     let response = http_client
@@ -50,9 +51,7 @@ pub async fn run(query: &str) -> Result<()> {
         )));
     }
 
-    let metadata: RegistryMetadata = response
-        .json()
-        .await?;
+    let metadata: RegistryMetadata = response.json().await?;
 
     // Search through packages
     let mut results = Vec::new();
@@ -100,7 +99,11 @@ pub async fn run(query: &str) -> Result<()> {
 
     // Display results
     if results.is_empty() {
-        println!("   {} No packages found matching '{}'", "ℹ️".yellow(), query);
+        println!(
+            "   {} No packages found matching '{}'",
+            "ℹ️".yellow(),
+            query
+        );
         println!();
         println!("   Try:");
         println!("   • Check spelling");
@@ -138,7 +141,11 @@ pub async fn run(query: &str) -> Result<()> {
     }
 
     if results.len() > 20 {
-        println!("   {} {} more results not shown", "ℹ️".yellow(), results.len() - 20);
+        println!(
+            "   {} {} more results not shown",
+            "ℹ️".yellow(),
+            results.len() - 20
+        );
         println!();
     }
 

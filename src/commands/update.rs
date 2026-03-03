@@ -10,8 +10,8 @@ use crate::storage::LocalStorage;
 
 /// Run the update command.
 pub async fn run(package: Option<&str>) -> Result<()> {
-    let storage = LocalStorage::new()
-        .map_err(|e| SpnError::ConfigError(format!("Storage error: {}", e)))?;
+    let storage =
+        LocalStorage::new().map_err(|e| SpnError::ConfigError(format!("Storage error: {}", e)))?;
 
     let state = storage
         .load_state()
@@ -69,13 +69,14 @@ pub async fn run(package: Option<&str>) -> Result<()> {
                 );
 
                 // Download and install new version
-                let downloaded = downloader.download_entry(&latest).await.map_err(|e| {
-                    SpnError::ConfigError(format!("Download failed: {}", e))
-                })?;
+                let downloaded = downloader
+                    .download_entry(&latest)
+                    .await
+                    .map_err(|e| SpnError::ConfigError(format!("Download failed: {}", e)))?;
 
-                storage.install(&downloaded).map_err(|e| {
-                    SpnError::ConfigError(format!("Install failed: {}", e))
-                })?;
+                storage
+                    .install(&downloaded)
+                    .map_err(|e| SpnError::ConfigError(format!("Install failed: {}", e)))?;
 
                 updated_count += 1;
             }

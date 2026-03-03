@@ -3,8 +3,8 @@
 //! Manages NovaNet schemas (node classes, arc classes).
 //! This is a proxy to `novanet schema` commands.
 
-use crate::SchemaCommands;
 use crate::error::{CliError, Result};
+use crate::SchemaCommands;
 
 pub async fn run(command: SchemaCommands) -> Result<()> {
     // Check if novanet is available
@@ -55,7 +55,10 @@ async fn schema_status() -> Result<()> {
             }
         }
         Err(e) => {
-            return Err(CliError::CommandFailed(format!("novanet schema status: {}", e)));
+            return Err(CliError::CommandFailed(format!(
+                "novanet schema status: {}",
+                e
+            )));
         }
     }
 
@@ -77,7 +80,10 @@ async fn schema_validate() -> Result<()> {
             }
         }
         Err(e) => {
-            return Err(CliError::CommandFailed(format!("novanet schema validate: {}", e)));
+            return Err(CliError::CommandFailed(format!(
+                "novanet schema validate: {}",
+                e
+            )));
         }
     }
 
@@ -100,7 +106,10 @@ async fn schema_resolve() -> Result<()> {
             }
         }
         Err(e) => {
-            return Err(CliError::CommandFailed(format!("novanet schema resolve: {}", e)));
+            return Err(CliError::CommandFailed(format!(
+                "novanet schema resolve: {}",
+                e
+            )));
         }
     }
 
@@ -128,7 +137,10 @@ async fn schema_diff() -> Result<()> {
             }
         }
         Err(e) => {
-            return Err(CliError::CommandFailed(format!("novanet schema diff: {}", e)));
+            return Err(CliError::CommandFailed(format!(
+                "novanet schema diff: {}",
+                e
+            )));
         }
     }
 
@@ -151,7 +163,10 @@ async fn schema_exclude(name: &str) -> Result<()> {
             }
         }
         Err(e) => {
-            return Err(CliError::CommandFailed(format!("novanet schema exclude: {}", e)));
+            return Err(CliError::CommandFailed(format!(
+                "novanet schema exclude: {}",
+                e
+            )));
         }
     }
 
@@ -174,7 +189,10 @@ async fn schema_include(name: &str) -> Result<()> {
             }
         }
         Err(e) => {
-            return Err(CliError::CommandFailed(format!("novanet schema include: {}", e)));
+            return Err(CliError::CommandFailed(format!(
+                "novanet schema include: {}",
+                e
+            )));
         }
     }
 

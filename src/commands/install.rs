@@ -22,7 +22,6 @@ pub struct InstallOptions {
     pub production: bool,
 }
 
-
 /// Run the install command.
 pub async fn run(frozen: bool) -> Result<()> {
     let options = InstallOptions {
@@ -107,9 +106,12 @@ pub async fn run_with_options(options: InstallOptions) -> Result<()> {
                     SpnError::ConfigError(format!("Package {} not in lockfile (frozen mode)", name))
                 })?;
 
-            client.fetch_version(name, &locked.version).await.map_err(|e| {
-                SpnError::PackageNotFound(format!("{}@{}: {}", name, locked.version, e))
-            })?
+            client
+                .fetch_version(name, &locked.version)
+                .await
+                .map_err(|e| {
+                    SpnError::PackageNotFound(format!("{}@{}: {}", name, locked.version, e))
+                })?
         } else {
             // Resolve latest matching version
             client

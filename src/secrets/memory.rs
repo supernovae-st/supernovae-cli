@@ -52,8 +52,15 @@ impl std::fmt::Display for MemoryError {
             Self::AllocationFailed => write!(f, "Failed to allocate memory"),
             Self::LockFailed(errno) => write!(f, "mlock failed with errno {}", errno),
             Self::MadviseFailed(errno) => write!(f, "madvise failed with errno {}", errno),
-            Self::Overflow { capacity, requested } => {
-                write!(f, "Buffer overflow: capacity {}, requested {}", capacity, requested)
+            Self::Overflow {
+                capacity,
+                requested,
+            } => {
+                write!(
+                    f,
+                    "Buffer overflow: capacity {}, requested {}",
+                    capacity, requested
+                )
             }
         }
     }
@@ -148,9 +155,8 @@ impl LockedBuffer {
     /// Try to lock memory pages in RAM.
     #[cfg(unix)]
     fn try_lock(&mut self) -> Result<(), MemoryError> {
-        let result = unsafe {
-            libc::mlock(self.ptr.as_ptr() as *const libc::c_void, self.layout.size())
-        };
+        let result =
+            unsafe { libc::mlock(self.ptr.as_ptr() as *const libc::c_void, self.layout.size()) };
 
         if result == 0 {
             self.locked = true;
@@ -389,7 +395,7 @@ pub fn mlock_limit() -> Option<u64> {
         if rlim.rlim_cur == libc::RLIM_INFINITY {
             Some(u64::MAX)
         } else {
-            Some(rlim.rlim_cur as u64)
+            Some(rlim.rlim_cur)
         }
     } else {
         None

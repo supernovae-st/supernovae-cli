@@ -345,12 +345,14 @@ impl LocalStorage {
                 if let Ok(content) = std::fs::read_to_string(path) {
                     if let Ok(manifest) = serde_yaml::from_str::<serde_yaml::Value>(&content) {
                         // Extract package info
-                        let name = manifest.get("name")
+                        let name = manifest
+                            .get("name")
                             .and_then(|v| v.as_str())
                             .unwrap_or("unknown")
                             .to_string();
 
-                        let version = manifest.get("version")
+                        let version = manifest
+                            .get("version")
                             .and_then(|v| v.as_str())
                             .unwrap_or("0.0.0")
                             .to_string();

@@ -78,7 +78,7 @@ pub struct McpConfig {
 }
 
 /// Integration configuration for package.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct IntegrationConfig {
     /// Whether this package requires filesystem sync to editors.
     #[serde(default)]
@@ -87,15 +87,6 @@ pub struct IntegrationConfig {
     /// List of editors this package supports.
     #[serde(default)]
     pub editors: Vec<String>,
-}
-
-impl Default for IntegrationConfig {
-    fn default() -> Self {
-        Self {
-            requires_sync: false,
-            editors: vec![],
-        }
-    }
 }
 
 /// Package type derived from name.
@@ -140,13 +131,13 @@ impl PackageType {
     /// Get default requires_sync value for this package type.
     pub fn default_requires_sync(&self) -> bool {
         match self {
-            Self::Skills => true,  // Skills need .claude/skills/
-            Self::Workflows => false,  // Standalone nika execution
-            Self::Agents => false,  // nika CLI subagents
-            Self::Prompts => false,  // No editor integration
-            Self::Jobs => false,  // No editor integration
-            Self::Schemas => false,  // No editor integration
-            Self::Unknown => false,  // Conservative default
+            Self::Skills => true,     // Skills need .claude/skills/
+            Self::Workflows => false, // Standalone nika execution
+            Self::Agents => false,    // nika CLI subagents
+            Self::Prompts => false,   // No editor integration
+            Self::Jobs => false,      // No editor integration
+            Self::Schemas => false,   // No editor integration
+            Self::Unknown => false,   // Conservative default
         }
     }
 }
@@ -328,10 +319,7 @@ mod tests {
             PackageType::Prompts
         );
         assert_eq!(PackageType::from_name("@jobs/daily"), PackageType::Jobs);
-        assert_eq!(
-            PackageType::from_name("@schemas/api"),
-            PackageType::Schemas
-        );
+        assert_eq!(PackageType::from_name("@schemas/api"), PackageType::Schemas);
         assert_eq!(
             PackageType::from_name("unknown-package"),
             PackageType::Unknown

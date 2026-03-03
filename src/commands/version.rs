@@ -27,9 +27,8 @@ async fn bump_version(manifest_path: &std::path::Path, bump: &str) -> Result<()>
     let mut manifest = SpnManifest::from_file(manifest_path)?;
 
     // Parse current version
-    let current = semver::Version::parse(&manifest.version).map_err(|e| {
-        CliError::InvalidInput(format!("Invalid version in manifest: {}", e))
-    })?;
+    let current = semver::Version::parse(&manifest.version)
+        .map_err(|e| CliError::InvalidInput(format!("Invalid version in manifest: {}", e)))?;
 
     // Calculate new version
     let new_version = match bump.to_lowercase().as_str() {
@@ -54,7 +53,8 @@ async fn bump_version(manifest_path: &std::path::Path, bump: &str) -> Result<()>
         "prerelease" => {
             if current.pre.is_empty() {
                 return Err(CliError::InvalidInput(
-                    "Cannot bump prerelease on a stable version. Use premajor/preminor/prepatch.".to_string(),
+                    "Cannot bump prerelease on a stable version. Use premajor/preminor/prepatch."
+                        .to_string(),
                 ));
             }
             // Increment prerelease number
@@ -95,7 +95,10 @@ async fn bump_version(manifest_path: &std::path::Path, bump: &str) -> Result<()>
     println!();
     println!("   Next steps:");
     println!("   • git add spn.yaml");
-    println!("   • git commit -m \"chore: bump version to {}\"", manifest.version);
+    println!(
+        "   • git commit -m \"chore: bump version to {}\"",
+        manifest.version
+    );
     println!("   • git tag v{}", manifest.version);
 
     Ok(())

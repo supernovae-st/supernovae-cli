@@ -82,12 +82,10 @@ impl SpnKeyring {
         let entry = Entry::new(SERVICE_NAME, provider)
             .map_err(|e| KeyringError::AccessError(e.to_string()))?;
 
-        entry
-            .set_password(key)
-            .map_err(|e| match e {
-                keyring::Error::NoStorageAccess(_) => KeyringError::Locked,
-                _ => KeyringError::StoreError(e.to_string()),
-            })
+        entry.set_password(key).map_err(|e| match e {
+            keyring::Error::NoStorageAccess(_) => KeyringError::Locked,
+            _ => KeyringError::StoreError(e.to_string()),
+        })
     }
 
     /// Store API key from SecretString (safer input).
@@ -352,12 +350,7 @@ pub fn migrate_env_to_keyring() -> MigrationReport {
                 // key is automatically zeroized when it goes out of scope
             }
             _ => {
-                println!(
-                    "  {} {}: {}",
-                    "├──".dimmed(),
-                    env_var,
-                    "Not found".dimmed()
-                );
+                println!("  {} {}: {}", "├──".dimmed(), env_var, "Not found".dimmed());
                 report.not_found.push(provider.to_string());
             }
         }
@@ -409,25 +402,27 @@ pub fn has_any_keys() -> bool {
 pub fn security_audit() -> Vec<(String, Option<SecretSource>, String)> {
     let mut results = Vec::new();
 
-    for provider in crate::secrets::SUPPORTED_PROVIDERS.iter()
+    for provider in crate::secrets::SUPPORTED_PROVIDERS
+        .iter()
         .chain(super::types::MCP_SECRET_TYPES.iter())
     {
         let (source, recommendation) = match resolve_api_key(provider) {
             Some((_, SecretSource::Keychain)) => {
                 (Some(SecretSource::Keychain), "✓ Secure".to_string())
             }
-            Some((_, SecretSource::Environment)) => {
-                (Some(SecretSource::Environment), "Consider migrating to keychain".to_string())
-            }
-            Some((_, SecretSource::DotEnv)) => {
-                (Some(SecretSource::DotEnv), "⚠ Migrate to keychain with `spn provider migrate`".to_string())
-            }
-            Some((_, SecretSource::Inline)) => {
-                (Some(SecretSource::Inline), "⚠ INSECURE - remove from config!".to_string())
-            }
-            None => {
-                (None, "Not configured".to_string())
-            }
+            Some((_, SecretSource::Environment)) => (
+                Some(SecretSource::Environment),
+                "Consider migrating to keychain".to_string(),
+            ),
+            Some((_, SecretSource::DotEnv)) => (
+                Some(SecretSource::DotEnv),
+                "⚠ Migrate to keychain with `spn provider migrate`".to_string(),
+            ),
+            Some((_, SecretSource::Inline)) => (
+                Some(SecretSource::Inline),
+                "⚠ INSECURE - remove from config!".to_string(),
+            ),
+            None => (None, "Not configured".to_string()),
         };
         results.push((provider.to_string(), source, recommendation));
     }
@@ -631,12 +626,30 @@ mod tests {
 
         // Verify all MCP types are included in audit
         let providers: Vec<&str> = audit.iter().map(|(p, _, _)| p.as_str()).collect();
-        assert!(providers.contains(&"neo4j"), "security_audit should include neo4j");
-        assert!(providers.contains(&"github"), "security_audit should include github");
-        assert!(providers.contains(&"slack"), "security_audit should include slack");
-        assert!(providers.contains(&"perplexity"), "security_audit should include perplexity");
-        assert!(providers.contains(&"firecrawl"), "security_audit should include firecrawl");
-        assert!(providers.contains(&"supadata"), "security_audit should include supadata");
+        assert!(
+            providers.contains(&"neo4j"),
+            "security_audit should include neo4j"
+        );
+        assert!(
+            providers.contains(&"github"),
+            "security_audit should include github"
+        );
+        assert!(
+            providers.contains(&"slack"),
+            "security_audit should include slack"
+        );
+        assert!(
+            providers.contains(&"perplexity"),
+            "security_audit should include perplexity"
+        );
+        assert!(
+            providers.contains(&"firecrawl"),
+            "security_audit should include firecrawl"
+        );
+        assert!(
+            providers.contains(&"supadata"),
+            "security_audit should include supadata"
+        );
     }
 
     #[test]
@@ -671,7 +684,11 @@ mod tests {
 
         // Each entry should have a recommendation string
         for (provider, _source, recommendation) in &audit {
-            assert!(!recommendation.is_empty(), "Provider {} should have a recommendation", provider);
+            assert!(
+                !recommendation.is_empty(),
+                "Provider {} should have a recommendation",
+                provider
+            );
         }
     }
 

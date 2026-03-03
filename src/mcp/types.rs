@@ -58,19 +58,15 @@ fn default_enabled() -> bool {
 /// Source of an MCP server configuration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum McpSource {
     /// Global configuration (~/.spn/mcp.yaml).
+    #[default]
     Global,
     /// Project configuration (.spn/mcp.yaml).
     Project,
     /// Workflow-level configuration (inline in workflow.nika.yaml).
     Workflow,
-}
-
-impl Default for McpSource {
-    fn default() -> Self {
-        Self::Global
-    }
 }
 
 /// Project-level MCP overrides.
@@ -217,8 +213,7 @@ mod tests {
     #[test]
     fn test_add_remove_server() {
         let mut config = McpConfig::new();
-        let server = McpServer::new("npx")
-            .with_args(vec!["-y".into(), "@neo4j/mcp-server".into()]);
+        let server = McpServer::new("npx").with_args(vec!["-y".into(), "@neo4j/mcp-server".into()]);
 
         config.add_server("neo4j".into(), server);
         assert!(config.has_server("neo4j"));

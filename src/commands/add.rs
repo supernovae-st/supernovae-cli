@@ -246,7 +246,10 @@ mod tests {
 
     #[test]
     fn test_package_type_from_str() {
-        assert_eq!(PackageType::from_str("workflow"), Some(PackageType::Workflow));
+        assert_eq!(
+            PackageType::from_str("workflow"),
+            Some(PackageType::Workflow)
+        );
         assert_eq!(PackageType::from_str("agent"), Some(PackageType::Agent));
         assert_eq!(PackageType::from_str("skill"), Some(PackageType::Skill));
         assert_eq!(PackageType::from_str("prompt"), Some(PackageType::Prompt));
@@ -257,14 +260,38 @@ mod tests {
 
     #[test]
     fn test_package_type_from_scope() {
-        assert_eq!(PackageType::from_scope("@workflows/test"), Some(PackageType::Workflow));
-        assert_eq!(PackageType::from_scope("@agents/test"), Some(PackageType::Agent));
-        assert_eq!(PackageType::from_scope("@skills/test"), Some(PackageType::Skill));
-        assert_eq!(PackageType::from_scope("@prompts/test"), Some(PackageType::Prompt));
-        assert_eq!(PackageType::from_scope("@jobs/test"), Some(PackageType::Job));
-        assert_eq!(PackageType::from_scope("@schemas/test"), Some(PackageType::Schema));
-        assert_eq!(PackageType::from_scope("@novanet/test"), Some(PackageType::Schema));
-        assert_eq!(PackageType::from_scope("@nika/test"), Some(PackageType::Workflow));
+        assert_eq!(
+            PackageType::from_scope("@workflows/test"),
+            Some(PackageType::Workflow)
+        );
+        assert_eq!(
+            PackageType::from_scope("@agents/test"),
+            Some(PackageType::Agent)
+        );
+        assert_eq!(
+            PackageType::from_scope("@skills/test"),
+            Some(PackageType::Skill)
+        );
+        assert_eq!(
+            PackageType::from_scope("@prompts/test"),
+            Some(PackageType::Prompt)
+        );
+        assert_eq!(
+            PackageType::from_scope("@jobs/test"),
+            Some(PackageType::Job)
+        );
+        assert_eq!(
+            PackageType::from_scope("@schemas/test"),
+            Some(PackageType::Schema)
+        );
+        assert_eq!(
+            PackageType::from_scope("@novanet/test"),
+            Some(PackageType::Schema)
+        );
+        assert_eq!(
+            PackageType::from_scope("@nika/test"),
+            Some(PackageType::Workflow)
+        );
         assert_eq!(PackageType::from_scope("unknown"), None);
     }
 }

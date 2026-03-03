@@ -5,11 +5,11 @@
 
 use std::path::{Path, PathBuf};
 
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
+use super::types::IdeTarget;
 use crate::error::Result;
 use crate::mcp::{config_manager, McpConfig, McpServer};
-use super::types::IdeTarget;
 
 /// Result of syncing MCP to an IDE.
 #[derive(Debug)]
@@ -78,10 +78,7 @@ fn sync_mcp_to_target(
 }
 
 /// Sync MCP servers to Claude Code.
-fn sync_to_claude_code(
-    mcp_config: &McpConfig,
-    project_root: Option<&Path>,
-) -> McpSyncResult {
+fn sync_to_claude_code(mcp_config: &McpConfig, project_root: Option<&Path>) -> McpSyncResult {
     // Determine target path: user global or project-local
     let config_path = if let Some(root) = project_root {
         root.join(".claude").join("settings.json")
@@ -101,10 +98,7 @@ fn sync_to_claude_code(
 }
 
 /// Sync MCP servers to Cursor.
-fn sync_to_cursor(
-    mcp_config: &McpConfig,
-    project_root: Option<&Path>,
-) -> McpSyncResult {
+fn sync_to_cursor(mcp_config: &McpConfig, project_root: Option<&Path>) -> McpSyncResult {
     // Cursor uses .cursor/mcp.json (project-level only)
     let config_path = if let Some(root) = project_root {
         root.join(".cursor").join("mcp.json")
@@ -120,10 +114,7 @@ fn sync_to_cursor(
 }
 
 /// Sync MCP servers to Windsurf.
-fn sync_to_windsurf(
-    mcp_config: &McpConfig,
-    project_root: Option<&Path>,
-) -> McpSyncResult {
+fn sync_to_windsurf(mcp_config: &McpConfig, project_root: Option<&Path>) -> McpSyncResult {
     // Windsurf uses similar format to Claude Code
     let config_path = if let Some(root) = project_root {
         root.join(".windsurf").join("mcp.json")
@@ -209,8 +200,9 @@ fn sync_to_json_mcp(
     // Load existing mcp.json or create new
     let mut mcp_json = if config_path.exists() {
         match std::fs::read_to_string(config_path) {
-            Ok(content) => serde_json::from_str(&content)
-                .unwrap_or_else(|_| json!({"mcpServers": {}})),
+            Ok(content) => {
+                serde_json::from_str(&content).unwrap_or_else(|_| json!({"mcpServers": {}}))
+            }
             Err(e) => {
                 return McpSyncResult {
                     target,
@@ -317,8 +309,8 @@ pub fn config_path_for_target(target: IdeTarget, project_root: Option<&Path>) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::collections::HashMap;
+    use tempfile::TempDir;
 
     fn create_test_mcp_config() -> McpConfig {
         let mut config = McpConfig::default();
@@ -337,7 +329,10 @@ mod tests {
             "github".to_string(),
             McpServer {
                 command: "npx".to_string(),
-                args: vec!["-y".to_string(), "@modelcontextprotocol/server-github".to_string()],
+                args: vec![
+                    "-y".to_string(),
+                    "@modelcontextprotocol/server-github".to_string(),
+                ],
                 env: HashMap::from([("GITHUB_TOKEN".to_string(), "${GITHUB_TOKEN}".to_string())]),
                 description: None,
                 enabled: true,
@@ -363,7 +358,10 @@ mod tests {
                 env: HashMap::from([
                     ("NEO4J_URI".to_string(), "bolt://localhost:7687".to_string()),
                     ("NEO4J_USER".to_string(), "neo4j".to_string()),
-                    ("NEO4J_PASSWORD".to_string(), "${NEO4J_PASSWORD}".to_string()),
+                    (
+                        "NEO4J_PASSWORD".to_string(),
+                        "${NEO4J_PASSWORD}".to_string(),
+                    ),
                 ]),
                 description: Some("Neo4j knowledge graph".to_string()),
                 enabled: true,
@@ -376,9 +374,10 @@ mod tests {
             McpServer {
                 command: "npx".to_string(),
                 args: vec!["-y".to_string(), "@anthropic/mcp-perplexity".to_string()],
-                env: HashMap::from([
-                    ("PERPLEXITY_API_KEY".to_string(), "${PERPLEXITY_API_KEY}".to_string()),
-                ]),
+                env: HashMap::from([(
+                    "PERPLEXITY_API_KEY".to_string(),
+                    "${PERPLEXITY_API_KEY}".to_string(),
+                )]),
                 description: Some("Web search".to_string()),
                 enabled: true,
                 source: None,
@@ -390,9 +389,10 @@ mod tests {
             McpServer {
                 command: "npx".to_string(),
                 args: vec!["-y".to_string(), "@anthropic/mcp-firecrawl".to_string()],
-                env: HashMap::from([
-                    ("FIRECRAWL_API_KEY".to_string(), "${FIRECRAWL_API_KEY}".to_string()),
-                ]),
+                env: HashMap::from([(
+                    "FIRECRAWL_API_KEY".to_string(),
+                    "${FIRECRAWL_API_KEY}".to_string(),
+                )]),
                 description: None,
                 enabled: true,
                 source: None,
@@ -415,7 +415,10 @@ mod tests {
         // Verify Perplexity has API key
         let perplexity = &json["perplexity"];
         assert!(perplexity["env"]["PERPLEXITY_API_KEY"].is_string());
-        assert_eq!(perplexity["env"]["PERPLEXITY_API_KEY"], "${PERPLEXITY_API_KEY}");
+        assert_eq!(
+            perplexity["env"]["PERPLEXITY_API_KEY"],
+            "${PERPLEXITY_API_KEY}"
+        );
 
         // Verify Firecrawl has API key
         let firecrawl = &json["firecrawl"];
@@ -501,7 +504,11 @@ mod tests {
                 }
             }
         });
-        std::fs::write(&config_path, serde_json::to_string_pretty(&existing).unwrap()).unwrap();
+        std::fs::write(
+            &config_path,
+            serde_json::to_string_pretty(&existing).unwrap(),
+        )
+        .unwrap();
 
         // Sync with new config containing secrets
         let mcp_config = create_mcp_config_with_secrets();
@@ -535,12 +542,18 @@ mod tests {
             if let Some(env) = server.get("env") {
                 for (key, value) in env.as_object().unwrap() {
                     // If the key ends with _PASSWORD, _KEY, or _TOKEN, it should be a reference
-                    if key.ends_with("_PASSWORD") || key.ends_with("_KEY") || key.ends_with("_TOKEN") {
+                    if key.ends_with("_PASSWORD")
+                        || key.ends_with("_KEY")
+                        || key.ends_with("_TOKEN")
+                    {
                         let value_str = value.as_str().unwrap();
                         assert!(
                             value_str.starts_with("${") && value_str.ends_with("}"),
                             "Secret {} in server {} should be a ${} reference, got: {}",
-                            key, name, key, value_str
+                            key,
+                            name,
+                            key,
+                            value_str
                         );
                     }
                 }
@@ -623,7 +636,11 @@ mod tests {
                 }
             }
         });
-        std::fs::write(&config_path, serde_json::to_string_pretty(&existing).unwrap()).unwrap();
+        std::fs::write(
+            &config_path,
+            serde_json::to_string_pretty(&existing).unwrap(),
+        )
+        .unwrap();
 
         // Sync with new servers
         let mcp_config = create_test_mcp_config();

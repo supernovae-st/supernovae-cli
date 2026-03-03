@@ -44,7 +44,10 @@ impl CheckResult {
 
     fn message(&self) -> &str {
         match self {
-            CheckResult::Pass(m) | CheckResult::Warning(m) | CheckResult::Error(m) | CheckResult::Info(m) => m,
+            CheckResult::Pass(m)
+            | CheckResult::Warning(m)
+            | CheckResult::Error(m)
+            | CheckResult::Info(m) => m,
         }
     }
 }
@@ -54,18 +57,15 @@ async fn run_doctor(fix: bool) -> Result<()> {
     println!();
     println!(
         "{}",
-        "╔═══════════════════════════════════════════════════════════════════════════════╗"
-            .cyan()
+        "╔═══════════════════════════════════════════════════════════════════════════════╗".cyan()
     );
     println!(
         "{}",
-        "║  🩺 SECRETS DOCTOR                                                            ║"
-            .cyan()
+        "║  🩺 SECRETS DOCTOR                                                            ║".cyan()
     );
     println!(
         "{}",
-        "╚═══════════════════════════════════════════════════════════════════════════════╝"
-            .cyan()
+        "╚═══════════════════════════════════════════════════════════════════════════════╝".cyan()
     );
     println!();
 
@@ -84,7 +84,10 @@ async fn run_doctor(fix: bool) -> Result<()> {
     println!("{}", "Checking file permissions...".dimmed());
     match check_file_permissions() {
         Ok(result) => checks.push(result),
-        Err(e) => checks.push(CheckResult::Error(format!("Permission check failed: {}", e))),
+        Err(e) => checks.push(CheckResult::Error(format!(
+            "Permission check failed: {}",
+            e
+        ))),
     }
 
     // Check 3: .gitignore for .env
@@ -104,9 +107,9 @@ async fn run_doctor(fix: bool) -> Result<()> {
     checks.extend(check_duplicate_keys());
 
     println!();
-    println!("{}", "╭─────────────────────────────────────────────────────────────────────────────╮");
-    println!("{}", "│  📋 HEALTH CHECK RESULTS                                                    │");
-    println!("{}", "├─────────────────────────────────────────────────────────────────────────────┤");
+    println!("╭─────────────────────────────────────────────────────────────────────────────╮");
+    println!("│  📋 HEALTH CHECK RESULTS                                                    │");
+    println!("├─────────────────────────────────────────────────────────────────────────────┤");
 
     for check in &checks {
         let icon = match check {
@@ -132,7 +135,7 @@ async fn run_doctor(fix: bool) -> Result<()> {
         println!("│    {} {}", icon, message);
     }
 
-    println!("{}", "╰─────────────────────────────────────────────────────────────────────────────╯");
+    println!("╰─────────────────────────────────────────────────────────────────────────────╯");
     println!();
 
     // Summary
@@ -310,7 +313,7 @@ fn check_duplicate_keys() -> Vec<CheckResult> {
 
         // Check environment
         let env_var = provider_env_var(provider);
-        if std::env::var(&env_var).is_ok() {
+        if std::env::var(env_var).is_ok() {
             sources.push(SecretSource::Environment);
         }
 
@@ -319,8 +322,7 @@ fn check_duplicate_keys() -> Vec<CheckResult> {
         if sources.len() > 1 {
             results.push(CheckResult::Warning(format!(
                 "Duplicate key for {}: found in {:?}",
-                provider,
-                sources
+                provider, sources
             )));
         }
     }
@@ -383,53 +385,43 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
         println!();
         println!(
             "{}",
-            "╭─────────────────────────────────────────────────────────────────────────────╮"
-                .red()
+            "╭─────────────────────────────────────────────────────────────────────────────╮".red()
         );
         println!(
             "{}",
-            "│  ⚠️  WARNING: PLAINTEXT EXPORT                                              │"
-                .red()
+            "│  ⚠️  WARNING: PLAINTEXT EXPORT                                              │".red()
         );
         println!(
             "{}",
-            "│                                                                             │"
-                .red()
+            "│                                                                             │".red()
         );
         println!(
             "{}",
-            "│  You are about to export secrets in PLAINTEXT. This is dangerous!          │"
-                .red()
+            "│  You are about to export secrets in PLAINTEXT. This is dangerous!          │".red()
         );
         println!(
             "{}",
-            "│  The output will contain unencrypted API keys.                             │"
-                .red()
+            "│  The output will contain unencrypted API keys.                             │".red()
         );
         println!(
             "{}",
-            "│                                                                             │"
-                .red()
+            "│                                                                             │".red()
         );
         println!(
             "{}",
-            "│  Only use this for:                                                        │"
-                .red()
+            "│  Only use this for:                                                        │".red()
         );
         println!(
             "{}",
-            "│    • Migrating to another machine you control                              │"
-                .red()
+            "│    • Migrating to another machine you control                              │".red()
         );
         println!(
             "{}",
-            "│    • Backup to encrypted storage                                           │"
-                .red()
+            "│    • Backup to encrypted storage                                           │".red()
         );
         println!(
             "{}",
-            "╰─────────────────────────────────────────────────────────────────────────────╯"
-                .red()
+            "╰─────────────────────────────────────────────────────────────────────────────╯".red()
         );
         println!();
     }
@@ -494,10 +486,18 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
         println!("{}", "SOPS encryption not yet implemented.".yellow());
         println!();
         println!("For now, use {} to export plaintext:", "--plaintext".cyan());
-        println!("  {} {}", "spn secrets export --plaintext -o".cyan(), "secrets.yaml".dimmed());
+        println!(
+            "  {} {}",
+            "spn secrets export --plaintext -o".cyan(),
+            "secrets.yaml".dimmed()
+        );
         println!();
         println!("Then encrypt with SOPS:");
-        println!("  {} {}", "sops encrypt".cyan(), "secrets.yaml > secrets.enc.yaml".dimmed());
+        println!(
+            "  {} {}",
+            "sops encrypt".cyan(),
+            "secrets.yaml > secrets.enc.yaml".dimmed()
+        );
     }
 
     Ok(())
@@ -531,18 +531,15 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
     println!();
     println!(
         "{}",
-        "╭─────────────────────────────────────────────────────────────────────────────╮"
-            .cyan()
+        "╭─────────────────────────────────────────────────────────────────────────────╮".cyan()
     );
     println!(
         "{}",
-        "│  📥 SECRETS IMPORT                                                          │"
-            .cyan()
+        "│  📥 SECRETS IMPORT                                                          │".cyan()
     );
     println!(
         "{}",
-        "├─────────────────────────────────────────────────────────────────────────────┤"
-            .cyan()
+        "├─────────────────────────────────────────────────────────────────────────────┤".cyan()
     );
 
     println!("│  Found {} secrets to import:", providers.len());
@@ -557,10 +554,7 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
         println!("│    {} {} ({})", "•".dimmed(), provider.bold(), status);
     }
 
-    println!(
-        "{}",
-        "╰─────────────────────────────────────────────────────────────────────────────╯"
-    );
+    println!("╰─────────────────────────────────────────────────────────────────────────────╯");
     println!();
 
     // Confirm
@@ -595,7 +589,7 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
         }
 
         // Store in keychain
-        match SpnKeyring::set(provider, &value) {
+        match SpnKeyring::set(provider, value) {
             Ok(()) => {
                 println!(
                     "  {} {}: Imported to keychain",

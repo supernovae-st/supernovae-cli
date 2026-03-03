@@ -53,8 +53,12 @@ pub struct RegistryConfig {
 impl Default for RegistryConfig {
     fn default() -> Self {
         Self {
-            index_url: "https://raw.githubusercontent.com/supernovae-st/supernovae-registry/main/index".to_string(),
-            download_url: "https://raw.githubusercontent.com/supernovae-st/supernovae-registry/main/releases".to_string(),
+            index_url:
+                "https://raw.githubusercontent.com/supernovae-st/supernovae-registry/main/index"
+                    .to_string(),
+            download_url:
+                "https://raw.githubusercontent.com/supernovae-st/supernovae-registry/main/releases"
+                    .to_string(),
             cache_dir: dirs::cache_dir()
                 .unwrap_or_else(|| PathBuf::from("."))
                 .join("spn")

@@ -145,11 +145,7 @@ pub fn read_from_dotenv(provider: &str, path: &Path) -> Result<Zeroizing<String>
         }
     }
 
-    anyhow::bail!(
-        "Key {} not found in {}",
-        env_var,
-        path.display()
-    )
+    anyhow::bail!("Key {} not found in {}", env_var, path.display())
 }
 
 /// Delete a secret from a .env file.

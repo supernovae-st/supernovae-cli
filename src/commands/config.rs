@@ -74,7 +74,11 @@ async fn show_locations() -> Result<()> {
     println!();
 
     for scope in scopes {
-        let status = if scope.exists { "✓".green() } else { "○".dimmed() };
+        let status = if scope.exists {
+            "✓".green()
+        } else {
+            "○".dimmed()
+        };
         println!("   {} {}", status, scope.display_name());
     }
 
@@ -107,10 +111,7 @@ async fn list_config(show_origin: bool) -> Result<()> {
 
     // List sync config
     if !config.sync.enabled_editors.is_empty() {
-        println!(
-            "  sync.enabled_editors = {:?}",
-            config.sync.enabled_editors
-        );
+        println!("  sync.enabled_editors = {:?}", config.sync.enabled_editors);
     }
     if config.sync.auto_sync {
         println!("  sync.auto_sync = true");
@@ -118,7 +119,7 @@ async fn list_config(show_origin: bool) -> Result<()> {
 
     // List servers
     if !config.servers.is_empty() {
-        for (name, _server) in &config.servers {
+        for name in config.servers.keys() {
             println!("  servers.{} = <configured>", name);
         }
     }
@@ -139,16 +140,15 @@ async fn get_value(key: &str, show_origin: bool) -> Result<()> {
 
     // TODO: Implement key path resolution
     // For now, just show a message
-    println!(
-        "{} Getting value for key: {}",
-        "🔍".cyan(),
-        key.bold()
-    );
+    println!("{} Getting value for key: {}", "🔍".cyan(), key.bold());
 
     if show_origin {
         println!();
         println!("   {} Origin tracking not yet implemented", "⚠️".yellow());
-        println!("   {} This will show which scope defined this value", "→".dimmed());
+        println!(
+            "   {} This will show which scope defined this value",
+            "→".dimmed()
+        );
     }
 
     Ok(())
@@ -172,7 +172,10 @@ async fn set_value(key: &str, value: &str, scope: &str) -> Result<()> {
 
     // TODO: Implement key path resolution and setting
     println!();
-    println!("   {} Key path resolution not yet implemented", "⚠️".yellow());
+    println!(
+        "   {} Key path resolution not yet implemented",
+        "⚠️".yellow()
+    );
     println!("   {} Manual edit with: spn config edit", "→".dimmed());
 
     Ok(())
@@ -217,9 +220,7 @@ async fn edit_config(local_flag: bool, user: bool, mcp: bool) -> Result<()> {
     println!("✏️  Opening {} with {}...", path.display(), editor);
 
     // Open editor
-    std::process::Command::new(&editor)
-        .arg(&path)
-        .status()?;
+    std::process::Command::new(&editor).arg(&path).status()?;
 
     println!("   Config saved.");
 
@@ -250,10 +251,7 @@ async fn import_config(file: &str, scope: &str, skip_confirm: bool) -> Result<()
     // Check if file exists
     let path = Path::new(file);
     if !path.exists() {
-        return Err(SpnError::ConfigError(format!(
-            "File not found: {}",
-            file
-        )));
+        return Err(SpnError::ConfigError(format!("File not found: {}", file)));
     }
 
     // Read and parse file
@@ -282,9 +280,7 @@ async fn import_config(file: &str, scope: &str, skip_confirm: bool) -> Result<()
                         .and_then(|v| v.as_object())
                         .map(|obj| {
                             obj.iter()
-                                .filter_map(|(k, v)| {
-                                    v.as_str().map(|s| (k.clone(), s.to_string()))
-                                })
+                                .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
                                 .collect()
                         })
                         .unwrap_or_default();

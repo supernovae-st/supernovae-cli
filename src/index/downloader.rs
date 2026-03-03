@@ -91,7 +91,10 @@ impl Downloader {
     }
 
     /// Download a package from an index entry.
-    pub async fn download_entry(&self, entry: &IndexEntry) -> Result<DownloadedPackage, DownloadError> {
+    pub async fn download_entry(
+        &self,
+        entry: &IndexEntry,
+    ) -> Result<DownloadedPackage, DownloadError> {
         let tarball_url = self.client.tarball_url(&entry.name, &entry.version)?;
 
         // Create cache directory structure
@@ -273,7 +276,10 @@ impl Downloader {
                 .template("{spinner:.green} {msg}")
                 .unwrap(),
         );
-        pb.set_message(format!("📦 Extracting {}@{}", downloaded.name, downloaded.version));
+        pb.set_message(format!(
+            "📦 Extracting {}@{}",
+            downloaded.name, downloaded.version
+        ));
 
         let file = std::fs::File::open(&downloaded.tarball_path)?;
         let decoder = flate2::read::GzDecoder::new(file);
@@ -283,7 +289,10 @@ impl Downloader {
             .unpack(dest)
             .map_err(|e| DownloadError::ExtractError(e.to_string()))?;
 
-        pb.finish_with_message(format!("✅ Extracted {}@{}", downloaded.name, downloaded.version));
+        pb.finish_with_message(format!(
+            "✅ Extracted {}@{}",
+            downloaded.name, downloaded.version
+        ));
 
         Ok(())
     }
@@ -379,7 +388,9 @@ mod tests {
         let (temp, config, _) = setup_test_registry();
         let downloader = Downloader::with_config(config);
 
-        let result = downloader.download_latest("@workflows/data/json-transformer").await;
+        let result = downloader
+            .download_latest("@workflows/data/json-transformer")
+            .await;
         assert!(result.is_ok(), "Download failed: {:?}", result.err());
 
         let pkg = result.unwrap();

@@ -48,8 +48,8 @@ pub async fn run(package: &str) -> Result<()> {
     }
 
     // Check if installed locally
-    let storage = LocalStorage::new()
-        .map_err(|e| SpnError::ConfigError(format!("Storage error: {}", e)))?;
+    let storage =
+        LocalStorage::new().map_err(|e| SpnError::ConfigError(format!("Storage error: {}", e)))?;
 
     if let Ok(Some(version)) = storage.installed_version(package) {
         println!();

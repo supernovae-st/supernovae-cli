@@ -22,9 +22,7 @@ pub async fn run(command: McpCommands) -> Result<()> {
             project,
             no_sync,
             sync_to,
-        } => {
-            run_add(&npm, &mcp, &name, global, project, no_sync, sync_to).await
-        }
+        } => run_add(&npm, &mcp, &name, global, project, no_sync, sync_to).await,
         McpCommands::Remove {
             name,
             global,
@@ -78,7 +76,12 @@ async fn run_add(
             println!("{} {}", "✓".green(), "npm package installed".green());
         }
         Err(e) => {
-            eprintln!("{} {}: {}", "✗".red(), "Failed to install npm package".red(), e);
+            eprintln!(
+                "{} {}: {}",
+                "✗".red(),
+                "Failed to install npm package".red(),
+                e
+            );
             std::process::exit(1);
         }
     }
@@ -123,12 +126,7 @@ async fn run_add(
 }
 
 /// Remove an MCP server.
-async fn run_remove(
-    mcp: &McpConfigManager,
-    name: &str,
-    global: bool,
-    project: bool,
-) -> Result<()> {
+async fn run_remove(mcp: &McpConfigManager, name: &str, global: bool, project: bool) -> Result<()> {
     let scope = determine_scope(global, project);
 
     println!(
@@ -168,12 +166,7 @@ async fn run_remove(
 }
 
 /// List MCP servers.
-async fn run_list(
-    mcp: &McpConfigManager,
-    global: bool,
-    project: bool,
-    json: bool,
-) -> Result<()> {
+async fn run_list(mcp: &McpConfigManager, global: bool, project: bool, json: bool) -> Result<()> {
     let servers = if global {
         mcp.list_servers(McpScope::Global)?
     } else if project {
@@ -265,11 +258,7 @@ async fn run_list(
         "[G]".blue(),
         "Global".dimmed()
     );
-    println!(
-        "        {} {}",
-        "[P]".green(),
-        "Project".dimmed()
-    );
+    println!("        {} {}", "[P]".green(), "Project".dimmed());
 
     Ok(())
 }
@@ -342,12 +331,11 @@ fn determine_scope(_global: bool, project: bool) -> McpScope {
 fn create_server_from_alias(alias: &str, npm: &NpmClient) -> McpServer {
     let npm_package = npm.resolve_alias(alias);
 
-    // Build npx command
-    let (command, args) = if npm_package.starts_with('@') {
-        ("npx".to_string(), vec!["-y".to_string(), npm_package.clone()])
-    } else {
-        ("npx".to_string(), vec!["-y".to_string(), npm_package.clone()])
-    };
+    // Build npx command (works with scoped @org/pkg and regular packages)
+    let (command, args) = (
+        "npx".to_string(),
+        vec!["-y".to_string(), npm_package.clone()],
+    );
 
     McpServer::new(command)
         .with_args(args)

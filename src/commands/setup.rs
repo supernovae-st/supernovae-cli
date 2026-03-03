@@ -9,12 +9,11 @@
 
 use crate::error::{Result, SpnError};
 use crate::secrets::{
-    mask_api_key, migrate_env_to_keyring, mlock_available, provider_env_var, resolve_api_key,
-    run_wizard, security_audit, SecretSource, SpnKeyring, MCP_SECRET_TYPES, SUPPORTED_PROVIDERS,
+    mask_api_key, migrate_env_to_keyring, resolve_api_key, run_wizard, security_audit, SecretSource,
 };
 
 use colored::Colorize;
-use dialoguer::{theme::ColorfulTheme, Confirm, MultiSelect, Select};
+use dialoguer::{theme::ColorfulTheme, Confirm, MultiSelect};
 
 /// Helper to convert dialoguer errors to SpnError.
 fn dialog_err(e: dialoguer::Error) -> SpnError {
@@ -124,10 +123,14 @@ pub async fn run(quick: bool) -> Result<()> {
     let proceed = Confirm::with_theme(&theme)
         .with_prompt("Ready to set up spn?")
         .default(true)
-        .interact().map_err(dialog_err)?;
+        .interact()
+        .map_err(dialog_err)?;
 
     if !proceed {
-        println!("{}", "Setup cancelled. Run `spn setup` anytime to continue.".dimmed());
+        println!(
+            "{}",
+            "Setup cancelled. Run `spn setup` anytime to continue.".dimmed()
+        );
         return Ok(());
     }
 
@@ -236,7 +239,8 @@ pub async fn run(quick: bool) -> Result<()> {
         let migrate = Confirm::with_theme(&theme)
             .with_prompt("Migrate keys to secure OS Keychain?")
             .default(true)
-            .interact().map_err(dialog_err)?;
+            .interact()
+            .map_err(dialog_err)?;
 
         if migrate {
             println!();
@@ -320,7 +324,8 @@ pub async fn run(quick: bool) -> Result<()> {
     let selections = MultiSelect::with_theme(&theme)
         .with_prompt("Select providers to configure (Space to select, Enter to confirm)")
         .items(&items)
-        .interact_opt().map_err(dialog_err)?;
+        .interact_opt()
+        .map_err(dialog_err)?;
 
     if let Some(indices) = selections {
         for idx in indices {
@@ -334,7 +339,8 @@ pub async fn run(quick: bool) -> Result<()> {
                         provider.display_name
                     ))
                     .default(false)
-                    .interact().map_err(dialog_err)?;
+                    .interact()
+                    .map_err(dialog_err)?;
 
                 if !reconfigure {
                     continue;
@@ -356,7 +362,10 @@ pub async fn run(quick: bool) -> Result<()> {
                 println!("  1. Download Ollama: {}", provider.signup_url.cyan());
                 println!("  2. Run: {}", "ollama pull llama3.2".cyan());
                 println!("  3. Set base URL (optional):");
-                println!("     {}", "export OLLAMA_API_BASE_URL=http://localhost:11434".cyan());
+                println!(
+                    "     {}",
+                    "export OLLAMA_API_BASE_URL=http://localhost:11434".cyan()
+                );
                 println!();
                 continue;
             }
@@ -420,11 +429,7 @@ async fn run_quick_setup() -> Result<()> {
         );
         let report = migrate_env_to_keyring();
         if report.migrated > 0 {
-            println!(
-                "  {} {} keys migrated",
-                "✓".green(),
-                report.migrated
-            );
+            println!("  {} {} keys migrated", "✓".green(), report.migrated);
         }
     }
 
@@ -509,8 +514,7 @@ fn print_welcome_banner() {
 fn print_summary(total_configured: usize, in_keychain: usize) {
     println!(
         "{}",
-        "╭─────────────────────────────────────────────────────────────────────────────╮"
-            .green()
+        "╭─────────────────────────────────────────────────────────────────────────────╮".green()
     );
     println!(
         "{}",
@@ -518,8 +522,7 @@ fn print_summary(total_configured: usize, in_keychain: usize) {
     );
     println!(
         "{}",
-        "├─────────────────────────────────────────────────────────────────────────────┤"
-            .green()
+        "├─────────────────────────────────────────────────────────────────────────────┤".green()
     );
     println!(
         "{}",
@@ -531,23 +534,22 @@ fn print_summary(total_configured: usize, in_keychain: usize) {
     );
     println!(
         "{}",
-        "╰─────────────────────────────────────────────────────────────────────────────╯"
-            .green()
+        "╰─────────────────────────────────────────────────────────────────────────────╯".green()
     );
     println!();
 
     println!("{}", "🚀 WHAT'S NEXT?".bold());
     println!();
-    println!("  {} {}", "1.".cyan().bold(), "Test your providers:");
+    println!("  {} Test your providers:", "1.".cyan().bold());
     println!("     {}", "spn provider test all".cyan());
     println!();
-    println!("  {} {}", "2.".cyan().bold(), "Add an MCP server:");
+    println!("  {} Add an MCP server:", "2.".cyan().bold());
     println!("     {}", "spn mcp add neo4j".cyan());
     println!();
-    println!("  {} {}", "3.".cyan().bold(), "Sync to Claude Code:");
+    println!("  {} Sync to Claude Code:", "3.".cyan().bold());
     println!("     {}", "spn sync --enable claude-code".cyan());
     println!();
-    println!("  {} {}", "4.".cyan().bold(), "Run a Nika workflow:");
+    println!("  {} Run a Nika workflow:", "4.".cyan().bold());
     println!("     {}", "nika chat".cyan());
     println!();
     println!(
@@ -560,6 +562,7 @@ fn print_summary(total_configured: usize, in_keychain: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::secrets::SUPPORTED_PROVIDERS;
 
     #[test]
     fn test_provider_info_complete() {
@@ -601,7 +604,10 @@ mod tests {
     #[test]
     fn test_at_least_one_free_tier() {
         let free_count = PROVIDER_INFO.iter().filter(|p| p.free_tier).count();
-        assert!(free_count >= 1, "Should have at least one free tier provider");
+        assert!(
+            free_count >= 1,
+            "Should have at least one free tier provider"
+        );
     }
 
     #[test]

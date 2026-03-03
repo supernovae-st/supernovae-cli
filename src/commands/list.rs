@@ -20,7 +20,7 @@ pub async fn run() -> Result<()> {
 
     println!("📦 Installed packages:\n");
 
-    if installed.is_empty() && manifest.as_ref().map_or(true, |m| m.dependencies.is_empty()) {
+    if installed.is_empty() && manifest.as_ref().is_none_or(|m| m.dependencies.is_empty()) {
         println!("   No packages installed.");
         println!();
         println!("   Get started:");
@@ -52,7 +52,7 @@ pub async fn run() -> Result<()> {
         for pkg in &installed {
             let in_manifest = manifest
                 .as_ref()
-                .map_or(false, |m| m.dependencies.contains_key(&pkg.name));
+                .is_some_and(|m| m.dependencies.contains_key(&pkg.name));
 
             let status = if in_manifest { "✓" } else { "⚡" };
             println!("   {} {} @ {}", status, pkg.name, pkg.version);

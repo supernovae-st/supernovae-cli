@@ -12,8 +12,8 @@ use crate::storage::LocalStorage;
 pub async fn run() -> Result<()> {
     println!("{} Checking for outdated packages...", "📋".cyan());
 
-    let storage = LocalStorage::new()
-        .map_err(|e| SpnError::ConfigError(format!("Storage error: {}", e)))?;
+    let storage =
+        LocalStorage::new().map_err(|e| SpnError::ConfigError(format!("Storage error: {}", e)))?;
 
     let state = storage
         .load_state()

@@ -1,6 +1,6 @@
 //! Configuration resolver - merges all three scopes.
 
-use crate::config::{global, local, scope, team, types::Config, ConfigScope, ScopeType};
+use crate::config::{global, local, team, types::Config, ConfigScope, ScopeType};
 use crate::error::Result;
 use std::path::Path;
 
@@ -58,7 +58,7 @@ impl ConfigResolver {
     }
 
     /// Show which scope defined a specific value.
-    pub fn get_origin(&self, key: &str) -> Option<ScopeType> {
+    pub fn get_origin(&self, _key: &str) -> Option<ScopeType> {
         // Check scopes in reverse order (Local -> Team -> Global)
         // Return the first one that has the key defined
         for (scope_type, config) in self.scopes.iter().rev() {

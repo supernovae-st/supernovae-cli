@@ -113,12 +113,7 @@ impl McpConfigManager {
     }
 
     /// Add a server to a specific scope.
-    pub fn add_server(
-        &self,
-        name: &str,
-        server: McpServer,
-        scope: McpScope,
-    ) -> Result<()> {
+    pub fn add_server(&self, name: &str, server: McpServer, scope: McpScope) -> Result<()> {
         let path = self.path_for_scope(scope);
         let mut config = Self::load_from_path(&path).unwrap_or_default();
 
@@ -266,8 +261,7 @@ mod tests {
     fn test_add_and_load_server() {
         let (_temp, manager) = setup_test_env();
 
-        let server = McpServer::new("npx")
-            .with_args(vec!["-y".into(), "@neo4j/mcp-server".into()]);
+        let server = McpServer::new("npx").with_args(vec!["-y".into(), "@neo4j/mcp-server".into()]);
 
         manager
             .add_server("neo4j", server, McpScope::Global)

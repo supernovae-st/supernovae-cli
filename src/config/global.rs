@@ -7,7 +7,8 @@ use std::path::PathBuf;
 
 /// Get path to global config file (~/.spn/config.toml).
 pub fn config_path() -> Result<PathBuf> {
-    let home = dirs::home_dir().ok_or_else(|| SpnError::ConfigError("Home directory not found".to_string()))?;
+    let home = dirs::home_dir()
+        .ok_or_else(|| SpnError::ConfigError("Home directory not found".to_string()))?;
     Ok(home.join(".spn").join("config.toml"))
 }
 
@@ -48,8 +49,8 @@ pub fn save(config: &Config) -> Result<()> {
 }
 
 /// Get a specific value from global config.
-pub fn get(key: &str) -> Result<Option<serde_json::Value>> {
-    let config = load()?;
+pub fn get(_key: &str) -> Result<Option<serde_json::Value>> {
+    let _config = load()?;
 
     // Simple key resolution for now
     // TODO: Support nested keys like "providers.anthropic.model"
@@ -57,8 +58,8 @@ pub fn get(key: &str) -> Result<Option<serde_json::Value>> {
 }
 
 /// Set a specific value in global config.
-pub fn set(key: &str, value: serde_json::Value) -> Result<()> {
-    let mut config = load()?;
+pub fn set(_key: &str, _value: serde_json::Value) -> Result<()> {
+    let config = load()?;
 
     // Simple key resolution for now
     // TODO: Support nested keys like "providers.anthropic.model"

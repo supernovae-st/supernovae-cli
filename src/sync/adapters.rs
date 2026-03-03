@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use super::types::{IdeTarget, McpConfig, PackageManifest, SyncResult, SyncedItem};
 
@@ -570,8 +570,7 @@ mod tests {
         };
 
         let adapter = ClaudeCodeAdapter;
-        let result =
-            adapter.sync_package(temp.path(), "@test/hooks-pkg", &package_path, &manifest);
+        let result = adapter.sync_package(temp.path(), "@test/hooks-pkg", &package_path, &manifest);
 
         assert!(result.success, "Sync failed: {:?}", result.error);
         assert_eq!(result.synced.len(), 1);
@@ -608,8 +607,7 @@ mod tests {
         };
 
         let adapter = ClaudeCodeAdapter;
-        let result =
-            adapter.sync_package(temp.path(), "@test/full-pkg", &package_path, &manifest);
+        let result = adapter.sync_package(temp.path(), "@test/full-pkg", &package_path, &manifest);
 
         assert!(result.success, "Sync failed: {:?}", result.error);
         assert_eq!(result.synced.len(), 3); // MCP + skills + hooks

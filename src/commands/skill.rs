@@ -2,9 +2,9 @@
 //!
 //! Manages skills from skills.sh registry.
 
-use crate::SkillCommands;
 use crate::error::Result;
 use crate::interop::skills::SkillsClient;
+use crate::SkillCommands;
 
 use colored::Colorize;
 

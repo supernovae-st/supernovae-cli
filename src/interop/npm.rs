@@ -28,7 +28,10 @@ pub fn mcp_aliases() -> FxHashMap<&'static str, &'static str> {
         ("gitlab", "@modelcontextprotocol/server-gitlab"),
         ("git", "@modelcontextprotocol/server-git"),
         ("everart", "@modelcontextprotocol/server-everart"),
-        ("aws-kb-retrieval", "@modelcontextprotocol/server-aws-kb-retrieval"),
+        (
+            "aws-kb-retrieval",
+            "@modelcontextprotocol/server-aws-kb-retrieval",
+        ),
         (
             "sequential-thinking",
             "@modelcontextprotocol/server-sequential-thinking",

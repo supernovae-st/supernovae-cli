@@ -55,7 +55,9 @@ LEARN MORE:
   spn doctor             System health check
   https://spn.supernovae.studio/docs
 "#)]
-#[command(after_help = "Run 'spn setup' for interactive onboarding, or 'spn topic' for detailed guides.")]
+#[command(
+    after_help = "Run 'spn setup' for interactive onboarding, or 'spn topic' for detailed guides."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -610,7 +612,11 @@ async fn main() -> Result<()> {
         Commands::Doctor => commands::doctor::run().await,
         Commands::Provider { command } => commands::provider::run(command).await,
         Commands::Status { json } => commands::status::run(json).await,
-        Commands::Init { local, mcp, template } => commands::init::run(local, mcp, template).await,
+        Commands::Init {
+            local,
+            mcp,
+            template,
+        } => commands::init::run(local, mcp, template).await,
         Commands::Topic { name } => commands::help::run(name.as_deref()).await,
         Commands::Secrets { command } => commands::secrets::run(command).await,
         Commands::Setup { quick } => commands::setup::run(quick).await,
