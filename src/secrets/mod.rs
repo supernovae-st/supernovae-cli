@@ -71,16 +71,27 @@
 //! 3. **Don't log keys** - Use `mask_api_key()` for display
 //! 4. **Validate early** - Keys are validated before storage
 
+mod env_storage;
 mod keyring;
 pub mod memory;
+mod storage;
 mod types;
+mod wizard;
 
+pub use env_storage::{
+    delete_from_dotenv, delete_from_global, dotenv_exists, global_secrets_exists, is_gitignored,
+    read_from_dotenv, read_from_global, store_in_dotenv, store_in_global,
+};
 pub use keyring::{
     has_any_keys, mask_api_key, migrate_env_to_keyring, provider_env_var, resolve_api_key,
     security_audit, validate_key_format, KeyringError, MigrationReport, SpnKeyring,
 };
 pub use memory::{mlock_available, mlock_limit, LockedBuffer, LockedString, MemoryError};
+pub use storage::{
+    global_secrets_path, project_env_path, InvalidStorageBackend, StorageBackend, StoreResult,
+};
 pub use types::{
     mask_key, ProviderKey, SecretSource, SecureBuffer, SecureString, MCP_SECRET_TYPES,
     SUPPORTED_PROVIDERS,
 };
+pub use wizard::{run_quick_setup, run_wizard, WizardResult};

@@ -192,15 +192,40 @@ pub fn validate_key_format(provider: &str, key: &str) -> Result<(), String> {
             }
         }
         "github" => {
-            // GitHub tokens start with ghp_, gho_, ghu_, ghs_, or ghr_
+            // GitHub tokens start with ghp_, gho_, ghu_, ghs_, ghr_, or github_pat_
             let valid_prefixes = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_"];
             if !valid_prefixes.iter().any(|p| key.starts_with(p)) {
                 return Err("GitHub tokens start with 'ghp_', 'gho_', etc.".into());
             }
         }
-        "perplexity" | "firecrawl" | "supadata" => {
-            if key.len() < 20 {
-                return Err("API key seems too short".into());
+        "slack" => {
+            // Slack tokens start with xoxb- (bot) or xoxp- (user)
+            if !key.starts_with("xoxb-") && !key.starts_with("xoxp-") {
+                return Err("Slack tokens start with 'xoxb-' or 'xoxp-'".into());
+            }
+        }
+        "perplexity" => {
+            // Perplexity keys start with pplx-
+            if !key.starts_with("pplx-") {
+                return Err("Perplexity keys start with 'pplx-'".into());
+            }
+        }
+        "firecrawl" => {
+            // Firecrawl keys start with fc-
+            if !key.starts_with("fc-") {
+                return Err("Firecrawl keys start with 'fc-'".into());
+            }
+        }
+        "supadata" => {
+            // Supadata keys start with sd_
+            if !key.starts_with("sd_") {
+                return Err("Supadata keys start with 'sd_'".into());
+            }
+        }
+        "neo4j" => {
+            // Neo4j password - just basic length check (no specific format)
+            if key.len() < 6 {
+                return Err("Neo4j password seems too short".into());
             }
         }
         _ => {
@@ -528,5 +553,161 @@ mod tests {
 
         assert!(report.is_success());
         assert!(report.summary().contains("2 migrated"));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MCP SECRET TYPES TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_mcp_secret_types_defined() {
+        use super::super::types::MCP_SECRET_TYPES;
+
+        // Verify all expected MCP secret types exist
+        assert!(MCP_SECRET_TYPES.contains(&"neo4j"));
+        assert!(MCP_SECRET_TYPES.contains(&"github"));
+        assert!(MCP_SECRET_TYPES.contains(&"slack"));
+        assert!(MCP_SECRET_TYPES.contains(&"perplexity"));
+        assert!(MCP_SECRET_TYPES.contains(&"firecrawl"));
+        assert!(MCP_SECRET_TYPES.contains(&"supadata"));
+    }
+
+    #[test]
+    fn test_mcp_env_var_mapping() {
+        // Test that MCP secret types map to correct env vars
+        assert_eq!(provider_env_var("neo4j"), "NEO4J_PASSWORD");
+        assert_eq!(provider_env_var("github"), "GITHUB_TOKEN");
+        assert_eq!(provider_env_var("slack"), "SLACK_TOKEN");
+        assert_eq!(provider_env_var("perplexity"), "PERPLEXITY_API_KEY");
+        assert_eq!(provider_env_var("firecrawl"), "FIRECRAWL_API_KEY");
+        assert_eq!(provider_env_var("supadata"), "SUPADATA_API_KEY");
+    }
+
+    #[test]
+    fn test_validate_neo4j_password() {
+        // Neo4j password should be generic (no specific prefix required)
+        assert!(validate_key_format("neo4j", "my-secure-password-123").is_ok());
+        assert!(validate_key_format("neo4j", "novanet-password").is_ok());
+        // Empty is not allowed
+        assert!(validate_key_format("neo4j", "").is_err());
+    }
+
+    #[test]
+    fn test_validate_slack_token() {
+        // Valid Slack tokens start with xoxb- or xoxp-
+        assert!(validate_key_format("slack", "xoxb-123-456-789abc").is_ok());
+        assert!(validate_key_format("slack", "xoxp-user-token-here").is_ok());
+        // Invalid prefix
+        assert!(validate_key_format("slack", "invalid-token").is_err());
+    }
+
+    #[test]
+    fn test_validate_perplexity_key() {
+        // Perplexity keys start with pplx-
+        assert!(validate_key_format("perplexity", "pplx-abc123def456ghi789").is_ok());
+        // Invalid prefix
+        assert!(validate_key_format("perplexity", "not-perplexity-key").is_err());
+    }
+
+    #[test]
+    fn test_validate_firecrawl_key() {
+        // Firecrawl keys start with fc-
+        assert!(validate_key_format("firecrawl", "fc-abc123def456").is_ok());
+        // Invalid prefix
+        assert!(validate_key_format("firecrawl", "invalid-key").is_err());
+    }
+
+    #[test]
+    fn test_validate_supadata_key() {
+        // Supadata keys start with sd_
+        assert!(validate_key_format("supadata", "sd_abc123def456").is_ok());
+        // Invalid prefix
+        assert!(validate_key_format("supadata", "invalid-key").is_err());
+    }
+
+    #[test]
+    fn test_security_audit_includes_mcp_types() {
+        let audit = security_audit();
+
+        // Verify all MCP types are included in audit
+        let providers: Vec<&str> = audit.iter().map(|(p, _, _)| p.as_str()).collect();
+        assert!(providers.contains(&"neo4j"), "security_audit should include neo4j");
+        assert!(providers.contains(&"github"), "security_audit should include github");
+        assert!(providers.contains(&"slack"), "security_audit should include slack");
+        assert!(providers.contains(&"perplexity"), "security_audit should include perplexity");
+        assert!(providers.contains(&"firecrawl"), "security_audit should include firecrawl");
+        assert!(providers.contains(&"supadata"), "security_audit should include supadata");
+    }
+
+    #[test]
+    fn test_security_audit_covers_all_providers() {
+        use super::super::types::{MCP_SECRET_TYPES, SUPPORTED_PROVIDERS};
+
+        let audit = security_audit();
+        let audit_providers: Vec<&str> = audit.iter().map(|(p, _, _)| p.as_str()).collect();
+
+        // All LLM providers should be in audit
+        for provider in SUPPORTED_PROVIDERS {
+            assert!(
+                audit_providers.contains(provider),
+                "LLM provider '{}' should be in security_audit",
+                provider
+            );
+        }
+
+        // All MCP types should be in audit
+        for mcp_type in MCP_SECRET_TYPES {
+            assert!(
+                audit_providers.contains(mcp_type),
+                "MCP type '{}' should be in security_audit",
+                mcp_type
+            );
+        }
+    }
+
+    #[test]
+    fn test_security_audit_returns_recommendations() {
+        let audit = security_audit();
+
+        // Each entry should have a recommendation string
+        for (provider, _source, recommendation) in &audit {
+            assert!(!recommendation.is_empty(), "Provider {} should have a recommendation", provider);
+        }
+    }
+
+    #[test]
+    fn test_keyring_list_includes_mcp() {
+        // SpnKeyring::list_stored should check both LLM and MCP providers
+        // This is a structural test - actual keychain access may vary
+        let _stored = SpnKeyring::list_stored();
+        // Test passes if it doesn't panic
+    }
+
+    #[test]
+    fn test_mcp_secrets_not_in_llm_providers() {
+        use super::super::types::{MCP_SECRET_TYPES, SUPPORTED_PROVIDERS};
+
+        // MCP types should NOT be in LLM providers list (separate concerns)
+        for mcp_type in MCP_SECRET_TYPES {
+            assert!(
+                !SUPPORTED_PROVIDERS.contains(mcp_type),
+                "MCP type '{}' should not be in SUPPORTED_PROVIDERS",
+                mcp_type
+            );
+        }
+    }
+
+    #[test]
+    fn test_llm_providers_not_in_mcp() {
+        use super::super::types::{MCP_SECRET_TYPES, SUPPORTED_PROVIDERS};
+
+        // LLM providers should NOT be in MCP types list (separate concerns)
+        for provider in SUPPORTED_PROVIDERS {
+            assert!(
+                !MCP_SECRET_TYPES.contains(provider),
+                "LLM provider '{}' should not be in MCP_SECRET_TYPES",
+                provider
+            );
+        }
     }
 }
