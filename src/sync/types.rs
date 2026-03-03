@@ -77,6 +77,80 @@ pub struct McpConfig {
     pub env: HashMap<String, String>,
 }
 
+/// Integration configuration for package.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IntegrationConfig {
+    /// Whether this package requires filesystem sync to editors.
+    #[serde(default)]
+    pub requires_sync: bool,
+
+    /// List of editors this package supports.
+    #[serde(default)]
+    pub editors: Vec<String>,
+}
+
+impl Default for IntegrationConfig {
+    fn default() -> Self {
+        Self {
+            requires_sync: false,
+            editors: vec![],
+        }
+    }
+}
+
+/// Package type derived from name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PackageType {
+    /// @skills/ - Requires sync
+    Skills,
+    /// @workflows/ - No sync needed (standalone execution)
+    Workflows,
+    /// @agents/ - No sync needed (CLI subagents)
+    Agents,
+    /// @prompts/ - No sync needed
+    Prompts,
+    /// @jobs/ - No sync needed
+    Jobs,
+    /// @schemas/ - No sync needed
+    Schemas,
+    /// Unknown package type
+    Unknown,
+}
+
+impl PackageType {
+    /// Parse package type from name.
+    pub fn from_name(name: &str) -> Self {
+        if name.starts_with("@skills/") {
+            Self::Skills
+        } else if name.starts_with("@workflows/") {
+            Self::Workflows
+        } else if name.starts_with("@agents/") {
+            Self::Agents
+        } else if name.starts_with("@prompts/") {
+            Self::Prompts
+        } else if name.starts_with("@jobs/") {
+            Self::Jobs
+        } else if name.starts_with("@schemas/") {
+            Self::Schemas
+        } else {
+            Self::Unknown
+        }
+    }
+
+    /// Get default requires_sync value for this package type.
+    pub fn default_requires_sync(&self) -> bool {
+        match self {
+            Self::Skills => true,  // Skills need .claude/skills/
+            Self::Workflows => false,  // Standalone nika execution
+            Self::Agents => false,  // nika CLI subagents
+            Self::Prompts => false,  // No editor integration
+            Self::Jobs => false,  // No editor integration
+            Self::Schemas => false,  // No editor integration
+            Self::Unknown => false,  // Conservative default
+        }
+    }
+}
+
 /// Package manifest (spn.json) with IDE integration info.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PackageManifest {
@@ -103,12 +177,36 @@ pub struct PackageManifest {
     /// Commands to sync.
     #[serde(default)]
     pub commands: Vec<String>,
+
+    /// Integration configuration.
+    #[serde(default)]
+    pub integration: IntegrationConfig,
 }
 
 impl PackageManifest {
     /// Check if this package has any IDE integrations.
     pub fn has_integrations(&self) -> bool {
         self.mcp.is_some() || !self.skills.is_empty() || !self.hooks.is_empty()
+    }
+
+    /// Check if this package requires sync to editors.
+    ///
+    /// Uses explicit integration config if present, otherwise falls back to
+    /// package type default.
+    pub fn requires_sync(&self) -> bool {
+        // If integration config explicitly sets requires_sync, use that
+        if self.integration.requires_sync {
+            return true;
+        }
+
+        // Otherwise, check package type default
+        let package_type = PackageType::from_name(&self.name);
+        package_type.default_requires_sync()
+    }
+
+    /// Get package type from name.
+    pub fn package_type(&self) -> PackageType {
+        PackageType::from_name(&self.name)
     }
 
     /// Load from a spn.json file.
@@ -209,5 +307,73 @@ mod tests {
             ..Default::default()
         };
         assert!(with_skills.has_integrations());
+    }
+
+    #[test]
+    fn test_package_type_from_name() {
+        assert_eq!(
+            PackageType::from_name("@skills/brainstorming"),
+            PackageType::Skills
+        );
+        assert_eq!(
+            PackageType::from_name("@workflows/generate-page"),
+            PackageType::Workflows
+        );
+        assert_eq!(
+            PackageType::from_name("@agents/code-reviewer"),
+            PackageType::Agents
+        );
+        assert_eq!(
+            PackageType::from_name("@prompts/system"),
+            PackageType::Prompts
+        );
+        assert_eq!(PackageType::from_name("@jobs/daily"), PackageType::Jobs);
+        assert_eq!(
+            PackageType::from_name("@schemas/api"),
+            PackageType::Schemas
+        );
+        assert_eq!(
+            PackageType::from_name("unknown-package"),
+            PackageType::Unknown
+        );
+    }
+
+    #[test]
+    fn test_package_type_default_requires_sync() {
+        assert!(PackageType::Skills.default_requires_sync());
+        assert!(!PackageType::Workflows.default_requires_sync());
+        assert!(!PackageType::Agents.default_requires_sync());
+        assert!(!PackageType::Prompts.default_requires_sync());
+        assert!(!PackageType::Jobs.default_requires_sync());
+        assert!(!PackageType::Schemas.default_requires_sync());
+        assert!(!PackageType::Unknown.default_requires_sync());
+    }
+
+    #[test]
+    fn test_package_manifest_requires_sync() {
+        // Skills package should sync by default
+        let skills = PackageManifest {
+            name: "@skills/brainstorming".to_string(),
+            ..Default::default()
+        };
+        assert!(skills.requires_sync());
+
+        // Workflows package should NOT sync by default
+        let workflow = PackageManifest {
+            name: "@workflows/generate-page".to_string(),
+            ..Default::default()
+        };
+        assert!(!workflow.requires_sync());
+
+        // Explicit integration config overrides default
+        let workflow_with_sync = PackageManifest {
+            name: "@workflows/with-sync".to_string(),
+            integration: IntegrationConfig {
+                requires_sync: true,
+                editors: vec!["claude-code".to_string()],
+            },
+            ..Default::default()
+        };
+        assert!(workflow_with_sync.requires_sync());
     }
 }

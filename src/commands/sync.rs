@@ -230,7 +230,7 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
             for (name, path) in &packages {
                 // Try to load package manifest
                 let manifest_path = path.join("spn.json");
-                let manifest = if manifest_path.exists() {
+                let mut manifest = if manifest_path.exists() {
                     PackageManifest::from_file(&manifest_path).unwrap_or_default()
                 } else {
                     PackageManifest {
@@ -239,6 +239,25 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
                         ..Default::default()
                     }
                 };
+
+                // Set name if not in manifest
+                if manifest.name.is_empty() {
+                    manifest.name = name.clone();
+                }
+
+                // Check if this package type requires sync
+                if !manifest.requires_sync() {
+                    let package_type = manifest.package_type();
+                    if dry_run {
+                        println!(
+                            "  {} Skipping {} (type: {:?}, no sync required)",
+                            "→".dimmed(),
+                            name,
+                            package_type
+                        );
+                    }
+                    continue;
+                }
 
                 // Skip packages without skills/hooks (MCP is handled separately)
                 if manifest.skills.is_empty() && manifest.hooks.is_empty() {
