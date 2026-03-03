@@ -427,6 +427,17 @@ enum ConfigCommands {
         #[arg(long)]
         mcp: bool,
     },
+    /// Import configuration from editor config file
+    Import {
+        /// Path to editor config file (e.g., .claude/settings.json)
+        file: String,
+        /// Scope to import into (global, team, local)
+        #[arg(long, default_value = "team")]
+        scope: String,
+        /// Skip confirmation prompts
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 #[derive(Subcommand)]
