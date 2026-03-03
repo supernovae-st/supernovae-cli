@@ -30,4 +30,4 @@ pub mod types;
 
 pub use resolver::ConfigResolver;
 pub use scope::{ConfigScope, ScopeType};
-pub use types::{Config, McpServerConfig, ProviderConfig, SyncConfig};
+pub use types::{Config, McpServerConfig, ProviderConfig, SecretsConfig, SyncConfig};
