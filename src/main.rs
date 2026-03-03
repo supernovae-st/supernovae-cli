@@ -29,13 +29,33 @@ mod sync;
 
 use error::Result;
 
-/// SuperNovae CLI - AI package manager
+/// SuperNovae CLI - AI Development Toolkit
 #[derive(Parser)]
 #[command(name = "spn")]
 #[command(author = "SuperNovae Studio")]
 #[command(version)]
-#[command(about = "Package manager for AI workflows, schemas, skills, and MCP servers")]
-#[command(long_about = None)]
+#[command(about = "AI Development Toolkit: packages, secrets, and sync for Claude Code & Nika")]
+#[command(long_about = r#"
+spn - SuperNovae Package Manager
+
+Your AI development toolkit providing:
+
+  📦 PACKAGES    Install AI workflows, schemas, skills, and MCP servers
+  🔐 SECRETS     Securely manage API keys for LLM providers and MCP tools
+  🔄 SYNC        Sync packages to Claude Code, VS Code, and other editors
+
+QUICK START:
+  spn setup              Interactive onboarding wizard
+  spn provider set       Set up an API key
+  spn mcp add neo4j      Add an MCP server
+  spn sync               Sync to your editor
+
+LEARN MORE:
+  spn topic              Browse detailed guides
+  spn doctor             System health check
+  https://spn.supernovae.studio/docs
+"#)]
+#[command(after_help = "Run 'spn setup' for interactive onboarding, or 'spn topic' for detailed guides.")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -205,6 +225,19 @@ enum Commands {
     Topic {
         /// Topic name
         name: Option<String>,
+    },
+
+    /// Secrets management and diagnostics
+    Secrets {
+        #[command(subcommand)]
+        command: SecretsCommands,
+    },
+
+    /// Interactive onboarding wizard for first-time setup
+    Setup {
+        /// Quick setup: auto-detect and migrate keys
+        #[arg(long)]
+        quick: bool,
     },
 }
 
@@ -463,6 +496,33 @@ enum SchemaCommands {
 }
 
 #[derive(Subcommand)]
+enum SecretsCommands {
+    /// Run health checks on secrets configuration
+    Doctor {
+        /// Fix issues automatically where possible
+        #[arg(long)]
+        fix: bool,
+    },
+    /// Export secrets to encrypted file (SOPS format)
+    Export {
+        /// Output file path (default: stdout)
+        #[arg(short, long)]
+        output: Option<String>,
+        /// Export as plaintext (DANGEROUS)
+        #[arg(long)]
+        plaintext: bool,
+    },
+    /// Import secrets from encrypted file
+    Import {
+        /// Input file path
+        file: String,
+        /// Skip confirmation prompts
+        #[arg(long)]
+        yes: bool,
+    },
+}
+
+#[derive(Subcommand)]
 enum ProviderCommands {
     /// List all stored API keys (masked)
     List {
@@ -477,6 +537,9 @@ enum ProviderCommands {
         /// API key value (prompts securely if omitted)
         #[arg(long)]
         key: Option<String>,
+        /// Storage backend: keychain (default), env, global, shell
+        #[arg(long, short = 's')]
+        storage: Option<String>,
     },
     /// Get masked API key for a provider
     Get {
@@ -501,6 +564,12 @@ enum ProviderCommands {
     Test {
         /// Provider name (or "all")
         provider: String,
+    },
+    /// Show full diagnostic status of all secrets and providers
+    Status {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -543,5 +612,7 @@ async fn main() -> Result<()> {
         Commands::Status { json } => commands::status::run(json).await,
         Commands::Init { local, mcp, template } => commands::init::run(local, mcp, template).await,
         Commands::Topic { name } => commands::help::run(name.as_deref()).await,
+        Commands::Secrets { command } => commands::secrets::run(command).await,
+        Commands::Setup { quick } => commands::setup::run(quick).await,
     }
 }

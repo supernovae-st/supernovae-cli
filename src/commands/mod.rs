@@ -17,6 +17,8 @@ pub mod publish;
 pub mod remove;
 pub mod schema;
 pub mod search;
+pub mod secrets;
+pub mod setup;
 pub mod skill;
 pub mod status;
 pub mod sync;
