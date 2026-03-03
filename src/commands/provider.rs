@@ -12,25 +12,32 @@
 
 use crate::error::Result;
 use crate::secrets::{
-    mask_api_key, migrate_env_to_keyring, mlock_available, mlock_limit, provider_env_var,
-    resolve_api_key, security_audit, validate_key_format, SecretSource, SpnKeyring,
-    MCP_SECRET_TYPES, SUPPORTED_PROVIDERS,
+    global_secrets_path, is_gitignored, mask_api_key, migrate_env_to_keyring, mlock_available,
+    mlock_limit, project_env_path, provider_env_var, resolve_api_key, run_quick_setup, run_wizard,
+    security_audit, store_in_dotenv, store_in_global, validate_key_format, SecretSource,
+    SpnKeyring, StorageBackend, MCP_SECRET_TYPES, SUPPORTED_PROVIDERS,
 };
 use crate::ProviderCommands;
 
 use colored::Colorize;
 use dialoguer::{Confirm, Password};
+use std::str::FromStr;
 use zeroize::Zeroizing;
 
 /// Run a provider management command.
 pub async fn run(command: ProviderCommands) -> Result<()> {
     match command {
         ProviderCommands::List { show_source } => run_list(show_source).await,
-        ProviderCommands::Set { provider, key } => run_set(&provider, key).await,
+        ProviderCommands::Set {
+            provider,
+            key,
+            storage,
+        } => run_set(&provider, key, storage).await,
         ProviderCommands::Get { provider, unmask } => run_get(&provider, unmask).await,
         ProviderCommands::Delete { provider } => run_delete(&provider).await,
         ProviderCommands::Migrate { yes } => run_migrate(yes).await,
         ProviderCommands::Test { provider } => run_test(&provider).await,
+        ProviderCommands::Status { json } => run_status(json).await,
     }
 }
 
@@ -143,7 +150,7 @@ fn list_providers(providers: &[&str], show_source: bool) {
 }
 
 /// Set an API key for a provider.
-async fn run_set(provider: &str, key: Option<String>) -> Result<()> {
+async fn run_set(provider: &str, key: Option<String>, storage: Option<String>) -> Result<()> {
     // Validate provider name
     let all_providers: Vec<&str> = SUPPORTED_PROVIDERS
         .iter()
@@ -171,32 +178,101 @@ async fn run_set(provider: &str, key: Option<String>) -> Result<()> {
         std::process::exit(1);
     }
 
-    // Get key (prompt if not provided)
-    // Wrap in Zeroizing immediately for secure handling
-    let api_key: Zeroizing<String> = match key {
-        Some(k) => Zeroizing::new(k),
-        None => {
-            let env_var = provider_env_var(provider);
-            println!(
-                "{} {} {}",
-                "Setting API key for".cyan(),
-                provider.bold(),
-                format!("({})", env_var).dimmed()
-            );
-            println!(
-                "{}",
-                "Key will be stored securely in OS Keychain".dimmed()
-            );
-            println!();
+    // If key is provided (scripting mode), use quick setup
+    if let Some(k) = key {
+        let backend = match &storage {
+            Some(s) => match StorageBackend::from_str(s) {
+                Ok(b) => b,
+                Err(e) => {
+                    eprintln!("{} {}", "✗".red(), e);
+                    std::process::exit(1);
+                }
+            },
+            None => StorageBackend::default(),
+        };
 
-            let input = Password::new()
-                .with_prompt("Enter API key")
-                .interact()
-                .map_err(|e| crate::error::SpnError::InvalidInput(e.to_string()))?;
-
-            Zeroizing::new(input)
+        match run_quick_setup(provider, &k, backend) {
+            Ok(result) => {
+                println!(
+                    "{} {} {} {}",
+                    "✓".green(),
+                    "API key stored in".green(),
+                    result.location.cyan().bold(),
+                    format!("for {}", provider).green()
+                );
+                println!("  {} {}", "Key:".dimmed(), result.masked_key.dimmed());
+            }
+            Err(e) => {
+                eprintln!("{} {} {}", "✗".red(), "Failed:".red(), e);
+                std::process::exit(1);
+            }
         }
+        return Ok(());
+    }
+
+    // If storage is specified but no key, use simplified prompt
+    if storage.is_some() {
+        return run_set_with_storage(provider, storage).await;
+    }
+
+    // Interactive wizard mode (no --key, no --storage)
+    match run_wizard(provider) {
+        Ok(Some(result)) => {
+            // Wizard handles all output, just log success
+            tracing::info!(
+                provider = provider,
+                storage = %result.storage,
+                location = result.location,
+                "API key stored via wizard"
+            );
+        }
+        Ok(None) => {
+            // User cancelled - wizard already printed "Cancelled."
+        }
+        Err(e) => {
+            // Error handling is done in wizard, but let's be defensive
+            eprintln!("{} {}", "✗".red(), e);
+            std::process::exit(1);
+        }
+    }
+
+    Ok(())
+}
+
+/// Set an API key with storage already specified (simplified prompt).
+async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result<()> {
+    let backend = match &storage {
+        Some(s) => match StorageBackend::from_str(s) {
+            Ok(b) => b,
+            Err(e) => {
+                eprintln!("{} {}", "✗".red(), e);
+                std::process::exit(1);
+            }
+        },
+        None => StorageBackend::default(),
     };
+
+    let env_var = provider_env_var(provider);
+    println!(
+        "{} {} {}",
+        "Setting API key for".cyan(),
+        provider.bold(),
+        format!("({})", env_var).dimmed()
+    );
+    println!(
+        "{} {} {}",
+        backend.emoji(),
+        "Storage:".dimmed(),
+        backend.description().dimmed()
+    );
+    println!();
+
+    let input = Password::new()
+        .with_prompt("Enter API key")
+        .interact()
+        .map_err(|e| crate::error::SpnError::InvalidInput(e.to_string()))?;
+
+    let api_key = Zeroizing::new(input);
 
     // Validate key format
     if let Err(e) = validate_key_format(provider, &api_key) {
@@ -204,37 +280,169 @@ async fn run_set(provider: &str, key: Option<String>) -> Result<()> {
         std::process::exit(1);
     }
 
-    // Store in keychain
-    match SpnKeyring::set(provider, &api_key) {
-        Ok(()) => {
+    // Store based on backend
+    match backend {
+        StorageBackend::Keychain => {
+            match SpnKeyring::set(provider, &api_key) {
+                Ok(()) => {
+                    println!(
+                        "{} {} {} {}",
+                        "✓".green(),
+                        "API key stored in".green(),
+                        "OS Keychain".cyan().bold(),
+                        format!("for {}", provider).green()
+                    );
+                    println!(
+                        "  {} {}",
+                        "Key:".dimmed(),
+                        mask_api_key(&api_key).dimmed()
+                    );
+                    println!();
+                    println!(
+                        "{}",
+                        "Key is now securely stored and will be used automatically.".dimmed()
+                    );
+                }
+                Err(e) => {
+                    eprintln!(
+                        "{} {} {}",
+                        "✗".red(),
+                        "Failed to store key:".red(),
+                        e.to_string()
+                    );
+                    std::process::exit(1);
+                }
+            }
+        }
+        StorageBackend::Env => {
+            let path = project_env_path();
+
+            // Warn if not gitignored
+            if !is_gitignored(&path) {
+                eprintln!(
+                    "{} {}",
+                    "⚠".yellow(),
+                    "Warning: .env is not in .gitignore!".yellow()
+                );
+                eprintln!(
+                    "  {}",
+                    "Add '.env' to .gitignore to avoid committing secrets.".dimmed()
+                );
+                eprintln!();
+            }
+
+            match store_in_dotenv(provider, &api_key, &path) {
+                Ok(()) => {
+                    println!(
+                        "{} {} {} {}",
+                        "✓".green(),
+                        "API key stored in".green(),
+                        ".env".cyan().bold(),
+                        format!("for {}", provider).green()
+                    );
+                    println!(
+                        "  {} {}",
+                        "Key:".dimmed(),
+                        mask_api_key(&api_key).dimmed()
+                    );
+                    println!("  {} {}", "File:".dimmed(), path.display());
+                }
+                Err(e) => {
+                    eprintln!(
+                        "{} {} {}",
+                        "✗".red(),
+                        "Failed to store key:".red(),
+                        e.to_string()
+                    );
+                    std::process::exit(1);
+                }
+            }
+        }
+        StorageBackend::Global => {
+            let path = match global_secrets_path() {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!(
+                        "{} {} {}",
+                        "✗".red(),
+                        "Failed to determine global secrets path:".red(),
+                        e.to_string()
+                    );
+                    std::process::exit(1);
+                }
+            };
+            match store_in_global(provider, &api_key) {
+                Ok(()) => {
+                    println!(
+                        "{} {} {} {}",
+                        "✓".green(),
+                        "API key stored in".green(),
+                        "~/.spn/secrets.env".cyan().bold(),
+                        format!("for {}", provider).green()
+                    );
+                    println!(
+                        "  {} {}",
+                        "Key:".dimmed(),
+                        mask_api_key(&api_key).dimmed()
+                    );
+                    println!("  {} {}", "File:".dimmed(), path.display());
+                }
+                Err(e) => {
+                    eprintln!(
+                        "{} {} {}",
+                        "✗".red(),
+                        "Failed to store key:".red(),
+                        e.to_string()
+                    );
+                    std::process::exit(1);
+                }
+            }
+        }
+        StorageBackend::Shell => {
+            println!();
+            println!(
+                "{} {}",
+                "⚠ SECURITY WARNING:".yellow().bold(),
+                "Full API key will be displayed below".yellow()
+            );
+            println!(
+                "  {}",
+                "• Key may appear in terminal scrollback history".dimmed()
+            );
+            println!(
+                "  {}",
+                "• May be visible in screen recordings/sharing".dimmed()
+            );
+            println!(
+                "  {}",
+                "• Will NOT be stored by spn - you must copy it".dimmed()
+            );
+            println!();
+
             println!(
                 "{} {} {}",
                 "✓".green(),
-                "API key stored in OS Keychain for".green(),
+                "Key validated for".green(),
                 provider.bold()
             );
+            println!();
+            println!("{}", "Export command (copy this):".bold());
+            println!();
             println!(
-                "  {} {}",
-                "Key:".dimmed(),
-                mask_api_key(&api_key).dimmed()
+                "  {}",
+                format!("export {}='{}'", env_var, *api_key).cyan()
             );
             println!();
             println!(
                 "{}",
-                "Key is now securely stored and will be used automatically.".dimmed()
+                "Add this to your ~/.zshrc or ~/.bashrc to persist.".dimmed()
             );
-        }
-        Err(e) => {
-            eprintln!(
-                "{} {} {}",
-                "✗".red(),
-                "Failed to store key:".red(),
-                e.to_string()
+            println!(
+                "{}",
+                "Tip: Use --storage keychain for more secure storage.".dimmed()
             );
-            std::process::exit(1);
         }
     }
-    // api_key is automatically zeroized when it goes out of scope
 
     Ok(())
 }
@@ -463,6 +671,334 @@ async fn test_single_provider(provider: &str) {
     }
 }
 
+/// Show comprehensive diagnostics for secrets and providers.
+async fn run_status(json: bool) -> Result<()> {
+    if json {
+        return run_status_json().await;
+    }
+
+    println!();
+    println!(
+        "{}",
+        "╔═══════════════════════════════════════════════════════════════════════════════╗"
+            .cyan()
+    );
+    println!(
+        "{}",
+        "║  🔐 SECRETS & PROVIDERS DIAGNOSTIC REPORT                                     ║"
+            .cyan()
+    );
+    println!(
+        "{}",
+        "╚═══════════════════════════════════════════════════════════════════════════════╝"
+            .cyan()
+    );
+    println!();
+
+    // Section 1: Provider Status
+    println!("{}", "╭─────────────────────────────────────────────────────────────────────────────╮");
+    println!("{}", "│  📊 PROVIDER STATUS                                                         │");
+    println!("{}", "├─────────────────────────────────────────────────────────────────────────────┤");
+
+    let mut configured = 0;
+    let mut in_keychain = 0;
+    let mut in_env = 0;
+    let mut in_dotenv = 0;
+
+    // LLM Providers
+    println!("│  {}", "LLM Providers:".bold());
+    for provider in SUPPORTED_PROVIDERS {
+        let status = match resolve_api_key(provider) {
+            Some((key, source)) => {
+                configured += 1;
+                match source {
+                    SecretSource::Keychain => in_keychain += 1,
+                    SecretSource::Environment => in_env += 1,
+                    SecretSource::DotEnv => in_dotenv += 1,
+                    SecretSource::Inline => {} // Inline secrets don't count in storage stats
+                }
+                let icon = source.icon();
+                let masked = mask_api_key(&key);
+                format!("{} {} {}", icon, masked.green(), format!("({})", source.description()).dimmed())
+            }
+            None => "○ not configured".dimmed().to_string(),
+        };
+        println!("│    {:12} {}", provider.bold(), status);
+    }
+
+    println!("│");
+    println!("│  {}", "MCP Secrets:".bold());
+    for provider in MCP_SECRET_TYPES {
+        let status = match resolve_api_key(provider) {
+            Some((key, source)) => {
+                configured += 1;
+                match source {
+                    SecretSource::Keychain => in_keychain += 1,
+                    SecretSource::Environment => in_env += 1,
+                    SecretSource::DotEnv => in_dotenv += 1,
+                    SecretSource::Inline => {} // Inline secrets don't count in storage stats
+                }
+                let icon = source.icon();
+                let masked = mask_api_key(&key);
+                format!("{} {} {}", icon, masked.green(), format!("({})", source.description()).dimmed())
+            }
+            None => "○ not configured".dimmed().to_string(),
+        };
+        println!("│    {:12} {}", provider.bold(), status);
+    }
+    println!("{}", "╰─────────────────────────────────────────────────────────────────────────────╯");
+    println!();
+
+    // Section 2: Storage Distribution
+    println!("{}", "╭─────────────────────────────────────────────────────────────────────────────╮");
+    println!("{}", "│  📦 STORAGE DISTRIBUTION                                                    │");
+    println!("{}", "├─────────────────────────────────────────────────────────────────────────────┤");
+    println!(
+        "│    {} {} {} {}",
+        "🔐".green(),
+        format!("{:>2}", in_keychain).green().bold(),
+        "in OS Keychain".green(),
+        "(most secure)".dimmed()
+    );
+    if in_env > 0 {
+        println!(
+            "│    {} {} {} {}",
+            "📦".yellow(),
+            format!("{:>2}", in_env).yellow().bold(),
+            "in environment variables".yellow(),
+            "(moderate security)".dimmed()
+        );
+    }
+    if in_dotenv > 0 {
+        println!(
+            "│    {} {} {} {}",
+            "📄".yellow(),
+            format!("{:>2}", in_dotenv).yellow().bold(),
+            "in .env files".yellow(),
+            "(check .gitignore!)".dimmed()
+        );
+    }
+    let total = SUPPORTED_PROVIDERS.len() + MCP_SECRET_TYPES.len();
+    let unconfigured = total - configured;
+    if unconfigured > 0 {
+        println!(
+            "│    {} {} {}",
+            "○".dimmed(),
+            format!("{:>2}", unconfigured).dimmed(),
+            "not configured".dimmed()
+        );
+    }
+    println!("{}", "╰─────────────────────────────────────────────────────────────────────────────╯");
+    println!();
+
+    // Section 3: Memory Protection
+    println!("{}", "╭─────────────────────────────────────────────────────────────────────────────╮");
+    println!("{}", "│  🛡️  MEMORY PROTECTION                                                      │");
+    println!("{}", "├─────────────────────────────────────────────────────────────────────────────┤");
+
+    if mlock_available() {
+        let limit = mlock_limit().map(|l| {
+            if l == u64::MAX {
+                "unlimited".to_string()
+            } else {
+                format!("{} KB", l / 1024)
+            }
+        });
+        println!(
+            "│    {} {} {}",
+            "✓".green(),
+            "mlock() available".green(),
+            format!("(limit: {})", limit.unwrap_or("unknown".into())).dimmed()
+        );
+        println!("│      {}", "Secrets are locked in memory and won't be swapped to disk.".dimmed());
+    } else {
+        println!(
+            "│    {} {}",
+            "✗".red(),
+            "mlock() unavailable".red()
+        );
+        println!("│      {}", "Secrets may be swapped to disk. Consider increasing RLIMIT_MEMLOCK.".dimmed());
+    }
+
+    println!("│");
+    println!("│    {} {}", "✓".green(), "Zeroize on drop enabled for all secrets".green());
+    println!("│      {}", "Secrets are cleared from memory when no longer needed.".dimmed());
+    println!("{}", "╰─────────────────────────────────────────────────────────────────────────────╯");
+    println!();
+
+    // Section 4: File Paths
+    println!("{}", "╭─────────────────────────────────────────────────────────────────────────────╮");
+    println!("{}", "│  📁 STORAGE LOCATIONS                                                       │");
+    println!("{}", "├─────────────────────────────────────────────────────────────────────────────┤");
+
+    match global_secrets_path() {
+        Ok(path) => {
+            let exists = path.exists();
+            let status = if exists { "✓".green() } else { "○".dimmed() };
+            println!(
+                "│    {} {} {}",
+                status,
+                "Global secrets:".bold(),
+                path.display()
+            );
+        }
+        Err(_) => {
+            println!(
+                "│    {} {} {}",
+                "✗".red(),
+                "Global secrets:".bold(),
+                "Cannot determine home directory".red()
+            );
+        }
+    }
+
+    let env_path = project_env_path();
+    let env_exists = env_path.exists();
+    let gitignored = is_gitignored(&env_path);
+    let env_status = if env_exists { "✓".green() } else { "○".dimmed() };
+    let gitignore_status = if gitignored {
+        "(gitignored ✓)".green()
+    } else if env_exists {
+        "(NOT gitignored ⚠)".yellow()
+    } else {
+        "".into()
+    };
+    println!(
+        "│    {} {} {} {}",
+        env_status,
+        "Project .env:".bold(),
+        env_path.display(),
+        gitignore_status
+    );
+
+    println!("{}", "╰─────────────────────────────────────────────────────────────────────────────╯");
+    println!();
+
+    // Section 5: Security Score
+    let score = calculate_security_score(in_keychain, in_env, in_dotenv, configured);
+    let score_color = if score >= 80 {
+        "green"
+    } else if score >= 50 {
+        "yellow"
+    } else {
+        "red"
+    };
+
+    println!("{}", "╭─────────────────────────────────────────────────────────────────────────────╮");
+    println!("{}", "│  🏆 SECURITY SCORE                                                          │");
+    println!("{}", "├─────────────────────────────────────────────────────────────────────────────┤");
+
+    let bar_width = 40;
+    let filled = (score * bar_width / 100) as usize;
+    let empty = bar_width as usize - filled;
+    let bar = format!("{}{}",
+        "█".repeat(filled),
+        "░".repeat(empty)
+    );
+
+    let colored_bar = match score_color {
+        "green" => bar.green(),
+        "yellow" => bar.yellow(),
+        _ => bar.red(),
+    };
+    let colored_score = match score_color {
+        "green" => format!("{}/100", score).green().bold(),
+        "yellow" => format!("{}/100", score).yellow().bold(),
+        _ => format!("{}/100", score).red().bold(),
+    };
+
+    println!("│    {} {}", colored_bar, colored_score);
+    println!("│");
+
+    // Recommendations
+    if in_env > 0 || in_dotenv > 0 {
+        println!("│    {}", "Recommendations:".bold());
+        if in_env > 0 {
+            println!("│      {} Migrate {} keys from environment to keychain:", "→".cyan(), in_env);
+            println!("│        {}", "spn provider migrate".cyan());
+        }
+        if in_dotenv > 0 && !gitignored {
+            println!("│      {} Add .env to .gitignore to prevent accidental commits", "→".cyan());
+        }
+    } else if configured == 0 {
+        println!("│    {}", "Get started:".bold());
+        println!("│      {} Set up your first API key:", "→".cyan());
+        println!("│        {}", "spn provider set anthropic".cyan());
+    } else {
+        println!("│    {} All secrets are stored securely in OS Keychain!", "✓".green());
+    }
+
+    println!("{}", "╰─────────────────────────────────────────────────────────────────────────────╯");
+    println!();
+
+    Ok(())
+}
+
+/// Calculate security score based on where keys are stored.
+fn calculate_security_score(in_keychain: usize, in_env: usize, in_dotenv: usize, total: usize) -> u32 {
+    if total == 0 {
+        return 100; // No secrets to protect = perfect score
+    }
+
+    // Weights: keychain=100, env=40, dotenv=20
+    let keychain_score = in_keychain * 100;
+    let env_score = in_env * 40;
+    let dotenv_score = in_dotenv * 20;
+
+    let weighted_total = keychain_score + env_score + dotenv_score;
+    let max_possible = total * 100;
+
+    (weighted_total * 100 / max_possible) as u32
+}
+
+/// Output status as JSON for scripting.
+async fn run_status_json() -> Result<()> {
+    use serde_json::json;
+
+    let audit = security_audit();
+    let mut providers = Vec::new();
+
+    for (provider, source, recommendation) in &audit {
+        // Get the actual masked key if configured
+        let masked_key = resolve_api_key(provider).map(|(key, _)| mask_api_key(&key));
+
+        providers.push(json!({
+            "name": provider,
+            "configured": source.is_some(),
+            "source": source.as_ref().map(|s| format!("{:?}", s)),
+            "masked_key": masked_key,
+            "recommendation": recommendation
+        }));
+    }
+
+    let in_keychain = audit.iter().filter(|(_, s, _)| *s == Some(SecretSource::Keychain)).count();
+    let in_env = audit.iter().filter(|(_, s, _)| *s == Some(SecretSource::Environment)).count();
+    let in_dotenv = audit.iter().filter(|(_, s, _)| *s == Some(SecretSource::DotEnv)).count();
+    let configured = in_keychain + in_env + in_dotenv;
+
+    let output = json!({
+        "providers": providers,
+        "storage": {
+            "keychain": in_keychain,
+            "environment": in_env,
+            "dotenv": in_dotenv
+        },
+        "memory_protection": {
+            "mlock_available": mlock_available(),
+            "mlock_limit": mlock_limit()
+        },
+        "paths": {
+            "global_secrets": global_secrets_path().ok().map(|p| p.display().to_string()),
+            "project_env": project_env_path().display().to_string(),
+            "project_env_gitignored": is_gitignored(&project_env_path())
+        },
+        "security_score": calculate_security_score(in_keychain, in_env, in_dotenv, configured)
+    });
+
+    println!("{}", serde_json::to_string_pretty(&output)?);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -479,5 +1015,70 @@ mod tests {
         assert!(MCP_SECRET_TYPES.contains(&"github"));
         assert!(MCP_SECRET_TYPES.contains(&"neo4j"));
         assert!(MCP_SECRET_TYPES.contains(&"perplexity"));
+    }
+
+    #[test]
+    fn test_storage_backend_parsing() {
+        // Valid backends
+        assert_eq!(
+            StorageBackend::from_str("keychain").unwrap(),
+            StorageBackend::Keychain
+        );
+        assert_eq!(
+            StorageBackend::from_str("env").unwrap(),
+            StorageBackend::Env
+        );
+        assert_eq!(
+            StorageBackend::from_str("global").unwrap(),
+            StorageBackend::Global
+        );
+        assert_eq!(
+            StorageBackend::from_str("shell").unwrap(),
+            StorageBackend::Shell
+        );
+
+        // Case insensitive
+        assert_eq!(
+            StorageBackend::from_str("KEYCHAIN").unwrap(),
+            StorageBackend::Keychain
+        );
+        assert_eq!(
+            StorageBackend::from_str("ENV").unwrap(),
+            StorageBackend::Env
+        );
+
+        // Invalid
+        assert!(StorageBackend::from_str("invalid").is_err());
+        assert!(StorageBackend::from_str("database").is_err());
+    }
+
+    #[test]
+    fn test_storage_backend_default_is_keychain() {
+        assert_eq!(StorageBackend::default(), StorageBackend::Keychain);
+    }
+
+    #[test]
+    fn test_storage_backend_descriptions() {
+        // Each backend should have meaningful description
+        assert!(StorageBackend::Keychain.description().contains("Keychain"));
+        assert!(StorageBackend::Env.description().contains(".env"));
+        assert!(StorageBackend::Global.description().contains("~/.spn"));
+        assert!(StorageBackend::Shell.description().contains("export"));
+    }
+
+    #[test]
+    fn test_storage_backend_emojis() {
+        assert_eq!(StorageBackend::Keychain.emoji(), "🔐");
+        assert_eq!(StorageBackend::Env.emoji(), "📁");
+        assert_eq!(StorageBackend::Global.emoji(), "🌍");
+        assert_eq!(StorageBackend::Shell.emoji(), "📋");
+    }
+
+    #[test]
+    fn test_storage_backend_security_ranking() {
+        // Keychain > Global > Env > Shell
+        assert!(StorageBackend::Keychain.security_level() > StorageBackend::Global.security_level());
+        assert!(StorageBackend::Global.security_level() > StorageBackend::Env.security_level());
+        assert!(StorageBackend::Env.security_level() > StorageBackend::Shell.security_level());
     }
 }
