@@ -19,14 +19,14 @@
 <sup>✨ One CLI to rule them all: Workflows, Skills, MCP Servers, and Agents ✨</sup>
 
 <!-- Primary Badges -->
-[![Version](https://img.shields.io/badge/v0.7.0-000000?style=for-the-badge&logo=semver&logoColor=white&labelColor=6366f1)](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.7.0)
+[![Version](https://img.shields.io/badge/v0.8.0-000000?style=for-the-badge&logo=semver&logoColor=white&labelColor=6366f1)](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.8.0)
 [![Rust](https://img.shields.io/badge/rust_1.86+-f97316?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/MIT-10b981?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 [![Website](https://img.shields.io/badge/🌟_spn.sh-8b5cf6?style=for-the-badge)](https://supernovae.studio)
 
 <!-- GitHub Badges -->
 [![CI](https://img.shields.io/github/actions/workflow/status/supernovae-st/supernovae-cli/ci.yml?style=flat-square&logo=github&label=CI)](https://github.com/supernovae-st/supernovae-cli/actions)
-[![Tests](https://img.shields.io/badge/tests-181_passing-10b981?style=flat-square&logo=checkmarx)](https://github.com/supernovae-st/supernovae-cli/actions)
+[![Tests](https://img.shields.io/badge/tests-251_passing-10b981?style=flat-square&logo=checkmarx)](https://github.com/supernovae-st/supernovae-cli/actions)
 [![Downloads](https://img.shields.io/crates/d/spn?style=flat-square&logo=rust&label=downloads)](https://crates.io/crates/spn)
 [![Stars](https://img.shields.io/github/stars/supernovae-st/supernovae-cli?style=flat-square&logo=github&label=stars)](https://github.com/supernovae-st/supernovae-cli/stargazers)
 
@@ -79,6 +79,8 @@ Manage workflows, skills, MCP servers, and agents with a single command.
 - ⚡ **Cargo-style Index** — Sparse registry for lightning-fast package resolution
 - 🎯 **Three-Level Config** — Global/Team/Local scope hierarchy (v0.7.0)
 - 🔄 **Selective Sync** — Only sync what needs syncing (v0.7.0)
+- 🚀 **Onboarding Wizard** — Interactive setup for first-time users (v0.8.0)
+- 🔑 **Secrets Management** — Doctor, export, import with SOPS support (v0.8.0)
 
 <br>
 
@@ -95,6 +97,8 @@ Manage workflows, skills, MCP servers, and agents with a single command.
 - [Commands Reference](#-commands-reference)
   - [Package Management](#-package-management)
   - [Configuration Management](#-configuration-management)
+  - [Onboarding](#-onboarding)
+  - [Secrets Management](#-secrets-management)
   - [Security](#-security)
   - [Skills](#-skills)
   - [MCP Servers](#-mcp-servers)
@@ -135,7 +139,7 @@ cargo install --path .
 ### Verify Installation
 
 ```bash
-spn --version  # spn 0.7.0
+spn --version  # spn 0.8.0
 spn doctor     # System diagnostic
 ```
 
@@ -873,6 +877,137 @@ Import 2 servers into team scope? [Y/n] y
 - `.claude/settings.json` (Claude Code)
 - `.cursor/mcp.json` (Cursor)
 - `.windsurf/mcp.json` (Windsurf)
+
+<br>
+
+---
+
+### 🚀 Onboarding
+
+Commands for first-time setup and configuration.
+
+#### `spn setup`
+
+Interactive onboarding wizard for first-time users.
+
+```bash
+# Full interactive wizard
+spn setup
+
+# Quick setup: auto-detect and migrate keys
+spn setup --quick
+
+# Verbose output
+spn setup --verbose
+```
+
+**What happens:**
+1. Detects existing API keys in environment
+2. Shows provider signup URLs with descriptions
+3. Prompts to migrate keys to OS Keychain
+4. Configures default providers
+5. Sets up MCP server aliases
+
+**Provider Information:**
+
+| Provider | Signup URL | Description |
+|:---------|:-----------|:------------|
+| Anthropic | [console.anthropic.com](https://console.anthropic.com/settings/keys) | Best for complex reasoning, coding, extended thinking |
+| OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | Versatile, great for chat and embeddings |
+| Mistral | [console.mistral.ai](https://console.mistral.ai/api-keys) | European, strong code generation |
+| Groq | [console.groq.com](https://console.groq.com/keys) | Fastest inference, great for real-time |
+| DeepSeek | [platform.deepseek.com](https://platform.deepseek.com/api_keys) | Cost-effective, strong reasoning |
+| Gemini | [aistudio.google.com](https://aistudio.google.com/app/apikey) | Google's model, multimodal capabilities |
+| Ollama | [ollama.ai](https://ollama.ai) | Local inference, no API key needed |
+
+<br>
+
+---
+
+### 🔑 Secrets Management
+
+Commands for managing and auditing secrets configuration.
+
+#### `spn secrets doctor`
+
+Run health checks on secrets configuration.
+
+```bash
+spn secrets doctor
+```
+
+**Output:**
+```
+🏥 Secrets Health Check
+
+Storage Status:
+  ✅ OS Keychain accessible
+  ✅ Environment variables loaded
+  ⚠️  .env file found (consider migration)
+
+Key Analysis:
+  🔐 0 keys in OS Keychain
+  📦 6 keys in environment variables
+  ⚠️  2 keys in .env files (insecure)
+
+Recommendations:
+  1. Migrate environment keys to OS Keychain
+     Run: spn provider migrate
+  2. Remove .env files from version control
+     Add to .gitignore: .env
+
+Memory Protection:
+  ✅ mlock available (limit: unlimited)
+  ✅ MADV_DONTDUMP available
+```
+
+<br>
+
+#### `spn secrets export <file> [--format=<format>]`
+
+Export secrets to encrypted file.
+
+```bash
+# Export to SOPS-encrypted file
+spn secrets export secrets.enc.yaml
+
+# Export as JSON
+spn secrets export secrets.enc.json --format=json
+
+# Export masked (for sharing config structure)
+spn secrets export secrets.masked.yaml --masked
+```
+
+**Formats:**
+- `yaml` (default) — SOPS-encrypted YAML
+- `json` — SOPS-encrypted JSON
+- `env` — Encrypted .env format
+
+**Security:**
+- Uses SOPS (Secrets OPerationS) for encryption
+- Supports age, PGP, AWS KMS, GCP KMS, Azure Key Vault
+- Never exports unencrypted secrets
+
+<br>
+
+#### `spn secrets import <file>`
+
+Import secrets from encrypted file.
+
+```bash
+# Import from SOPS-encrypted file
+spn secrets import secrets.enc.yaml
+
+# Import with verbose output
+spn secrets import secrets.enc.yaml --verbose
+```
+
+**What happens:**
+1. Decrypts file using SOPS
+2. Validates key formats
+3. Shows preview of keys to import
+4. Asks for confirmation
+5. Stores in OS Keychain
 
 <br>
 
@@ -1678,8 +1813,8 @@ spn doctor
 🏥 SuperNovae System Diagnostic
 
 Installation:
-  ✅ spn v0.7.0 installed
-  ✅ nika v0.16.3 available
+  ✅ spn v0.8.0 installed
+  ✅ nika v0.17.5 available
   ✅ novanet v0.14.0 available
 
 Dependencies:
@@ -1948,7 +2083,7 @@ Resolved package versions (committed to git).
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818cf8', 'lineColor': '#a5b4fc', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#312e81'}}}%%
 flowchart TB
-    subgraph SPN["🌟 spn — Package Manager v0.7.0"]
+    subgraph SPN["🌟 spn — Package Manager v0.8.0"]
         direction LR
         subgraph OWNED["We Own"]
             W["📋 workflows/<br/>YAML DAGs"]
@@ -1973,7 +2108,7 @@ flowchart TB
     end
 
     subgraph RUNTIME["🚀 Runtime Engines"]
-        NIKA["🦋 Nika v0.16.3<br/>Workflow Runtime<br/><i>5 Semantic Verbs</i>"]
+        NIKA["🦋 Nika v0.17.5<br/>Workflow Runtime<br/><i>5 Semantic Verbs</i>"]
         NOVANET["🧠 NovaNet v0.14.0<br/>Knowledge Graph<br/><i>Neo4j + MCP Server</i>"]
     end
 
@@ -2075,7 +2210,7 @@ flowchart TB
 
 | Repository | Description | Version |
 |:-----------|:------------|:--------|
-| [nika](https://github.com/supernovae-st/nika) | 🦋 Semantic YAML workflow engine | v0.16.3 |
+| [nika](https://github.com/supernovae-st/nika) | 🦋 Semantic YAML workflow engine | v0.17.5 |
 | [novanet](https://github.com/supernovae-st/novanet) | 🧠 Knowledge graph for localization | v0.14.0 |
 | [supernovae-registry](https://github.com/supernovae-st/supernovae-registry) | 📦 Public package registry | - |
 | [supernovae-index](https://github.com/supernovae-st/supernovae-index) | 📇 Sparse package index | - |
@@ -2099,7 +2234,7 @@ cd supernovae-cli
 # Build the project
 cargo build
 
-# Run tests (181 tests)
+# Run tests (251 tests)
 cargo test
 
 # Run linter
@@ -2172,7 +2307,10 @@ src/
 ├── secrets/             // Credential management (v0.6.0)
 │   ├── keyring.rs       // OS keychain
 │   ├── types.rs         // Provider types
-│   └── memory.rs        // Memory protection
+│   ├── memory.rs        // Memory protection
+│   ├── storage.rs       // Storage abstraction (v0.8.0)
+│   ├── env_storage.rs   // Environment storage (v0.8.0)
+│   └── wizard.rs        // Setup wizard (v0.8.0)
 └── error.rs             // Error types
 ```
 
@@ -2281,6 +2419,6 @@ src/
 
 <br>
 
-<sup>v0.7.0 — Architecture Refactor • Three-level config scope • Selective sync • Import from editors</sup>
+<sup>v0.8.0 — Onboarding Wizard • Secrets Management • Setup Command • Provider Signup URLs</sup>
 
 </div>
