@@ -347,6 +347,222 @@ mod tests {
         config
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MCP SECRETS INTEGRATION TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    fn create_mcp_config_with_secrets() -> McpConfig {
+        let mut config = McpConfig::default();
+
+        // MCP server that uses secrets from environment
+        config.servers.insert(
+            "neo4j".to_string(),
+            McpServer {
+                command: "npx".to_string(),
+                args: vec!["-y".to_string(), "@neo4j/mcp-server-neo4j".to_string()],
+                env: HashMap::from([
+                    ("NEO4J_URI".to_string(), "bolt://localhost:7687".to_string()),
+                    ("NEO4J_USER".to_string(), "neo4j".to_string()),
+                    ("NEO4J_PASSWORD".to_string(), "${NEO4J_PASSWORD}".to_string()),
+                ]),
+                description: Some("Neo4j knowledge graph".to_string()),
+                enabled: true,
+                source: None,
+            },
+        );
+
+        config.servers.insert(
+            "perplexity".to_string(),
+            McpServer {
+                command: "npx".to_string(),
+                args: vec!["-y".to_string(), "@anthropic/mcp-perplexity".to_string()],
+                env: HashMap::from([
+                    ("PERPLEXITY_API_KEY".to_string(), "${PERPLEXITY_API_KEY}".to_string()),
+                ]),
+                description: Some("Web search".to_string()),
+                enabled: true,
+                source: None,
+            },
+        );
+
+        config.servers.insert(
+            "firecrawl".to_string(),
+            McpServer {
+                command: "npx".to_string(),
+                args: vec!["-y".to_string(), "@anthropic/mcp-firecrawl".to_string()],
+                env: HashMap::from([
+                    ("FIRECRAWL_API_KEY".to_string(), "${FIRECRAWL_API_KEY}".to_string()),
+                ]),
+                description: None,
+                enabled: true,
+                source: None,
+            },
+        );
+
+        config
+    }
+
+    #[test]
+    fn test_mcp_secrets_in_env_config() {
+        let config = create_mcp_config_with_secrets();
+        let json = build_mcp_servers_json(&config);
+
+        // Verify Neo4j has password env var
+        let neo4j = &json["neo4j"];
+        assert!(neo4j["env"]["NEO4J_PASSWORD"].is_string());
+        assert_eq!(neo4j["env"]["NEO4J_PASSWORD"], "${NEO4J_PASSWORD}");
+
+        // Verify Perplexity has API key
+        let perplexity = &json["perplexity"];
+        assert!(perplexity["env"]["PERPLEXITY_API_KEY"].is_string());
+        assert_eq!(perplexity["env"]["PERPLEXITY_API_KEY"], "${PERPLEXITY_API_KEY}");
+
+        // Verify Firecrawl has API key
+        let firecrawl = &json["firecrawl"];
+        assert!(firecrawl["env"]["FIRECRAWL_API_KEY"].is_string());
+    }
+
+    #[test]
+    fn test_mcp_server_with_multiple_secrets() {
+        let mut config = McpConfig::default();
+        config.servers.insert(
+            "multi-secret".to_string(),
+            McpServer {
+                command: "node".to_string(),
+                args: vec!["server.js".to_string()],
+                env: HashMap::from([
+                    ("API_KEY".to_string(), "${API_KEY}".to_string()),
+                    ("SECRET_TOKEN".to_string(), "${SECRET_TOKEN}".to_string()),
+                    ("DB_PASSWORD".to_string(), "${DB_PASSWORD}".to_string()),
+                ]),
+                description: None,
+                enabled: true,
+                source: None,
+            },
+        );
+
+        let json = build_mcp_servers_json(&config);
+        let server = &json["multi-secret"];
+
+        // All three secrets should be present
+        assert!(server["env"]["API_KEY"].is_string());
+        assert!(server["env"]["SECRET_TOKEN"].is_string());
+        assert!(server["env"]["DB_PASSWORD"].is_string());
+    }
+
+    #[test]
+    fn test_sync_mcp_with_secrets_to_claude_code() {
+        let temp = TempDir::new().unwrap();
+        let config_path = temp.path().join(".claude").join("settings.json");
+        let mcp_config = create_mcp_config_with_secrets();
+
+        let result = sync_to_json_settings(
+            IdeTarget::ClaudeCode,
+            &config_path,
+            &mcp_config,
+            "mcpServers",
+        );
+
+        assert!(result.success);
+        assert_eq!(result.servers_synced, 3); // neo4j, perplexity, firecrawl
+
+        // Read the file and verify secrets are present
+        let content = std::fs::read_to_string(&config_path).unwrap();
+        let json: Value = serde_json::from_str(&content).unwrap();
+
+        // Check Neo4j password
+        assert_eq!(
+            json["mcpServers"]["neo4j"]["env"]["NEO4J_PASSWORD"],
+            "${NEO4J_PASSWORD}"
+        );
+
+        // Check Perplexity API key
+        assert_eq!(
+            json["mcpServers"]["perplexity"]["env"]["PERPLEXITY_API_KEY"],
+            "${PERPLEXITY_API_KEY}"
+        );
+    }
+
+    #[test]
+    fn test_sync_preserves_secrets_on_update() {
+        let temp = TempDir::new().unwrap();
+        let config_path = temp.path().join(".cursor").join("mcp.json");
+
+        // Create initial config with secrets
+        std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        let existing = json!({
+            "mcpServers": {
+                "existing": {
+                    "command": "node",
+                    "args": ["existing.js"],
+                    "env": {
+                        "EXISTING_SECRET": "${EXISTING_SECRET}"
+                    }
+                }
+            }
+        });
+        std::fs::write(&config_path, serde_json::to_string_pretty(&existing).unwrap()).unwrap();
+
+        // Sync with new config containing secrets
+        let mcp_config = create_mcp_config_with_secrets();
+        let result = sync_to_json_mcp(IdeTarget::Cursor, &config_path, &mcp_config);
+
+        assert!(result.success);
+
+        // Verify existing secrets are preserved
+        let content = std::fs::read_to_string(&config_path).unwrap();
+        let json: Value = serde_json::from_str(&content).unwrap();
+
+        assert_eq!(
+            json["mcpServers"]["existing"]["env"]["EXISTING_SECRET"],
+            "${EXISTING_SECRET}"
+        );
+
+        // And new secrets are added
+        assert_eq!(
+            json["mcpServers"]["neo4j"]["env"]["NEO4J_PASSWORD"],
+            "${NEO4J_PASSWORD}"
+        );
+    }
+
+    #[test]
+    fn test_mcp_server_secrets_are_env_var_references() {
+        // Verify that secrets use ${VAR} syntax (not actual values)
+        let config = create_mcp_config_with_secrets();
+        let json = build_mcp_servers_json(&config);
+
+        for (name, server) in json.as_object().unwrap() {
+            if let Some(env) = server.get("env") {
+                for (key, value) in env.as_object().unwrap() {
+                    // If the key ends with _PASSWORD, _KEY, or _TOKEN, it should be a reference
+                    if key.ends_with("_PASSWORD") || key.ends_with("_KEY") || key.ends_with("_TOKEN") {
+                        let value_str = value.as_str().unwrap();
+                        assert!(
+                            value_str.starts_with("${") && value_str.ends_with("}"),
+                            "Secret {} in server {} should be a ${} reference, got: {}",
+                            key, name, key, value_str
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_all_mcp_secret_types_have_env_vars() {
+        use crate::secrets::{provider_env_var, MCP_SECRET_TYPES};
+
+        // Verify all MCP secret types map to known env vars
+        for secret_type in MCP_SECRET_TYPES {
+            let env_var = provider_env_var(secret_type);
+            assert_ne!(
+                env_var, "UNKNOWN_API_KEY",
+                "MCP secret type {} should have a known env var mapping",
+                secret_type
+            );
+        }
+    }
+
     #[test]
     fn test_build_mcp_servers_json() {
         let config = create_test_mcp_config();
