@@ -397,6 +397,24 @@ enum ConfigCommands {
         #[arg(long)]
         show_origin: bool,
     },
+    /// Get a configuration value
+    Get {
+        /// Config key (e.g., providers.anthropic.model)
+        key: String,
+        /// Show which scope defined this value
+        #[arg(long)]
+        show_origin: bool,
+    },
+    /// Set a configuration value
+    Set {
+        /// Config key (e.g., providers.anthropic.model)
+        key: String,
+        /// Value to set
+        value: String,
+        /// Scope to set value in (global, team, local)
+        #[arg(long, default_value = "global")]
+        scope: String,
+    },
     /// Edit configuration
     Edit {
         /// Edit local config

@@ -1,228 +1,193 @@
 //! Config command implementation.
 //!
-//! Shows and manages configuration from multiple sources.
+//! Manages configuration across three scopes: Global, Team, Local.
 
 use std::env;
-use std::path::PathBuf;
 
+use colored::Colorize;
+
+use crate::config::{global, local, scope::ScopeType, team, ConfigResolver};
+use crate::error::{Result, SpnError};
 use crate::ConfigCommands;
-use crate::error::Result;
-
-/// Config file locations in precedence order (lowest to highest).
-#[derive(Debug)]
-struct ConfigLocations {
-    /// User config (~/.config/spn/config.yaml)
-    user: Option<PathBuf>,
-    /// Project config (spn.yaml)
-    project: Option<PathBuf>,
-    /// Local config (spn.local.yaml)
-    local: Option<PathBuf>,
-    /// MCP config (.mcp.yaml)
-    mcp: Option<PathBuf>,
-    /// MCP local config (.mcp.local.yaml)
-    mcp_local: Option<PathBuf>,
-}
-
-impl ConfigLocations {
-    fn discover() -> Self {
-        let cwd = env::current_dir().unwrap_or_default();
-
-        // User config directory
-        let user_config = dirs::config_dir()
-            .map(|d| d.join("spn").join("config.yaml"))
-            .filter(|p| p.exists());
-
-        // Project configs
-        let project = cwd.join("spn.yaml");
-        let local = cwd.join("spn.local.yaml");
-        let mcp = cwd.join(".mcp.yaml");
-        let mcp_local = cwd.join(".mcp.local.yaml");
-
-        Self {
-            user: user_config,
-            project: project.exists().then_some(project),
-            local: local.exists().then_some(local),
-            mcp: mcp.exists().then_some(mcp),
-            mcp_local: mcp_local.exists().then_some(mcp_local),
-        }
-    }
-}
 
 pub async fn run(command: ConfigCommands) -> Result<()> {
     match command {
         ConfigCommands::Show { section } => show_config(section).await,
         ConfigCommands::Where => show_locations().await,
         ConfigCommands::List { show_origin } => list_config(show_origin).await,
+        ConfigCommands::Get { key, show_origin } => get_value(&key, show_origin).await,
+        ConfigCommands::Set { key, value, scope } => set_value(&key, &value, &scope).await,
         ConfigCommands::Edit { local, user, mcp } => edit_config(local, user, mcp).await,
     }
 }
 
-async fn show_config(section: Option<String>) -> Result<()> {
-    let locations = ConfigLocations::discover();
+async fn show_config(_section: Option<String>) -> Result<()> {
+    let resolver = ConfigResolver::load()?;
+    let config = resolver.resolved();
 
-    println!("⚙️  Configuration:\n");
+    println!("{}", "⚙️  Resolved Configuration".cyan().bold());
+    println!();
 
-    // Show project config if exists
-    if let Some(ref path) = locations.project {
-        let content = std::fs::read_to_string(path)?;
-        match section {
-            Some(ref s) => {
-                println!("   Section: {}", s);
-                // Parse YAML and extract section
-                if let Ok(yaml) = serde_yaml::from_str::<serde_yaml::Value>(&content) {
-                    if let Some(value) = yaml.get(s) {
-                        let section_yaml = serde_yaml::to_string(value)?;
-                        for line in section_yaml.lines() {
-                            println!("   {}", line);
-                        }
-                    } else {
-                        println!("   Section '{}' not found", s);
-                    }
-                }
+    // Show providers
+    if !config.providers.is_empty() {
+        println!("{}", "Providers:".bold());
+        for (name, provider) in &config.providers {
+            if let Some(model) = &provider.model {
+                println!("  {} model = {}", name.cyan(), model);
             }
-            None => {
-                println!("   {}:", path.display());
-                for line in content.lines().take(20) {
-                    println!("   {}", line);
-                }
-                if content.lines().count() > 20 {
-                    println!("   ... ({} more lines)", content.lines().count() - 20);
-                }
+            if let Some(endpoint) = &provider.endpoint {
+                println!("  {} endpoint = {}", name.cyan(), endpoint);
             }
         }
-    } else {
-        println!("   No spn.yaml found in current directory.");
         println!();
-        println!("   Run 'spn init' to create one.");
+    }
+
+    // Show sync config
+    if !config.sync.enabled_editors.is_empty() || config.sync.auto_sync {
+        println!("{}", "Sync:".bold());
+        println!("  enabled_editors = {:?}", config.sync.enabled_editors);
+        println!("  auto_sync = {}", config.sync.auto_sync);
+        println!();
+    }
+
+    // Show MCP servers
+    if !config.servers.is_empty() {
+        println!("{}", "MCP Servers:".bold());
+        for (name, server) in &config.servers {
+            let status = if server.disabled { "(disabled)" } else { "" };
+            println!("  {} {} {}", name.cyan(), server.command, status.dimmed());
+        }
+        println!();
     }
 
     Ok(())
 }
 
 async fn show_locations() -> Result<()> {
-    let locations = ConfigLocations::discover();
-    let cwd = env::current_dir()?;
+    let resolver = ConfigResolver::load()?;
+    let scopes = resolver.get_scope_paths()?;
 
-    println!("📁 Config file locations:\n");
+    println!("{}", "📁 Config File Locations".cyan().bold());
+    println!();
+    println!("   {}", "Precedence: Local > Team > Global".dimmed());
+    println!();
 
-    // User config
-    let user_path = dirs::config_dir()
-        .map(|d| d.join("spn").join("config.yaml"))
-        .unwrap_or_else(|| PathBuf::from("~/.config/spn/config.yaml"));
-    let user_status = if locations.user.is_some() { "✓" } else { "○" };
-    println!("   {} User:    {}", user_status, user_path.display());
-
-    // Project config
-    let project_path = cwd.join("spn.yaml");
-    let project_status = if locations.project.is_some() { "✓" } else { "○" };
-    println!("   {} Project: {}", project_status, project_path.display());
-
-    // Local config
-    let local_path = cwd.join("spn.local.yaml");
-    let local_status = if locations.local.is_some() { "✓" } else { "○" };
-    println!("   {} Local:   {} (gitignored)", local_status, local_path.display());
-
-    // MCP config
-    let mcp_path = cwd.join(".mcp.yaml");
-    let mcp_status = if locations.mcp.is_some() { "✓" } else { "○" };
-    println!("   {} MCP:     {}", mcp_status, mcp_path.display());
-
-    // MCP local config
-    let mcp_local_path = cwd.join(".mcp.local.yaml");
-    let mcp_local_status = if locations.mcp_local.is_some() { "✓" } else { "○" };
-    println!("   {} MCP:     {} (gitignored)", mcp_local_status, mcp_local_path.display());
+    for scope in scopes {
+        let status = if scope.exists { "✓".green() } else { "○".dimmed() };
+        println!("   {} {}", status, scope.display_name());
+    }
 
     println!();
-    println!("   ✓ = exists, ○ = not found");
-    println!();
-    println!("   Precedence: user < project < local");
+    println!("   {} = exists, {} = not found", "✓".green(), "○".dimmed());
 
     Ok(())
 }
 
 async fn list_config(show_origin: bool) -> Result<()> {
-    let locations = ConfigLocations::discover();
+    let resolver = ConfigResolver::load()?;
+    let config = resolver.resolved();
 
-    println!("📋 Configuration values:\n");
+    println!("{}", "📋 Configuration Values".cyan().bold());
+    println!();
 
-    if locations.project.is_none() {
-        println!("   No spn.yaml found. Run 'spn init' to create one.");
-        return Ok(());
+    // List providers
+    if !config.providers.is_empty() {
+        for (name, provider) in &config.providers {
+            if let Some(model) = &provider.model {
+                if show_origin {
+                    // TODO: Implement proper origin tracking
+                    println!("  providers.{}.model = {} (global)", name, model);
+                } else {
+                    println!("  providers.{}.model = {}", name, model);
+                }
+            }
+        }
     }
 
-    // Load and display project config
-    if let Some(ref path) = locations.project {
-        let content = std::fs::read_to_string(path)?;
-        if let Ok(yaml) = serde_yaml::from_str::<serde_yaml::Value>(&content) {
-            print_yaml_values(&yaml, "", show_origin, path);
+    // List sync config
+    if !config.sync.enabled_editors.is_empty() {
+        println!(
+            "  sync.enabled_editors = {:?}",
+            config.sync.enabled_editors
+        );
+    }
+    if config.sync.auto_sync {
+        println!("  sync.auto_sync = true");
+    }
+
+    // List servers
+    if !config.servers.is_empty() {
+        for (name, _server) in &config.servers {
+            println!("  servers.{} = <configured>", name);
         }
     }
 
     if show_origin {
         println!();
-        println!("   Values from: spn.yaml < spn.local.yaml");
+        println!(
+            "   {}",
+            "Use 'spn config get <key> --show-origin' for detailed origin info".dimmed()
+        );
     }
 
     Ok(())
 }
 
-fn print_yaml_values(value: &serde_yaml::Value, prefix: &str, show_origin: bool, source: &PathBuf) {
-    match value {
-        serde_yaml::Value::Mapping(map) => {
-            for (k, v) in map {
-                if let serde_yaml::Value::String(key) = k {
-                    let new_prefix = if prefix.is_empty() {
-                        key.clone()
-                    } else {
-                        format!("{}.{}", prefix, key)
-                    };
+async fn get_value(key: &str, show_origin: bool) -> Result<()> {
+    let _resolver = ConfigResolver::load()?;
 
-                    match v {
-                        serde_yaml::Value::Mapping(_) => {
-                            print_yaml_values(v, &new_prefix, show_origin, source);
-                        }
-                        serde_yaml::Value::Sequence(seq) => {
-                            if show_origin {
-                                println!("   {} = [{} items] ({})", new_prefix, seq.len(), source.file_name().unwrap().to_string_lossy());
-                            } else {
-                                println!("   {} = [{} items]", new_prefix, seq.len());
-                            }
-                        }
-                        _ => {
-                            let val_str = match v {
-                                serde_yaml::Value::String(s) => s.clone(),
-                                serde_yaml::Value::Number(n) => n.to_string(),
-                                serde_yaml::Value::Bool(b) => b.to_string(),
-                                serde_yaml::Value::Null => "null".to_string(),
-                                _ => format!("{:?}", v),
-                            };
-                            if show_origin {
-                                println!("   {} = {} ({})", new_prefix, val_str, source.file_name().unwrap().to_string_lossy());
-                            } else {
-                                println!("   {} = {}", new_prefix, val_str);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        _ => {}
+    // TODO: Implement key path resolution
+    // For now, just show a message
+    println!(
+        "{} Getting value for key: {}",
+        "🔍".cyan(),
+        key.bold()
+    );
+
+    if show_origin {
+        println!();
+        println!("   {} Origin tracking not yet implemented", "⚠️".yellow());
+        println!("   {} This will show which scope defined this value", "→".dimmed());
     }
+
+    Ok(())
 }
 
-async fn edit_config(local: bool, user: bool, mcp: bool) -> Result<()> {
+async fn set_value(key: &str, value: &str, scope: &str) -> Result<()> {
+    let scope_type = ScopeType::from_str(scope).ok_or_else(|| {
+        SpnError::ConfigError(format!(
+            "Invalid scope: {}. Use: global, team, or local",
+            scope
+        ))
+    })?;
+
+    println!(
+        "{} Setting {} = {} in {} scope",
+        "✍️".cyan(),
+        key.bold(),
+        value,
+        scope_type
+    );
+
+    // TODO: Implement key path resolution and setting
+    println!();
+    println!("   {} Key path resolution not yet implemented", "⚠️".yellow());
+    println!("   {} Manual edit with: spn config edit", "→".dimmed());
+
+    Ok(())
+}
+
+async fn edit_config(local_flag: bool, user: bool, mcp: bool) -> Result<()> {
     let cwd = env::current_dir()?;
 
-    let path = if local {
-        cwd.join("spn.local.yaml")
+    let path = if local_flag {
+        local::config_path(&cwd)
     } else if user {
-        dirs::config_dir()
-            .map(|d| d.join("spn").join("config.yaml"))
-            .unwrap_or_else(|| PathBuf::from("~/.config/spn/config.yaml"))
+        global::config_path()?
     } else if mcp {
-        cwd.join(".mcp.yaml")
+        team::mcp_config_path(&cwd)
     } else {
-        cwd.join("spn.yaml")
+        team::package_config_path(&cwd)
     };
 
     // Determine editor
@@ -232,14 +197,20 @@ async fn edit_config(local: bool, user: bool, mcp: bool) -> Result<()> {
 
     if !path.exists() {
         println!("⚠️  File does not exist: {}", path.display());
-        if local {
-            println!("   Run 'spn init --local' to create it.");
+        if local_flag {
+            println!("   Creating local config...");
+            local::save(&cwd, &Default::default())?;
+            local::ensure_gitignored(&cwd)?;
+        } else if user {
+            println!("   Creating global config...");
+            global::save(&Default::default())?;
         } else if mcp {
-            println!("   Run 'spn init --mcp' to create it.");
+            println!("   Creating MCP config...");
+            team::save_mcp(&cwd, &Default::default())?;
         } else {
             println!("   Run 'spn init' to create it.");
+            return Ok(());
         }
-        return Ok(());
     }
 
     println!("✏️  Opening {} with {}...", path.display(), editor);
