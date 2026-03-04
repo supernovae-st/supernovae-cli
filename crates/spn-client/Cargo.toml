@@ -1,0 +1,34 @@
+[package]
+name = "spn-client"
+version = "0.1.0"
+edition = "2021"
+authors = ["SuperNovae Studio <hello@supernovae.studio>"]
+description = "Client library for communicating with the spn daemon - secure secret management for AI applications"
+license = "MIT"
+repository = "https://github.com/SuperNovae-studio/supernovae-cli"
+homepage = "https://supernovae.studio"
+keywords = ["secrets", "ai", "mcp", "daemon", "ipc"]
+categories = ["authentication", "development-tools"]
+readme = "README.md"
+
+[dependencies]
+# Async runtime (minimal features)
+tokio = { version = "1.36", features = ["net", "io-util", "sync"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Security
+secrecy = { version = "0.10", features = ["serde"] }
+
+# Error handling
+thiserror = "2"
+
+# Utilities
+dirs = "5.0"
+tracing = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1.36", features = ["full", "test-util"] }
+tempfile = "3.10"

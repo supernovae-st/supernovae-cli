@@ -1,0 +1,87 @@
+[package]
+name = "spn"
+version = "0.9.0"
+edition = "2021"
+authors = ["SuperNovae Studio <hello@supernovae.studio>"]
+description = "CLI for SuperNovae package registry - manage workflows, schemas, skills, and MCP servers"
+license = "MIT"
+repository = "https://github.com/SuperNovae-studio/supernovae-cli"
+homepage = "https://supernovae.studio"
+keywords = ["cli", "package-manager", "ai", "workflows", "mcp"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "spn"
+path = "src/main.rs"
+
+[[bin]]
+name = "supernovae"
+path = "src/main.rs"
+
+[dependencies]
+# CLI framework
+clap = { version = "4.5", features = ["derive", "env"] }
+clap_complete = "4.5"
+
+# Async runtime
+tokio = { version = "1.36", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8"
+
+# HTTP client (async only - no blocking feature)
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"], default-features = false }
+futures-util = "0.3"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Archive handling
+flate2 = "1.0"
+tar = "0.4"
+
+# Utilities
+sha2 = "0.10"
+hex = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+url = "2.5"
+dirs = "5.0"
+which = "6.0"
+semver = "1.0"
+walkdir = "2.5"
+urlencoding = "2.1"
+indicatif = "0.17"
+console = "0.15"
+dialoguer = "0.11"
+colored = "2.1"
+similar = { version = "2.6", features = ["inline"] }
+
+# Security
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+secrecy = { version = "0.10", features = ["serde"] }
+zeroize = { version = "1", features = ["derive"] }
+dotenvy = "0.15"
+libc = "0.2"
+
+# Performance
+rustc-hash = "2.1"
+dashmap = "6.1"
+
+# HTTP retry logic
+reqwest-retry = "0.6"
+reqwest-middleware = "0.3"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.1"
+tempfile = "3.10"
+insta = "1.36"
+pretty_assertions = "1.4"

@@ -1,0 +1,122 @@
+//! Protocol types for daemon communication.
+//!
+//! The protocol uses length-prefixed JSON over Unix sockets.
+//!
+//! ## Wire Format
+//!
+//! ```text
+//! [4 bytes: message length (big-endian u32)][JSON payload]
+//! ```
+//!
+//! ## Example
+//!
+//! Request:
+//! ```json
+//! { "cmd": "GET_SECRET", "provider": "anthropic" }
+//! ```
+//!
+//! Response:
+//! ```json
+//! { "ok": true, "secret": "sk-ant-..." }
+//! ```
+
+use serde::{Deserialize, Serialize};
+
+/// Request sent to the daemon.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "cmd")]
+pub enum Request {
+    /// Ping the daemon to check it's alive.
+    #[serde(rename = "PING")]
+    Ping,
+
+    /// Get a secret for a provider.
+    #[serde(rename = "GET_SECRET")]
+    GetSecret { provider: String },
+
+    /// Check if a secret exists.
+    #[serde(rename = "HAS_SECRET")]
+    HasSecret { provider: String },
+
+    /// List all available providers.
+    #[serde(rename = "LIST_PROVIDERS")]
+    ListProviders,
+}
+
+/// Response from the daemon.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Response {
+    /// Successful ping response.
+    Pong { version: String },
+
+    /// Secret value response.
+    Secret { value: String },
+
+    /// Secret existence check response.
+    Exists { exists: bool },
+
+    /// Provider list response.
+    Providers { providers: Vec<String> },
+
+    /// Error response.
+    Error { message: String },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_request_serialization() {
+        let ping = Request::Ping;
+        let json = serde_json::to_string(&ping).unwrap();
+        assert_eq!(json, r#"{"cmd":"PING"}"#);
+
+        let get_secret = Request::GetSecret {
+            provider: "anthropic".to_string(),
+        };
+        let json = serde_json::to_string(&get_secret).unwrap();
+        assert_eq!(json, r#"{"cmd":"GET_SECRET","provider":"anthropic"}"#);
+
+        let has_secret = Request::HasSecret {
+            provider: "openai".to_string(),
+        };
+        let json = serde_json::to_string(&has_secret).unwrap();
+        assert_eq!(json, r#"{"cmd":"HAS_SECRET","provider":"openai"}"#);
+
+        let list = Request::ListProviders;
+        let json = serde_json::to_string(&list).unwrap();
+        assert_eq!(json, r#"{"cmd":"LIST_PROVIDERS"}"#);
+    }
+
+    #[test]
+    fn test_response_deserialization() {
+        // Pong
+        let json = r#"{"version":"0.9.0"}"#;
+        let response: Response = serde_json::from_str(json).unwrap();
+        assert!(matches!(response, Response::Pong { version } if version == "0.9.0"));
+
+        // Secret
+        let json = r#"{"value":"sk-test-123"}"#;
+        let response: Response = serde_json::from_str(json).unwrap();
+        assert!(matches!(response, Response::Secret { value } if value == "sk-test-123"));
+
+        // Exists
+        let json = r#"{"exists":true}"#;
+        let response: Response = serde_json::from_str(json).unwrap();
+        assert!(matches!(response, Response::Exists { exists } if exists));
+
+        // Providers
+        let json = r#"{"providers":["anthropic","openai"]}"#;
+        let response: Response = serde_json::from_str(json).unwrap();
+        assert!(
+            matches!(response, Response::Providers { providers } if providers == vec!["anthropic", "openai"])
+        );
+
+        // Error
+        let json = r#"{"message":"Not found"}"#;
+        let response: Response = serde_json::from_str(json).unwrap();
+        assert!(matches!(response, Response::Error { message } if message == "Not found"));
+    }
+}
