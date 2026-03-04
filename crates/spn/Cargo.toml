@@ -1,10 +1,10 @@
 [package]
 name = "spn-cli"
-version = "0.9.0"
+version = "0.9.1"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "SuperNovae Package Manager - unified CLI for AI workflows, secrets, MCP servers, and daemon management"
-license = "MIT"
+license = "AGPL-3.0-or-later"
 repository = "https://github.com/supernovae-st/supernovae-cli"
 homepage = "https://supernovae.studio"
 documentation = "https://github.com/supernovae-st/supernovae-cli#readme"
