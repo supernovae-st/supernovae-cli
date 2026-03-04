@@ -2010,6 +2010,7 @@ dependencies = [
  "serde_yaml",
  "sha2",
  "similar",
+ "spn-client",
  "tar",
  "tempfile",
  "thiserror 2.0.18",

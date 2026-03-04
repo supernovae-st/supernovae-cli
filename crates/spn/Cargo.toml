@@ -19,6 +19,9 @@ name = "supernovae"
 path = "src/main.rs"
 
 [dependencies]
+# Workspace crates
+spn-client = { path = "../spn-client" }
+
 # CLI framework
 clap = { version = "4.5", features = ["derive", "env"] }
 clap_complete = "4.5"

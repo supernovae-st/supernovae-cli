@@ -17,6 +17,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 mod config;
+mod daemon;
 mod diff;
 mod error;
 mod index;
@@ -240,6 +241,12 @@ enum Commands {
         /// Quick setup: auto-detect and migrate keys
         #[arg(long)]
         quick: bool,
+    },
+
+    /// Daemon commands for background service
+    Daemon {
+        #[command(subcommand)]
+        command: DaemonCommands,
     },
 }
 
@@ -525,6 +532,26 @@ enum SecretsCommands {
 }
 
 #[derive(Subcommand)]
+enum DaemonCommands {
+    /// Start the daemon
+    Start {
+        /// Run in foreground (don't daemonize)
+        #[arg(long)]
+        foreground: bool,
+    },
+    /// Stop the daemon
+    Stop,
+    /// Show daemon status
+    Status {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Restart the daemon
+    Restart,
+}
+
+#[derive(Subcommand)]
 enum ProviderCommands {
     /// List all stored API keys (masked)
     List {
@@ -620,5 +647,6 @@ async fn main() -> Result<()> {
         Commands::Topic { name } => commands::help::run(name.as_deref()).await,
         Commands::Secrets { command } => commands::secrets::run(command).await,
         Commands::Setup { quick } => commands::setup::run(quick).await,
+        Commands::Daemon { command } => commands::daemon::run(command).await,
     }
 }
