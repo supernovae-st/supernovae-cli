@@ -1,15 +1,17 @@
 [package]
 name = "spn-client"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-authors = ["SuperNovae Studio <hello@supernovae.studio>"]
+authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "Client library for communicating with the spn daemon - secure secret management for AI applications"
 license = "MIT"
-repository = "https://github.com/SuperNovae-studio/supernovae-cli"
+repository = "https://github.com/supernovae-st/supernovae-cli"
 homepage = "https://supernovae.studio"
+documentation = "https://docs.rs/spn-client"
 keywords = ["secrets", "ai", "mcp", "daemon", "ipc"]
 categories = ["authentication", "development-tools"]
 readme = "README.md"
+rust-version = "1.75"
 
 [dependencies]
 # Async runtime (minimal features)

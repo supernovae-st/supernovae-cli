@@ -2,13 +2,16 @@
 name = "spn"
 version = "0.9.0"
 edition = "2021"
-authors = ["SuperNovae Studio <hello@supernovae.studio>"]
-description = "CLI for SuperNovae package registry - manage workflows, schemas, skills, and MCP servers"
+authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
+description = "SuperNovae Package Manager - unified CLI for AI workflows, secrets, MCP servers, and daemon management"
 license = "MIT"
-repository = "https://github.com/SuperNovae-studio/supernovae-cli"
+repository = "https://github.com/supernovae-st/supernovae-cli"
 homepage = "https://supernovae.studio"
-keywords = ["cli", "package-manager", "ai", "workflows", "mcp"]
+documentation = "https://github.com/supernovae-st/supernovae-cli#readme"
+keywords = ["cli", "package-manager", "ai", "mcp", "secrets"]
 categories = ["command-line-utilities", "development-tools"]
+readme = "../../README.md"
+rust-version = "1.75"
 
 [[bin]]
 name = "spn"
@@ -20,7 +23,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Workspace crates
-spn-client = { path = "../spn-client" }
+spn-client = { version = "0.1", path = "../spn-client" }
 
 # CLI framework
 clap = { version = "4.5", features = ["derive", "env"] }
