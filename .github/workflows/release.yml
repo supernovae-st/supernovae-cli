@@ -93,18 +93,32 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  publish-crates:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish spn-client
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p spn-client --token "$CARGO_REGISTRY_TOKEN"
+        continue-on-error: true
+
   update-homebrew:
     name: Update Homebrew Formula
     needs: release
     runs-on: ubuntu-latest
-    env:
-      TAG_NAME: ${{ github.ref_name }}
     steps:
       - name: Update Homebrew formula
         uses: mislav/bump-homebrew-formula-action@v3
         with:
           formula-name: spn
           homebrew-tap: supernovae-st/homebrew-tap
-          download-url: https://github.com/supernovae-st/supernovae-cli/releases/download/${{ env.TAG_NAME }}/spn-x86_64-apple-darwin.tar.gz
+          download-url: https://github.com/supernovae-st/supernovae-cli/releases/download/${{ github.ref_name }}/spn-x86_64-apple-darwin.tar.gz
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
