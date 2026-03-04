@@ -1,5 +1,5 @@
 [package]
-name = "spn"
+name = "spn-cli"
 version = "0.9.0"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
