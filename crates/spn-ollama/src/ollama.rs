@@ -50,7 +50,7 @@ impl OllamaBackend {
 
     /// Get the underlying client.
     #[must_use]
-    pub fn client(&self) -> &OllamaClient {
+    pub const fn client(&self) -> &OllamaClient {
         &self.client
     }
 
@@ -158,7 +158,7 @@ impl OllamaBackend {
 
         let callback = progress.unwrap_or_else(|| Box::new(|_: PullProgress| {}));
 
-        self.client.pull(name, |p| callback(p)).await
+        self.client.pull(name, callback).await
     }
 
     async fn impl_delete(&self, name: &str) -> Result<(), BackendError> {
@@ -177,11 +177,7 @@ impl OllamaBackend {
 
         info!(model = %name, ?config, "Loading model");
 
-        let keep_alive = if config.keep_alive {
-            Some("-1")
-        } else {
-            None
-        };
+        let keep_alive = if config.keep_alive { Some("-1") } else { None };
 
         self.client.generate_warmup(name, keep_alive).await
     }
@@ -212,7 +208,8 @@ impl OllamaBackend {
             .collect())
     }
 
-    async fn impl_gpu_info(&self) -> Result<Vec<GpuInfo>, BackendError> {
+    #[allow(clippy::unnecessary_wraps, clippy::unused_self)] // Required to match trait signature
+    fn impl_gpu_info(&self) -> Result<Vec<GpuInfo>, BackendError> {
         debug!("GPU info not directly available from Ollama API");
         Ok(vec![])
     }
@@ -278,7 +275,7 @@ impl ModelBackend for OllamaBackend {
     }
 
     async fn gpu_info(&self) -> Result<Vec<GpuInfo>, BackendError> {
-        self.impl_gpu_info().await
+        self.impl_gpu_info()
     }
 
     fn endpoint_url(&self) -> &str {
@@ -369,7 +366,7 @@ impl DynModelBackend for OllamaBackend {
     fn gpu_info(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<GpuInfo>, BackendError>> + Send + '_>> {
-        Box::pin(self.impl_gpu_info())
+        Box::pin(async move { self.impl_gpu_info() })
     }
 
     fn endpoint_url(&self) -> &str {
@@ -391,7 +388,10 @@ mod tests {
     #[test]
     fn test_backend_endpoint() {
         let backend = OllamaBackend::new();
-        assert_eq!(ModelBackend::endpoint_url(&backend), "http://localhost:11434");
+        assert_eq!(
+            ModelBackend::endpoint_url(&backend),
+            "http://localhost:11434"
+        );
 
         let custom = OllamaBackend::with_endpoint("http://custom:8080");
         assert_eq!(ModelBackend::endpoint_url(&custom), "http://custom:8080");

@@ -140,7 +140,7 @@ impl SpnKeyring {
     /// # Security
     ///
     /// The intermediate String is wrapped in `Zeroizing` to ensure it's cleared
-    /// even if a panic occurs before SecretString takes ownership.
+    /// even if a panic occurs before `SecretString` takes ownership.
     pub fn get_secret(provider: &str) -> Result<SecretString, KeyringError> {
         let key = Self::get(provider)?;
         // Wrap clone in Zeroizing for panic safety - if anything panics,

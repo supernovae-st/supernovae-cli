@@ -2,6 +2,7 @@
 //!
 //! Provides low-level HTTP communication with the Ollama REST API.
 
+use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use spn_core::{BackendError, ModelInfo, PullProgress};
@@ -54,6 +55,10 @@ impl OllamaClient {
     }
 
     /// List all installed models.
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::NetworkError` if the API request fails.
     pub async fn list_models(&self) -> Result<Vec<ModelInfo>, BackendError> {
         let url = format!("{}/api/tags", self.endpoint);
         debug!(url = %url, "Listing models");
@@ -81,6 +86,11 @@ impl OllamaClient {
     }
 
     /// Get information about a specific model.
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::ModelNotFound` if model doesn't exist.
+    /// Returns `BackendError::NetworkError` if the API request fails.
     pub async fn model_info(&self, name: &str) -> Result<ModelInfo, BackendError> {
         let url = format!("{}/api/show", self.endpoint);
         debug!(url = %url, model = %name, "Getting model info");
@@ -88,7 +98,9 @@ impl OllamaClient {
         let response = self
             .client
             .post(&url)
-            .json(&ShowRequest { name: name.to_string() })
+            .json(&ShowRequest {
+                name: name.to_string(),
+            })
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
@@ -112,13 +124,20 @@ impl OllamaClient {
         Ok(ModelInfo {
             name: name.to_string(),
             size: body.size.unwrap_or(0),
-            quantization: body.details.as_ref().and_then(|d| d.quantization_level.clone()),
+            quantization: body
+                .details
+                .as_ref()
+                .and_then(|d| d.quantization_level.clone()),
             parameters: body.details.as_ref().and_then(|d| d.parameter_size.clone()),
             digest: body.digest,
         })
     }
 
     /// Pull a model, streaming progress updates.
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::NetworkError` if the download fails.
     pub async fn pull<F>(&self, name: &str, mut on_progress: F) -> Result<(), BackendError>
     where
         F: FnMut(PullProgress),
@@ -145,7 +164,6 @@ impl OllamaClient {
         }
 
         // Stream the response body line by line (NDJSON)
-        use futures_util::StreamExt;
         let mut stream = response.bytes_stream();
         let mut buffer = String::new();
 
@@ -178,6 +196,11 @@ impl OllamaClient {
     }
 
     /// Delete a model.
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::ModelNotFound` if model doesn't exist.
+    /// Returns `BackendError::NetworkError` if the API request fails.
     pub async fn delete(&self, name: &str) -> Result<(), BackendError> {
         let url = format!("{}/api/delete", self.endpoint);
         debug!(url = %url, model = %name, "Deleting model");
@@ -185,7 +208,9 @@ impl OllamaClient {
         let response = self
             .client
             .delete(&url)
-            .json(&DeleteRequest { name: name.to_string() })
+            .json(&DeleteRequest {
+                name: name.to_string(),
+            })
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
@@ -205,6 +230,10 @@ impl OllamaClient {
     }
 
     /// List running models (via /api/ps).
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::NetworkError` if the API request fails.
     pub async fn running_models(&self) -> Result<Vec<RunningModelResponse>, BackendError> {
         let url = format!("{}/api/ps", self.endpoint);
         debug!(url = %url, "Listing running models");
@@ -234,7 +263,16 @@ impl OllamaClient {
     /// Generate a completion to warm up/load a model.
     ///
     /// This is the Ollama way to ensure a model is loaded.
-    pub async fn generate_warmup(&self, name: &str, keep_alive: Option<&str>) -> Result<(), BackendError> {
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::ModelNotFound` if model doesn't exist.
+    /// Returns `BackendError::NetworkError` if the API request fails.
+    pub async fn generate_warmup(
+        &self,
+        name: &str,
+        keep_alive: Option<&str>,
+    ) -> Result<(), BackendError> {
         let url = format!("{}/api/generate", self.endpoint);
         debug!(url = %url, model = %name, "Warming up model");
 
@@ -321,7 +359,10 @@ impl From<ListedModel> for ModelInfo {
         Self {
             name: m.name,
             size: m.size,
-            quantization: m.details.as_ref().and_then(|d| d.quantization_level.clone()),
+            quantization: m
+                .details
+                .as_ref()
+                .and_then(|d| d.quantization_level.clone()),
             parameters: m.details.as_ref().and_then(|d| d.parameter_size.clone()),
             digest: m.digest,
         }
