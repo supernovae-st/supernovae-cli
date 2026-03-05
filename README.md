@@ -19,7 +19,7 @@
 <sup>✨ MCP servers • LLM providers • Packages • Secrets — all in one CLI ✨</sup>
 
 <!-- Primary Badges -->
-[![Version](https://img.shields.io/badge/v0.10.0-000000?style=for-the-badge&logo=semver&logoColor=white&labelColor=6366f1)](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.10.0)
+[![Version](https://img.shields.io/badge/v0.11.0-000000?style=for-the-badge&logo=semver&logoColor=white&labelColor=6366f1)](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.11.0)
 [![Rust](https://img.shields.io/badge/rust_1.85+-f97316?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/AGPL--3.0-10b981?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 [![Website](https://img.shields.io/badge/🌟_spn.sh-8b5cf6?style=for-the-badge)](https://supernovae.studio)
@@ -1229,6 +1229,144 @@ Key is valid and ready to use!
 | MCP | perplexity | `PERPLEXITY_API_KEY` | `...` | AI search |
 | MCP | firecrawl | `FIRECRAWL_API_KEY` | `fc-...` | Web scraping |
 | MCP | supadata | `SUPADATA_API_KEY` | `...` | Data API |
+
+<br>
+
+---
+
+### 🦙 Model Management
+
+Commands for managing local LLM models via Ollama. Requires daemon running (`spn daemon start`).
+
+#### `spn model list [--json] [--running]`
+
+List installed models.
+
+```bash
+# List all installed models
+spn model list
+
+# Output as JSON
+spn model list --json
+
+# Only show currently loaded models
+spn model list --running
+```
+
+**Output:**
+```
+Installed Models
+
+  NAME                                 SIZE      QUANT
+  ----------------------------------------------------
+  llama3.2:1b                        1.2 GB       Q8_0
+  mistral:7b                         4.1 GB       Q4_K_M
+
+  2 model(s) installed
+```
+
+<br>
+
+#### `spn model pull <name>`
+
+Download a model from the Ollama registry.
+
+```bash
+# Pull latest version
+spn model pull llama3.2
+
+# Pull specific variant
+spn model pull llama3.2:1b
+spn model pull mistral:7b
+spn model pull codellama:13b
+```
+
+**Output:**
+```
+-> Pulling model: llama3.2:1b
+   This may take a while...
+* Model 'llama3.2:1b' pulled successfully
+```
+
+<br>
+
+#### `spn model load <name> [--keep-alive]`
+
+Load a model into GPU/RAM memory.
+
+```bash
+# Load model (auto-unloads after inactivity)
+spn model load llama3.2:1b
+
+# Keep loaded until manually unloaded
+spn model load llama3.2:1b --keep-alive
+```
+
+**Output:**
+```
+-> Loading model: llama3.2:1b
+* Model 'llama3.2:1b' loaded
+   Model will stay loaded until manually unloaded
+```
+
+<br>
+
+#### `spn model unload <name>`
+
+Unload a model from memory to free GPU/RAM.
+
+```bash
+spn model unload llama3.2:1b
+```
+
+**Output:**
+```
+-> Unloading model: llama3.2:1b
+* Model 'llama3.2:1b' unloaded
+```
+
+<br>
+
+#### `spn model delete <name> [-y]`
+
+Delete a model from disk.
+
+```bash
+# Interactive (asks for confirmation)
+spn model delete llama3.2:1b
+
+# Skip confirmation
+spn model delete llama3.2:1b -y
+```
+
+<br>
+
+#### `spn model status [--json]`
+
+Show running models and VRAM usage.
+
+```bash
+spn model status
+spn model status --json
+```
+
+**Output:**
+```
+Model Status
+
+  MODEL                                  VRAM
+  --------------------------------------------
+  * llama3.2:1b                        1.6 GB
+  * mistral:7b                         5.2 GB
+  --------------------------------------------
+  Total VRAM                           6.8 GB
+```
+
+**Use with Nika:**
+```bash
+# Use local model in Nika workflow
+nika run workflow.yaml --provider ollama --model llama3.2:1b
+```
 
 <br>
 

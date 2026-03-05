@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-03-05
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║  🦙 SPN v0.11.0 — MODEL CLI COMMANDS                                          ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║  🦙 Local LLM  │  6 Commands  │  Ollama Integration  │  VRAM Management       ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+### ✨ Highlights
+
+| Feature | Status | Impact |
+|---------|--------|--------|
+| **🦙 Model CLI Commands** | ✅ New | Full local LLM management via CLI |
+| **📋 6 New Commands** | ✅ New | list, pull, load, unload, delete, status |
+| **🔧 Daemon IPC** | ✅ Enhanced | Model operations via background daemon |
+| **📊 VRAM Monitoring** | ✅ New | Track GPU memory usage per model |
+
+### 🦙 Model Commands
+
+```bash
+# List installed models
+spn model list [--json] [--running]
+
+# Download a model from Ollama registry
+spn model pull <name>           # e.g., llama3.2:1b, mistral:7b
+
+# Load model into GPU/RAM
+spn model load <name> [--keep-alive]
+
+# Unload model from memory
+spn model unload <name>
+
+# Delete model from disk
+spn model delete <name> [-y]
+
+# Show running models and VRAM usage
+spn model status [--json]
+```
+
+### 🏗️ Architecture
+
+```
+spn CLI ──► spn daemon (IPC) ──► spn-ollama ──► Ollama API (localhost:11434)
+    │                                               │
+    │                                               ▼
+    │                                    ┌─────────────────────┐
+    │                                    │  Downloaded Models  │
+    │                                    │  • llama3.2:1b      │
+    │                                    │  • mistral:7b       │
+    │                                    │  • codellama:13b    │
+    │                                    └─────────────────────┘
+    │
+    └──► Nika workflows can use: --provider ollama --model llama3.2:1b
+```
+
+### 🔧 Technical Details
+
+- **409 LOC** new implementation in `commands/model.rs`
+- **2 unit tests** for `format_size()` helper
+- **IPC Protocol**: `ModelList`, `ModelPull`, `ModelLoad`, `ModelUnload`, `ModelDelete`, `ModelStatus`
+- **spn-client**: `send_request()` now public for advanced usage
+
+### 🐛 Bug Fixes
+
+- **CI**: Fixed formatting issues in model.rs
+- **Tests**: Fixed flaky `test_daemon_socket_exists` (no longer assumes daemon state)
+
 ## [0.10.0] - 2026-03-05
 
 ╔═══════════════════════════════════════════════════════════════════════════════╗
