@@ -174,7 +174,9 @@ pub static KNOWN_PROVIDERS: &[Provider] = &[
 /// ```
 #[must_use]
 pub fn find_provider(id: &str) -> Option<&'static Provider> {
-    KNOWN_PROVIDERS.iter().find(|p| p.id.eq_ignore_ascii_case(id))
+    KNOWN_PROVIDERS
+        .iter()
+        .find(|p| p.id.eq_ignore_ascii_case(id))
 }
 
 /// Get the environment variable name for a provider.
@@ -204,7 +206,9 @@ pub fn provider_to_env_var(id: &str) -> Option<&'static str> {
 pub fn providers_by_category(
     category: ProviderCategory,
 ) -> impl Iterator<Item = &'static Provider> {
-    KNOWN_PROVIDERS.iter().filter(move |p| p.category == category)
+    KNOWN_PROVIDERS
+        .iter()
+        .filter(move |p| p.category == category)
 }
 
 #[cfg(test)]
@@ -239,7 +243,11 @@ mod tests {
     #[test]
     fn test_all_providers_have_env_var() {
         for provider in KNOWN_PROVIDERS {
-            assert!(!provider.env_var.is_empty(), "Provider {} missing env_var", provider.id);
+            assert!(
+                !provider.env_var.is_empty(),
+                "Provider {} missing env_var",
+                provider.id
+            );
         }
     }
 

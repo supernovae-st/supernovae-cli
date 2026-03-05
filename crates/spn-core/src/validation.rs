@@ -48,7 +48,11 @@ impl fmt::Display for ValidationResult {
                 write!(f, "Key too short ({} chars, minimum {})", actual, minimum)
             }
             Self::InvalidPrefix { expected, actual } => {
-                write!(f, "Invalid prefix (expected '{}', got '{}')", expected, actual)
+                write!(
+                    f,
+                    "Invalid prefix (expected '{}', got '{}')",
+                    expected, actual
+                )
             }
             Self::UnknownProvider { provider } => {
                 write!(f, "Unknown provider: {}", provider)
@@ -163,7 +167,13 @@ mod tests {
     #[test]
     fn test_validate_too_short() {
         let result = validate_key_format("anthropic", "short");
-        assert!(matches!(result, ValidationResult::TooShort { actual: 5, minimum: 8 }));
+        assert!(matches!(
+            result,
+            ValidationResult::TooShort {
+                actual: 5,
+                minimum: 8
+            }
+        ));
     }
 
     #[test]

@@ -38,9 +38,10 @@ async fn start(foreground: bool) -> Result<()> {
         let config = DaemonConfig::default();
         let mut server = DaemonServer::new(config);
 
-        server.run().await.map_err(|e| {
-            anyhow::anyhow!("Daemon error: {}", e)
-        })?;
+        server
+            .run()
+            .await
+            .map_err(|e| anyhow::anyhow!("Daemon error: {}", e))?;
     } else {
         // Daemonize (spawn detached process)
         println!("{} Starting daemon...", "🚀".green());
@@ -116,7 +117,10 @@ async fn stop() -> Result<()> {
         println!("{} Daemon force stopped", "✓".green());
     } else {
         // Process doesn't exist, clean up stale PID file
-        println!("{} Daemon was not running, cleaning up stale PID file", "⚠".yellow());
+        println!(
+            "{} Daemon was not running, cleaning up stale PID file",
+            "⚠".yellow()
+        );
         fs::remove_file(&pid_file).ok();
     }
 

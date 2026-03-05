@@ -44,7 +44,6 @@ pub enum Request {
     ListProviders,
 
     // ==================== Model Commands ====================
-
     /// List all installed models.
     #[serde(rename = "MODEL_LIST")]
     ModelList,
@@ -98,7 +97,6 @@ pub enum Response {
     Providers { providers: Vec<String> },
 
     // ==================== Model Responses ====================
-
     /// List of installed models.
     Models { models: Vec<ModelInfo> },
 

@@ -181,7 +181,10 @@ mod tests {
             .with_env("NEO4J_PASSWORD", "secret");
 
         assert_eq!(server.env.len(), 2);
-        assert_eq!(server.env[0], ("NEO4J_URI".to_string(), "bolt://localhost:7687".to_string()));
+        assert_eq!(
+            server.env[0],
+            ("NEO4J_URI".to_string(), "bolt://localhost:7687".to_string())
+        );
     }
 
     #[test]
@@ -220,6 +223,9 @@ mod tests {
         config1.merge(config2);
 
         assert_eq!(config1.servers.len(), 3);
-        assert_eq!(config1.find_server("neo4j").unwrap().command, Some("new-cmd".to_string()));
+        assert_eq!(
+            config1.find_server("neo4j").unwrap().command,
+            Some("new-cmd".to_string())
+        );
     }
 }

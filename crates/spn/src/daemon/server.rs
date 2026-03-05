@@ -13,8 +13,12 @@ use tokio::task::JoinSet;
 use tracing::{debug, error, info, warn};
 
 use super::{
-    handler::RequestHandler, model_manager::ModelManager, paths, secrets::SecretManager,
-    socket::{verify_peer_credentials, SocketUtils}, DaemonError,
+    handler::RequestHandler,
+    model_manager::ModelManager,
+    paths,
+    secrets::SecretManager,
+    socket::{verify_peer_credentials, SocketUtils},
+    DaemonError,
 };
 
 /// Daemon server configuration.
@@ -54,7 +58,10 @@ impl DaemonServer {
     pub fn new(config: DaemonConfig) -> Self {
         let secrets = Arc::new(SecretManager::new());
         let models = Arc::new(ModelManager::new());
-        let handler = Arc::new(RequestHandler::new(Arc::clone(&secrets), Arc::clone(&models)));
+        let handler = Arc::new(RequestHandler::new(
+            Arc::clone(&secrets),
+            Arc::clone(&models),
+        ));
         let (shutdown_tx, _) = broadcast::channel(1);
 
         Self {
@@ -88,10 +95,7 @@ impl DaemonServer {
         // Bind to socket
         let listener = self.bind_socket().await?;
 
-        info!(
-            "Daemon listening on {:?}",
-            self.config.socket_path
-        );
+        info!("Daemon listening on {:?}", self.config.socket_path);
 
         // Run the accept loop with graceful shutdown
         self.accept_loop(listener).await?;
@@ -106,10 +110,8 @@ impl DaemonServer {
     fn ensure_spn_dir(&self) -> Result<(), DaemonError> {
         let dir = paths::spn_dir();
         if !dir.exists() {
-            fs::create_dir_all(&dir).map_err(|source| DaemonError::CreateDirFailed {
-                path: dir,
-                source,
-            })?;
+            fs::create_dir_all(&dir)
+                .map_err(|source| DaemonError::CreateDirFailed { path: dir, source })?;
         }
         Ok(())
     }
@@ -255,7 +257,10 @@ impl DaemonServer {
     /// Drain all remaining tasks on shutdown.
     async fn drain_tasks(tasks: &mut JoinSet<()>) {
         if !tasks.is_empty() {
-            info!("Waiting for {} active connections to complete...", tasks.len());
+            info!(
+                "Waiting for {} active connections to complete...",
+                tasks.len()
+            );
             while let Some(result) = tasks.join_next().await {
                 if let Err(e) = result {
                     error!("Task panicked during shutdown: {:?}", e);

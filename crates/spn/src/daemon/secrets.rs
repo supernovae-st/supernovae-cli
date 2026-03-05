@@ -141,10 +141,7 @@ impl SecretManager {
     ///
     /// Returns a map of env var names to values for the requested providers.
     /// Used when spawning MCP servers or other processes that need secrets.
-    pub async fn build_env_for_process(
-        &self,
-        needed: &[&str],
-    ) -> FxHashMap<String, String> {
+    pub async fn build_env_for_process(&self, needed: &[&str]) -> FxHashMap<String, String> {
         let mut env = FxHashMap::default();
         let cache = self.cache.read().await;
 
@@ -241,13 +238,27 @@ mod tests {
     async fn test_build_env_for_process() {
         let manager = SecretManager::new();
 
-        manager.set_cached("anthropic", "sk-ant-test").await.unwrap();
-        manager.set_cached("openai", "sk-openai-test").await.unwrap();
+        manager
+            .set_cached("anthropic", "sk-ant-test")
+            .await
+            .unwrap();
+        manager
+            .set_cached("openai", "sk-openai-test")
+            .await
+            .unwrap();
 
-        let env = manager.build_env_for_process(&["anthropic", "openai"]).await;
+        let env = manager
+            .build_env_for_process(&["anthropic", "openai"])
+            .await;
 
-        assert_eq!(env.get("ANTHROPIC_API_KEY"), Some(&"sk-ant-test".to_string()));
-        assert_eq!(env.get("OPENAI_API_KEY"), Some(&"sk-openai-test".to_string()));
+        assert_eq!(
+            env.get("ANTHROPIC_API_KEY"),
+            Some(&"sk-ant-test".to_string())
+        );
+        assert_eq!(
+            env.get("OPENAI_API_KEY"),
+            Some(&"sk-openai-test".to_string())
+        );
     }
 
     #[tokio::test]

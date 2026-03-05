@@ -118,7 +118,9 @@ pub trait ModelBackend: Send + Sync {
     fn unload(&self, name: &str) -> impl Future<Output = Result<(), BackendError>> + Send;
 
     /// List currently loaded/running models.
-    fn running_models(&self) -> impl Future<Output = Result<Vec<RunningModel>, BackendError>> + Send;
+    fn running_models(
+        &self,
+    ) -> impl Future<Output = Result<Vec<RunningModel>, BackendError>> + Send;
 
     /// Get GPU information (if available).
     fn gpu_info(&self) -> impl Future<Output = Result<Vec<GpuInfo>, BackendError>> + Send;
@@ -143,8 +145,7 @@ pub trait ModelBackend: Send + Sync {
 }
 
 /// Boxed version of the progress callback for trait objects.
-pub type BoxedProgressCallback =
-    Box<dyn Fn(PullProgress) + Send + Sync + 'static>;
+pub type BoxedProgressCallback = Box<dyn Fn(PullProgress) + Send + Sync + 'static>;
 
 /// Type alias for a boxed `ModelBackend` trait object.
 pub type BoxedBackend = Box<dyn DynModelBackend>;

@@ -54,17 +54,33 @@ pub use secrecy::{ExposeSecret, SecretString};
 
 // Re-export all spn-core types for convenience
 pub use spn_core::{
-    // Providers
-    Provider, ProviderCategory, KNOWN_PROVIDERS,
-    find_provider, provider_to_env_var, providers_by_category,
-    // Validation
-    ValidationResult, validate_key_format, mask_key,
+    find_provider,
+    mask_key,
+    provider_to_env_var,
+    providers_by_category,
+    validate_key_format,
+    BackendError,
+    GpuInfo,
+    LoadConfig,
+    McpConfig,
     // MCP
-    McpServer, McpServerType, McpConfig, McpSource,
+    McpServer,
+    McpServerType,
+    McpSource,
+    ModelInfo,
+    PackageManifest,
     // Registry
-    PackageRef, PackageManifest, PackageType,
+    PackageRef,
+    PackageType,
+    // Providers
+    Provider,
+    ProviderCategory,
     // Backend
-    PullProgress, ModelInfo, RunningModel, GpuInfo, LoadConfig, BackendError,
+    PullProgress,
+    RunningModel,
+    // Validation
+    ValidationResult,
+    KNOWN_PROVIDERS,
 };
 
 use std::path::PathBuf;
@@ -120,12 +136,13 @@ impl SpnClient {
     pub async fn connect_to(socket_path: &PathBuf) -> Result<Self, Error> {
         debug!("Connecting to spn daemon at {:?}", socket_path);
 
-        let stream = UnixStream::connect(socket_path)
-            .await
-            .map_err(|e| Error::ConnectionFailed {
-                path: socket_path.clone(),
-                source: e,
-            })?;
+        let stream =
+            UnixStream::connect(socket_path)
+                .await
+                .map_err(|e| Error::ConnectionFailed {
+                    path: socket_path.clone(),
+                    source: e,
+                })?;
 
         // Verify connection with ping
         let mut client = Self {
@@ -278,10 +295,7 @@ impl SpnClient {
     /// Send a request to the daemon and receive a response.
     #[cfg(unix)]
     async fn send_request(&mut self, request: Request) -> Result<Response, Error> {
-        let stream = self
-            .stream
-            .as_mut()
-            .ok_or(Error::NotConnected)?;
+        let stream = self.stream.as_mut().ok_or(Error::NotConnected)?;
 
         // Serialize request
         let request_json = serde_json::to_vec(&request).map_err(Error::SerializationError)?;
@@ -347,7 +361,6 @@ impl SpnClient {
             .collect()
     }
 }
-
 
 #[cfg(test)]
 mod tests {

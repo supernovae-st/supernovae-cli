@@ -51,38 +51,14 @@ mod validation;
 
 // Re-export everything at crate root for ergonomic imports
 pub use providers::{
-    Provider,
-    ProviderCategory,
+    find_provider, provider_to_env_var, providers_by_category, Provider, ProviderCategory,
     KNOWN_PROVIDERS,
-    find_provider,
-    provider_to_env_var,
-    providers_by_category,
 };
 
-pub use validation::{
-    ValidationResult,
-    validate_key_format,
-    mask_key,
-};
+pub use validation::{mask_key, validate_key_format, ValidationResult};
 
-pub use mcp::{
-    McpServer,
-    McpServerType,
-    McpConfig,
-    McpSource,
-};
+pub use mcp::{McpConfig, McpServer, McpServerType, McpSource};
 
-pub use registry::{
-    PackageRef,
-    PackageManifest,
-    PackageType,
-};
+pub use registry::{PackageManifest, PackageRef, PackageType};
 
-pub use backend::{
-    PullProgress,
-    ModelInfo,
-    RunningModel,
-    GpuInfo,
-    LoadConfig,
-    BackendError,
-};
+pub use backend::{BackendError, GpuInfo, LoadConfig, ModelInfo, PullProgress, RunningModel};

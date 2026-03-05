@@ -17,11 +17,9 @@ impl SocketUtils {
     /// Set socket file permissions to 0600 (owner only).
     pub fn set_socket_permissions(path: &Path) -> Result<(), DaemonError> {
         let permissions = fs::Permissions::from_mode(0o600);
-        fs::set_permissions(path, permissions).map_err(|source| {
-            DaemonError::SetPermissionsFailed {
-                path: path.to_path_buf(),
-                source,
-            }
+        fs::set_permissions(path, permissions).map_err(|source| DaemonError::SetPermissionsFailed {
+            path: path.to_path_buf(),
+            source,
         })
     }
 
@@ -99,7 +97,10 @@ pub fn verify_peer_credentials(stream: &StdUnixStream) -> Result<PeerCredentials
         });
     }
 
-    debug!("Verified peer: PID={}, UID={}, GID={}", peer.pid, peer.uid, peer.gid);
+    debug!(
+        "Verified peer: PID={}, UID={}, GID={}",
+        peer.pid, peer.uid, peer.gid
+    );
     Ok(peer)
 }
 
