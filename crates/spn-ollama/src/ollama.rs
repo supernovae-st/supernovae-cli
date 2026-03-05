@@ -116,6 +116,7 @@ impl OllamaBackend {
         }
     }
 
+    #[allow(clippy::unused_async)] // Async used on macOS but not other platforms
     async fn impl_stop(&self) -> Result<(), BackendError> {
         warn!("Stopping Ollama server is not directly supported");
 
