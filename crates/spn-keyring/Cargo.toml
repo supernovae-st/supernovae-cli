@@ -1,0 +1,31 @@
+[package]
+name = "spn-keyring"
+version = "0.1.0"
+edition = "2021"
+description = "OS keychain wrapper for SuperNovae CLI"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/supernovae-st/supernovae-cli"
+readme = "README.md"
+keywords = ["keyring", "keychain", "credentials", "secrets"]
+categories = ["authentication", "cryptography"]
+
+[dependencies]
+spn-core = { path = "../spn-core" }
+keyring = "3"
+secrecy = "0.10"
+zeroize = { version = "1", features = ["derive"] }
+thiserror = "2"
+
+[dev-dependencies]
+serial_test = "3"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
+# Allow these common patterns
+module_name_repetitions = "allow"
+must_use_candidate = "allow"

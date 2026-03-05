@@ -1,0 +1,29 @@
+[package]
+name = "spn-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Thibaut MELEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
+description = "Core types, provider definitions, and validation for SuperNovae ecosystem"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/supernovae-st/supernovae-cli"
+homepage = "https://supernovae.studio"
+documentation = "https://docs.rs/spn-core"
+keywords = ["supernovae", "providers", "validation", "mcp", "llm"]
+categories = ["data-structures", "config"]
+readme = "README.md"
+rust-version = "1.75"
+
+[dependencies]
+# NONE - pure Rust, zero dependencies
+# This crate is intentionally dependency-free for:
+# - Fast compilation
+# - WASM compatibility
+# - No transitive dependency risk
+
+[dev-dependencies]
+# None needed - pure unit tests
+
+[features]
+default = []
+# Reserved for future use (e.g., serde support)
+# serde = ["dep:serde"]

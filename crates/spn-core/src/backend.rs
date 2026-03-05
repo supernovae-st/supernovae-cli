@@ -1,0 +1,441 @@
+//! Backend types for model management.
+//!
+//! These types are used by spn-ollama (and future backends like llama.cpp)
+//! to provide a unified interface for local model management.
+//!
+//! # Architecture
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────────────────────┐
+//! │  spn-core (this module)                                                    │
+//! │  ├── PullProgress       Progress updates during model download              │
+//! │  ├── ModelInfo          Information about an installed model                │
+//! │  ├── RunningModel       Currently loaded model with GPU allocation          │
+//! │  ├── GpuInfo            GPU device information                              │
+//! │  ├── LoadConfig         Configuration for loading a model                   │
+//! │  └── BackendError       Error types for backend operations                  │
+//! └─────────────────────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! # Example
+//!
+//! ```
+//! use spn_core::{LoadConfig, ModelInfo, PullProgress};
+//!
+//! // Create a load configuration
+//! let config = LoadConfig::default()
+//!     .with_gpu_layers(-1)  // Use all GPU layers
+//!     .with_context_size(4096);
+//!
+//! // Model info from backend
+//! let info = ModelInfo {
+//!     name: "llama3.2:7b".to_string(),
+//!     size: 4_000_000_000,
+//!     quantization: Some("Q4_K_M".to_string()),
+//!     parameters: Some("7B".to_string()),
+//!     digest: Some("sha256:abc123".to_string()),
+//! };
+//!
+//! assert!(info.size_gb() > 3.0);
+//! ```
+
+use std::fmt;
+
+/// Progress information during model pull/download.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PullProgress {
+    /// Current status message (e.g., "pulling manifest", "downloading").
+    pub status: String,
+    /// Bytes completed.
+    pub completed: u64,
+    /// Total bytes to download.
+    pub total: u64,
+}
+
+impl PullProgress {
+    /// Create a new progress update.
+    #[must_use]
+    pub fn new(status: impl Into<String>, completed: u64, total: u64) -> Self {
+        Self {
+            status: status.into(),
+            completed,
+            total,
+        }
+    }
+
+    /// Get progress as a percentage (0.0 to 100.0).
+    #[must_use]
+    pub fn percent(&self) -> f64 {
+        if self.total == 0 {
+            0.0
+        } else {
+            (self.completed as f64 / self.total as f64) * 100.0
+        }
+    }
+
+    /// Check if download is complete.
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.total > 0 && self.completed >= self.total
+    }
+}
+
+impl fmt::Display for PullProgress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {:.1}%", self.status, self.percent())
+    }
+}
+
+/// Information about an installed model.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModelInfo {
+    /// Model name (e.g., "llama3.2:7b").
+    pub name: String,
+    /// Size in bytes.
+    pub size: u64,
+    /// Quantization level (e.g., "Q4_K_M", "Q8_0").
+    pub quantization: Option<String>,
+    /// Parameter count (e.g., "7B", "70B").
+    pub parameters: Option<String>,
+    /// Model digest/hash.
+    pub digest: Option<String>,
+}
+
+impl ModelInfo {
+    /// Get size in gigabytes.
+    #[must_use]
+    pub fn size_gb(&self) -> f64 {
+        self.size as f64 / 1_000_000_000.0
+    }
+
+    /// Get size as human-readable string.
+    #[must_use]
+    pub fn size_human(&self) -> String {
+        let gb = self.size_gb();
+        if gb >= 1.0 {
+            format!("{gb:.1} GB")
+        } else {
+            format!("{:.0} MB", self.size as f64 / 1_000_000.0)
+        }
+    }
+}
+
+impl fmt::Display for ModelInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ({})", self.name, self.size_human())
+    }
+}
+
+/// Information about a currently running/loaded model.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunningModel {
+    /// Model name.
+    pub name: String,
+    /// VRAM used in bytes (if available).
+    pub vram_used: Option<u64>,
+    /// GPU IDs this model is loaded on.
+    pub gpu_ids: Vec<u32>,
+}
+
+impl RunningModel {
+    /// Get VRAM used in gigabytes.
+    #[must_use]
+    pub fn vram_gb(&self) -> Option<f64> {
+        self.vram_used.map(|v| v as f64 / 1_000_000_000.0)
+    }
+}
+
+impl fmt::Display for RunningModel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)?;
+        if !self.gpu_ids.is_empty() {
+            write!(f, " [GPU: {:?}]", self.gpu_ids)?;
+        }
+        if let Some(vram) = self.vram_gb() {
+            write!(f, " ({vram:.1} GB VRAM)")?;
+        }
+        Ok(())
+    }
+}
+
+/// GPU device information.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GpuInfo {
+    /// GPU device ID.
+    pub id: u32,
+    /// GPU name (e.g., "NVIDIA RTX 4090").
+    pub name: String,
+    /// Total memory in bytes.
+    pub memory_total: u64,
+    /// Free memory in bytes.
+    pub memory_free: u64,
+}
+
+impl GpuInfo {
+    /// Get total memory in gigabytes.
+    #[must_use]
+    pub fn memory_total_gb(&self) -> f64 {
+        self.memory_total as f64 / 1_000_000_000.0
+    }
+
+    /// Get free memory in gigabytes.
+    #[must_use]
+    pub fn memory_free_gb(&self) -> f64 {
+        self.memory_free as f64 / 1_000_000_000.0
+    }
+
+    /// Get memory usage percentage.
+    #[must_use]
+    pub fn memory_used_percent(&self) -> f64 {
+        if self.memory_total == 0 {
+            0.0
+        } else {
+            let used = self.memory_total.saturating_sub(self.memory_free);
+            (used as f64 / self.memory_total as f64) * 100.0
+        }
+    }
+}
+
+impl fmt::Display for GpuInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "GPU {}: {} ({:.1}/{:.1} GB free)",
+            self.id,
+            self.name,
+            self.memory_free_gb(),
+            self.memory_total_gb()
+        )
+    }
+}
+
+/// Error types for backend operations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BackendError {
+    /// Backend server is not running.
+    NotRunning,
+    /// Model not found in registry or locally.
+    ModelNotFound(String),
+    /// Model is already loaded.
+    AlreadyLoaded(String),
+    /// Insufficient GPU/system memory.
+    InsufficientMemory,
+    /// Network error during pull/API call.
+    NetworkError(String),
+    /// Process management error.
+    ProcessError(String),
+    /// Backend-specific error.
+    BackendSpecific(String),
+}
+
+impl std::error::Error for BackendError {}
+
+impl fmt::Display for BackendError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotRunning => write!(f, "Backend server is not running"),
+            Self::ModelNotFound(name) => write!(f, "Model not found: {name}"),
+            Self::AlreadyLoaded(name) => write!(f, "Model already loaded: {name}"),
+            Self::InsufficientMemory => write!(f, "Insufficient memory to load model"),
+            Self::NetworkError(msg) => write!(f, "Network error: {msg}"),
+            Self::ProcessError(msg) => write!(f, "Process error: {msg}"),
+            Self::BackendSpecific(msg) => write!(f, "Backend error: {msg}"),
+        }
+    }
+}
+
+/// Configuration for loading a model.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoadConfig {
+    /// GPU IDs to use for this model (empty = auto).
+    pub gpu_ids: Vec<u32>,
+    /// Number of layers to offload to GPU (-1 = all, 0 = none).
+    pub gpu_layers: i32,
+    /// Context size (token window).
+    pub context_size: Option<u32>,
+    /// Keep model loaded in memory (prevent unload).
+    pub keep_alive: bool,
+}
+
+impl Default for LoadConfig {
+    fn default() -> Self {
+        Self {
+            gpu_ids: Vec::new(),
+            gpu_layers: -1, // All layers on GPU by default
+            context_size: None,
+            keep_alive: false,
+        }
+    }
+}
+
+impl LoadConfig {
+    /// Create a new load configuration.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set specific GPU IDs.
+    #[must_use]
+    pub fn with_gpus(mut self, gpu_ids: Vec<u32>) -> Self {
+        self.gpu_ids = gpu_ids;
+        self
+    }
+
+    /// Set GPU layers (-1 = all, 0 = CPU only).
+    #[must_use]
+    pub fn with_gpu_layers(mut self, layers: i32) -> Self {
+        self.gpu_layers = layers;
+        self
+    }
+
+    /// Set context size.
+    #[must_use]
+    pub fn with_context_size(mut self, size: u32) -> Self {
+        self.context_size = Some(size);
+        self
+    }
+
+    /// Set keep alive.
+    #[must_use]
+    pub fn with_keep_alive(mut self, keep: bool) -> Self {
+        self.keep_alive = keep;
+        self
+    }
+
+    /// Check if this is a CPU-only configuration.
+    #[must_use]
+    pub fn is_cpu_only(&self) -> bool {
+        self.gpu_layers == 0
+    }
+
+    /// Check if using all GPU layers.
+    #[must_use]
+    pub fn is_full_gpu(&self) -> bool {
+        self.gpu_layers < 0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pull_progress() {
+        let progress = PullProgress::new("downloading", 500, 1000);
+        assert_eq!(progress.percent(), 50.0);
+        assert!(!progress.is_complete());
+
+        let complete = PullProgress::new("complete", 1000, 1000);
+        assert!(complete.is_complete());
+    }
+
+    #[test]
+    fn test_pull_progress_display() {
+        let progress = PullProgress::new("pulling", 750, 1000);
+        assert_eq!(progress.to_string(), "pulling: 75.0%");
+    }
+
+    #[test]
+    fn test_pull_progress_zero_total() {
+        let progress = PullProgress::new("starting", 0, 0);
+        assert_eq!(progress.percent(), 0.0);
+        assert!(!progress.is_complete());
+    }
+
+    #[test]
+    fn test_model_info_size() {
+        let info = ModelInfo {
+            name: "llama3.2:7b".to_string(),
+            size: 4_500_000_000,
+            quantization: Some("Q4_K_M".to_string()),
+            parameters: Some("7B".to_string()),
+            digest: None,
+        };
+
+        assert!((info.size_gb() - 4.5).abs() < 0.01);
+        assert_eq!(info.size_human(), "4.5 GB");
+    }
+
+    #[test]
+    fn test_model_info_display() {
+        let info = ModelInfo {
+            name: "test:latest".to_string(),
+            size: 500_000_000,
+            quantization: None,
+            parameters: None,
+            digest: None,
+        };
+
+        assert!(info.to_string().contains("test:latest"));
+        assert!(info.to_string().contains("500 MB"));
+    }
+
+    #[test]
+    fn test_running_model() {
+        let model = RunningModel {
+            name: "llama3.2".to_string(),
+            vram_used: Some(4_000_000_000),
+            gpu_ids: vec![0],
+        };
+
+        assert!((model.vram_gb().unwrap() - 4.0).abs() < 0.01);
+        assert!(model.to_string().contains("llama3.2"));
+        assert!(model.to_string().contains("GPU"));
+    }
+
+    #[test]
+    fn test_gpu_info() {
+        let gpu = GpuInfo {
+            id: 0,
+            name: "RTX 4090".to_string(),
+            memory_total: 24_000_000_000,
+            memory_free: 20_000_000_000,
+        };
+
+        assert!((gpu.memory_total_gb() - 24.0).abs() < 0.01);
+        assert!((gpu.memory_free_gb() - 20.0).abs() < 0.01);
+        assert!((gpu.memory_used_percent() - 16.67).abs() < 0.5);
+    }
+
+    #[test]
+    fn test_backend_error_display() {
+        let err = BackendError::NotRunning;
+        assert!(err.to_string().contains("not running"));
+
+        let err = BackendError::ModelNotFound("test".to_string());
+        assert!(err.to_string().contains("test"));
+    }
+
+    #[test]
+    fn test_load_config_default() {
+        let config = LoadConfig::default();
+        assert!(config.gpu_ids.is_empty());
+        assert_eq!(config.gpu_layers, -1);
+        assert!(config.is_full_gpu());
+        assert!(!config.is_cpu_only());
+    }
+
+    #[test]
+    fn test_load_config_builder() {
+        let config = LoadConfig::new()
+            .with_gpus(vec![0, 1])
+            .with_gpu_layers(32)
+            .with_context_size(8192)
+            .with_keep_alive(true);
+
+        assert_eq!(config.gpu_ids, vec![0, 1]);
+        assert_eq!(config.gpu_layers, 32);
+        assert_eq!(config.context_size, Some(8192));
+        assert!(config.keep_alive);
+        assert!(!config.is_cpu_only());
+        assert!(!config.is_full_gpu());
+    }
+
+    #[test]
+    fn test_load_config_cpu_only() {
+        let config = LoadConfig::new().with_gpu_layers(0);
+        assert!(config.is_cpu_only());
+        assert!(!config.is_full_gpu());
+    }
+}

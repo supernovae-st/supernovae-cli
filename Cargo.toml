@@ -3,6 +3,9 @@ resolver = "2"
 members = [
     "crates/spn",
     "crates/spn-client",
+    "crates/spn-core",
+    "crates/spn-keyring",
+    "crates/spn-ollama",
 ]
 
 [workspace.package]
