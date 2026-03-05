@@ -137,10 +137,27 @@ cd supernovae-cli
 cargo install --path .
 ```
 
+### Docker
+
+```bash
+# Run directly
+docker run --rm ghcr.io/supernovae-st/spn:latest --version
+
+# With project mount
+docker run --rm -v $(pwd):/workspace ghcr.io/supernovae-st/spn:latest list
+
+# With API keys (env vars)
+docker run --rm \
+  -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+  ghcr.io/supernovae-st/spn:latest provider test anthropic
+```
+
+> **Note:** Docker cannot access OS Keychain. Use environment variables for secrets in containers.
+
 ### Verify Installation
 
 ```bash
-spn --version  # spn 0.8.1
+spn --version  # spn-cli 0.11.0
 spn doctor     # System diagnostic
 ```
 

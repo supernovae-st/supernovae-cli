@@ -1,0 +1,16 @@
+# =============================================================================
+# SuperNovae CLI — Docker Build Context Ignore
+# =============================================================================
+# This Dockerfile uses pre-built binaries, not source compilation.
+# We ignore everything except the binaries created by CI.
+# =============================================================================
+
+# Ignore everything by default
+*
+
+# Include pre-built binaries (created by GitHub Actions)
+!amd64/
+!arm64/
+
+# Include Dockerfile for reference (optional)
+!Dockerfile
