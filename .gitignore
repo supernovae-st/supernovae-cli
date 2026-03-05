@@ -25,3 +25,4 @@ coverage/
 # === LOCAL STATE ===
 .spn/
 dx/
+dist/
