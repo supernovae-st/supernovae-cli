@@ -532,7 +532,7 @@ impl ModelBackend for LlamaCppBackend {
 - [ ] Nika: `model:` field in AST
 - [ ] Nika: LSP completions/diagnostics
 - [ ] Multi-model workflow E2E test passes
-- [ ] All crates published to crates.io
+- [x] All crates published to crates.io (spn-core, spn-keyring, spn-ollama, spn-client)
 
 ---
 
@@ -553,12 +553,12 @@ impl ModelBackend for LlamaCppBackend {
 [x] Phase 3 completed: 2026-03-05 (ModelManager, IPC protocol extended, serde feature)
 [x] Phase 4A started: 2026-03-05
 [x] Phase 4A completed: 2026-03-05 (nika keyring.rs → spn-core, tokio::sync::Mutex fix)
-[ ] Phase 4B started:
-[ ] Phase 4B completed:
-[ ] Phase 4C started:
-[ ] Phase 4C completed:
-[ ] Phase 5 started:
-[ ] Phase 5 completed:
+[ ] Phase 4B started: (future)
+[ ] Phase 4B completed: (future)
+[ ] Phase 4C started: (future)
+[ ] Phase 4C completed: (future)
+[x] Phase 5 started: 2026-03-05
+[x] Phase 5 completed: 2026-03-05 (spn-core, spn-keyring, spn-ollama, spn-client on crates.io)
 [ ] Phase 6 started:
 [ ] Phase 6 completed:
 ```
