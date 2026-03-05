@@ -162,10 +162,12 @@ jobs:
     needs: [build, docker-publish]
     runs-on: ubuntu-latest
     steps:
-      - name: Download all artifacts
+      - name: Download binary artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: spn-*
           path: artifacts
+          merge-multiple: false
 
       - name: Display structure
         run: ls -R artifacts
