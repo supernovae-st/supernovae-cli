@@ -10,7 +10,7 @@ keywords = ["keyring", "keychain", "credentials", "secrets"]
 categories = ["authentication", "cryptography"]
 
 [dependencies]
-spn-core = { path = "../spn-core" }
+spn-core = "0.1"
 keyring = "3"
 secrecy = "0.10"
 zeroize = { version = "1", features = ["derive"] }
