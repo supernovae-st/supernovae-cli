@@ -23,7 +23,7 @@ pub async fn run() -> Result<()> {
     if installed.is_empty()
         && manifest
             .as_ref()
-            .map_or(true, |m| m.dependencies.is_empty())
+            .is_none_or(|m| m.dependencies.is_empty())
     {
         println!("   No packages installed.");
         println!();
