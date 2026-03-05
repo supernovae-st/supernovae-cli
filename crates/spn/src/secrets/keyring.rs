@@ -636,10 +636,12 @@ mod tests {
 
     #[test]
     fn test_migration_report() {
-        let mut report = MigrationReport::default();
-        report.migrated = 2;
-        report.skipped = 1;
-        report.not_found = vec!["test".to_string()];
+        let report = MigrationReport {
+            migrated: 2,
+            skipped: 1,
+            not_found: vec!["test".to_string()],
+            ..Default::default()
+        };
 
         assert!(report.is_success());
         assert!(report.summary().contains("2 migrated"));

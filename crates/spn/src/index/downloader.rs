@@ -322,7 +322,7 @@ mod tests {
     fn create_test_tarball(dir: &Path, name: &str, version: &str) -> (PathBuf, String) {
         // Create tarball directory structure matching tarball_url() output
         // tarball_url generates: releases/@w/data/json-transformer/1.0.0.tar.gz
-        let pkg_name = name.split('/').last().unwrap_or(name);
+        let pkg_name = name.split('/').next_back().unwrap_or(name);
         let releases_dir = dir.join("releases/@w/data").join(pkg_name);
         std::fs::create_dir_all(&releases_dir).unwrap();
 
@@ -385,7 +385,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_and_verify() {
-        let (temp, config, _) = setup_test_registry();
+        let (_temp, config, _) = setup_test_registry();
         let downloader = Downloader::with_config(config);
 
         let result = downloader
@@ -447,7 +447,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_reuse() {
-        let (temp, config, _) = setup_test_registry();
+        let (_temp, config, _) = setup_test_registry();
         let downloader = Downloader::with_config(config);
 
         // First download

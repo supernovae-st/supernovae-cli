@@ -1,12 +1,12 @@
 # supernovae-cli
 
-**SuperNovae CLI (`spn`)** v0.10.0 — Unified package manager for the SuperNovae AI workflow ecosystem.
+**SuperNovae CLI (`spn`)** v0.12.2 — Unified package manager for the SuperNovae AI workflow ecosystem.
 
 ## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  spn — SuperNovae Package Manager v0.10.0                                       │
+│  spn — SuperNovae Package Manager v0.12.2                                       │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │  Package Commands:                                                              │
@@ -38,6 +38,11 @@
 │  ├── spn skill add/remove/list  Manage skills (via skills.sh)                   │
 │  └── spn mcp add/remove/list    Manage MCP servers (via npm)                    │
 │                                                                                 │
+│  Setup Commands (v0.12.0):                                                      │
+│  ├── spn setup                  Interactive onboarding wizard                   │
+│  ├── spn setup nika             Install and configure Nika workflow engine      │
+│  └── spn setup novanet          Install and configure NovaNet knowledge graph   │
+│                                                                                 │
 │  Integration:                                                                   │
 │  ├── spn nk <args>              Proxy to nika CLI                               │
 │  ├── spn nv <args>              Proxy to novanet CLI                            │
@@ -57,7 +62,7 @@
 - **Security:** keyring (OS keychain), secrecy, zeroize, libc (mlock)
 - **Performance:** rustc-hash (FxHashMap)
 
-## Workspace Architecture (v0.10.0)
+## Workspace Architecture (v0.12.2)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -66,7 +71,7 @@
 │                                                                                 │
 │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐                        │
 │  │  spn-core    │   │  spn-keyring │   │  spn-ollama  │                        │
-│  │   v0.1.0     │   │    v0.1.0    │   │    v0.1.0    │                        │
+│  │   v0.1.1     │   │    v0.1.1    │   │    v0.1.1    │                        │
 │  ├──────────────┤   ├──────────────┤   ├──────────────┤                        │
 │  │ • Provider   │   │ • OS keychain│   │ • Ollama API │                        │
 │  │   definitions│   │   (macOS/Win │   │ • ModelBackend│                        │
@@ -80,13 +85,13 @@
 │                            ▼                                                    │
 │                   ┌──────────────┐                                              │
 │                   │  spn-client  │  ← SDK for external tools                   │
-│                   │    v0.2.1    │    (re-exports spn-core)                    │
+│                   │    v0.2.2    │    (re-exports spn-core)                    │
 │                   └──────────────┘                                              │
 │                            │                                                    │
 │                            ▼                                                    │
 │                   ┌──────────────┐                                              │
 │                   │   spn-cli    │  ← Main binary                              │
-│                   │   v0.10.0    │    (all commands)                           │
+│                   │   v0.12.2    │    (all commands)                           │
 │                   └──────────────┘                                              │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -222,6 +227,64 @@ supernovae-cli/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+## Release Automation (v0.12.2)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  FULLY AUTOMATED RELEASE PIPELINE                                               │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  Tools:                                                                         │
+│  ├── release-plz              Automated release PRs and crates.io publishing   │
+│  ├── git-cliff                CHANGELOG generation from conventional commits   │
+│  └── cargo-semver-checks      SemVer compatibility validation                  │
+│                                                                                 │
+│  Workflow (Zero Manual Steps):                                                  │
+│  ├── 1. Push to main          Triggers release-plz.yml                         │
+│  ├── 2. Validation            fmt, clippy, tests, semver-checks                │
+│  ├── 3. Release PR created    Version bumps + CHANGELOG updates                │
+│  ├── 4. Merge PR              Triggers release.yml                             │
+│  ├── 5. Git tag created       v0.X.Y format                                    │
+│  ├── 6. Binaries built        macOS, Linux (native + musl), Windows            │
+│  ├── 7. Docker published      ghcr.io/supernovae-st/spn (~5MB scratch image)   │
+│  ├── 8. crates.io published   All 5 crates in dependency order                 │
+│  └── 9. GitHub Release        With binaries, SLSA provenance, SBOM             │
+│                                                                                 │
+│  Configuration Files:                                                           │
+│  ├── cliff.toml               git-cliff configuration                          │
+│  ├── release-plz.toml         release-plz workspace/package config             │
+│  └── .github/workflows/       release-plz.yml + release.yml                    │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Feature Flags (v0.12.2)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  CONDITIONAL COMPILATION FOR DIFFERENT BUILD TARGETS                            │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  spn-keyring crate:                                                             │
+│  ├── default = ["os-keychain"]                                                  │
+│  └── os-keychain              Enable OS keychain integration (keyring crate)   │
+│                                                                                 │
+│  spn-cli crate:                                                                 │
+│  ├── default = ["native"]                                                       │
+│  ├── native                   Full features including OS keychain              │
+│  ├── os-keychain              Optional keychain support                        │
+│  └── docker                   Minimal build for containers (no keychain)       │
+│                                                                                 │
+│  Build Targets:                                                                 │
+│  ├── Native (macOS/Linux/Windows)   Full features, dynamic linking             │
+│  └── Docker (musl)                  Static binary, no keychain, scratch image  │
+│                                                                                 │
+│  Fallback Behavior:                                                             │
+│  └── Without keychain, resolve_api_key() falls back to env vars                │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
 ## Commands
 
 ```bash
@@ -243,6 +306,11 @@ cargo run -p spn-cli -- provider test all
 cargo run -p spn-cli -- model list
 cargo run -p spn-cli -- model pull llama3.2:7b
 
+# Setup (v0.12.0)
+cargo run -p spn-cli -- setup              # Interactive wizard
+cargo run -p spn-cli -- setup nika         # Install Nika
+cargo run -p spn-cli -- setup novanet      # Install NovaNet
+
 # Test (610 tests across workspace)
 cargo test --workspace
 
@@ -263,11 +331,11 @@ cargo install --path crates/spn
 
 | Crate | Version | crates.io |
 |-------|---------|-----------|
-| spn-core | 0.1.0 | [Published](https://crates.io/crates/spn-core) |
-| spn-keyring | 0.1.0 | [Published](https://crates.io/crates/spn-keyring) |
-| spn-ollama | 0.1.0 | [Published](https://crates.io/crates/spn-ollama) |
-| spn-client | 0.2.1 | [Published](https://crates.io/crates/spn-client) |
-| spn-cli | 0.10.0 | [Published](https://crates.io/crates/spn-cli) |
+| spn-core | 0.1.1 | [Published](https://crates.io/crates/spn-core) |
+| spn-keyring | 0.1.1 | [Published](https://crates.io/crates/spn-keyring) |
+| spn-ollama | 0.1.1 | [Published](https://crates.io/crates/spn-ollama) |
+| spn-client | 0.2.2 | [Published](https://crates.io/crates/spn-client) |
+| spn-cli | 0.12.2 | [Published](https://crates.io/crates/spn-cli) |
 
 ## Storage Layout
 
@@ -311,4 +379,7 @@ ln -s ../supernovae-agi/dx/.claude .claude
 
 ---
 
-**Distribution:** `brew install supernovae-st/tap/spn`
+**Distribution:**
+- Homebrew: `brew install supernovae-st/tap/spn`
+- Docker: `docker pull ghcr.io/supernovae-st/spn:latest`
+- Cargo: `cargo install spn-cli`

@@ -70,7 +70,6 @@ pub fn set(_key: &str, _value: serde_json::Value) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[test]
     fn test_global_config_path() {

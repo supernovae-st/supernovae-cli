@@ -358,8 +358,10 @@ dependencies:
 
     #[test]
     fn test_add_remove_dependency() {
-        let mut manifest = SpnManifest::default();
-        manifest.name = "test".to_string();
+        let mut manifest = SpnManifest {
+            name: "test".to_string(),
+            ..Default::default()
+        };
 
         manifest.add_dependency("@nika/seo-audit", "^0.1");
         assert_eq!(manifest.dependencies.len(), 1);
@@ -370,9 +372,11 @@ dependencies:
 
     #[test]
     fn test_serialize_to_yaml() {
-        let mut manifest = SpnManifest::default();
-        manifest.name = "test-project".to_string();
-        manifest.version = "1.0.0".to_string();
+        let mut manifest = SpnManifest {
+            name: "test-project".to_string(),
+            version: "1.0.0".to_string(),
+            ..Default::default()
+        };
         manifest.add_dependency("@nika/seo-audit", "^0.1");
 
         let yaml = manifest.to_yaml().unwrap();

@@ -88,12 +88,12 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
     // Dispatch to specific setup if command provided
     if let Some(cmd) = command {
         return match cmd {
-            SetupCommands::Nika { no_sync, no_lsp, method } => {
-                run_nika_setup(no_sync, no_lsp, &method).await
-            }
-            SetupCommands::Novanet { no_sync } => {
-                run_novanet_setup(no_sync).await
-            }
+            SetupCommands::Nika {
+                no_sync,
+                no_lsp,
+                method,
+            } => run_nika_setup(no_sync, no_lsp, &method).await,
+            SetupCommands::Novanet { no_sync } => run_novanet_setup(no_sync).await,
         };
     }
 
@@ -607,12 +607,13 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
     let install_result = match method {
         "cargo" if has_cargo => {
             println!("  {} cargo install nika-cli", "Running:".cyan());
-            Command::new("cargo")
-                .args(["install", "nika-cli"])
-                .status()
+            Command::new("cargo").args(["install", "nika-cli"]).status()
         }
         "brew" if has_brew => {
-            println!("  {} brew install supernovae-st/tap/nika", "Running:".cyan());
+            println!(
+                "  {} brew install supernovae-st/tap/nika",
+                "Running:".cyan()
+            );
             Command::new("brew")
                 .args(["install", "supernovae-st/tap/nika"])
                 .status()
@@ -622,19 +623,26 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
                 "  {}",
                 "Source installation: clone and build manually".yellow()
             );
-            println!("     {}", "git clone https://github.com/supernovae-st/nika".dimmed());
-            println!("     {}", "cd nika && cargo install --path tools/nika".dimmed());
+            println!(
+                "     {}",
+                "git clone https://github.com/supernovae-st/nika".dimmed()
+            );
+            println!(
+                "     {}",
+                "cd nika && cargo install --path tools/nika".dimmed()
+            );
             return Ok(());
         }
         _ => {
             // Fallback to what's available
             if has_cargo {
                 println!("  {} cargo install nika-cli", "Running:".cyan());
-                Command::new("cargo")
-                    .args(["install", "nika-cli"])
-                    .status()
+                Command::new("cargo").args(["install", "nika-cli"]).status()
             } else {
-                println!("  {} brew install supernovae-st/tap/nika", "Running:".cyan());
+                println!(
+                    "  {} brew install supernovae-st/tap/nika",
+                    "Running:".cyan()
+                );
                 Command::new("brew")
                     .args(["install", "supernovae-st/tap/nika"])
                     .status()
@@ -666,10 +674,7 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
 
         if has_cargo {
             println!("  {} cargo install nika-lsp", "Running:".cyan());
-            match Command::new("cargo")
-                .args(["install", "nika-lsp"])
-                .status()
-            {
+            match Command::new("cargo").args(["install", "nika-lsp"]).status() {
                 Ok(status) if status.success() => {
                     println!("  {} Nika LSP installed", "✓".green());
                 }
@@ -687,10 +692,7 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
                 }
             }
         } else {
-            println!(
-                "  {}",
-                "⚠️  Skipping LSP (requires cargo)".yellow()
-            );
+            println!("  {}", "⚠️  Skipping LSP (requires cargo)".yellow());
         }
         println!();
     }
@@ -726,7 +728,10 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
             .filter(|f| f.exists());
 
         if let Some(settings_path) = vscode_config {
-            println!("  {} VS Code detected, configuring yaml.schemas...", "→".cyan());
+            println!(
+                "  {} VS Code detected, configuring yaml.schemas...",
+                "→".cyan()
+            );
             if let Err(e) = configure_vscode_yaml_schema(&settings_path) {
                 println!("  {} VS Code config failed: {}", "⚠️".yellow(), e);
             } else {
@@ -740,7 +745,10 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
             .filter(|f| f.exists());
 
         if let Some(settings_path) = cursor_config {
-            println!("  {} Cursor detected, configuring yaml.schemas...", "→".cyan());
+            println!(
+                "  {} Cursor detected, configuring yaml.schemas...",
+                "→".cyan()
+            );
             if let Err(e) = configure_cursor_yaml_schema(&settings_path) {
                 println!("  {} Cursor config failed: {}", "⚠️".yellow(), e);
             } else {
@@ -842,14 +850,8 @@ fn print_nika_success() {
 /// Install and configure NovaNet knowledge graph.
 async fn run_novanet_setup(_no_sync: bool) -> Result<()> {
     println!();
-    println!(
-        "{}",
-        "NovaNet setup is not yet implemented.".yellow()
-    );
-    println!(
-        "{}",
-        "For now, follow the manual setup at:".dimmed()
-    );
+    println!("{}", "NovaNet setup is not yet implemented.".yellow());
+    println!("{}", "For now, follow the manual setup at:".dimmed());
     println!(
         "  {}",
         "https://github.com/supernovae-st/novanet#readme".cyan()

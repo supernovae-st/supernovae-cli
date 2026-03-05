@@ -86,7 +86,7 @@ impl ConfigResolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::types::{McpServerConfig, ProviderConfig};
+    use crate::config::types::McpServerConfig;
     use rustc_hash::FxHashMap;
     use tempfile::TempDir;
 

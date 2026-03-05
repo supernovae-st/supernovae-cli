@@ -1,0 +1,77 @@
+# release-plz configuration for supernovae-cli
+# https://release-plz.ieni.dev/docs/config
+#
+# This file configures automated release management:
+# - Version bumping based on conventional commits
+# - CHANGELOG generation via git-cliff
+# - crates.io publishing in dependency order
+# - GitHub release creation
+
+[workspace]
+# Use git-cliff for CHANGELOG generation
+changelog_config = "cliff.toml"
+
+# Create GitHub releases for tagged versions
+git_release_enable = true
+
+# PR labels for automated release PRs
+pr_labels = ["release", "automated"]
+
+# Run cargo semver-checks before releasing
+semver_check = true
+
+# Timeout for cargo publish operations
+publish_timeout = "10m"
+
+# Don't allow dirty working directory
+allow_dirty = false
+
+# Publish packages in dependency order
+publish = true
+
+# Git tag format (v prefix)
+git_tag_name = "v{{ version }}"
+
+# Release name format (GitHub release title)
+git_release_name = "v{{ version }}"
+
+# ============================================================================
+# Package Configurations
+# ============================================================================
+# Only spn-cli creates GitHub releases (it's the main binary)
+# Library crates are published to crates.io but don't create releases
+
+[[package]]
+name = "spn-cli"
+# Main binary - creates GitHub releases
+git_release_enable = true
+# Root changelog
+changelog_path = "CHANGELOG.md"
+# Include all changes from workspace crates in release notes
+changelog_include = ["spn-core", "spn-keyring", "spn-ollama", "spn-client"]
+
+[[package]]
+name = "spn-core"
+# Library crate - no GitHub release, just crates.io publish
+git_release_enable = false
+# Per-crate changelog (optional)
+changelog_path = "crates/spn-core/CHANGELOG.md"
+changelog_update = false
+
+[[package]]
+name = "spn-keyring"
+git_release_enable = false
+changelog_path = "crates/spn-keyring/CHANGELOG.md"
+changelog_update = false
+
+[[package]]
+name = "spn-client"
+git_release_enable = false
+changelog_path = "crates/spn-client/CHANGELOG.md"
+changelog_update = false
+
+[[package]]
+name = "spn-ollama"
+git_release_enable = false
+changelog_path = "crates/spn-ollama/CHANGELOG.md"
+changelog_update = false

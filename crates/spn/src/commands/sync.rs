@@ -475,7 +475,7 @@ mod tests {
     #[test]
     fn test_enable_disable_target() {
         let temp = TempDir::new().unwrap();
-        let config_path = temp.path().join("sync.json");
+        let _config_path = temp.path().join("sync.json");
 
         let mut config = SyncConfig::default();
         config.enable(IdeTarget::ClaudeCode);
