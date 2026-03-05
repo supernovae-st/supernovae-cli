@@ -5,12 +5,15 @@ use spn_client::{Request, Response};
 use std::sync::Arc;
 use tracing::{debug, warn};
 
-use super::SecretManager;
+use super::{ModelManager, SecretManager};
 
 /// Handles incoming daemon requests.
 pub struct RequestHandler {
     /// Secret manager
     secrets: Arc<SecretManager>,
+
+    /// Model manager
+    models: Arc<ModelManager>,
 
     /// Daemon version
     version: String,
@@ -18,9 +21,10 @@ pub struct RequestHandler {
 
 impl RequestHandler {
     /// Create a new request handler.
-    pub fn new(secrets: Arc<SecretManager>) -> Self {
+    pub fn new(secrets: Arc<SecretManager>, models: Arc<ModelManager>) -> Self {
         Self {
             secrets,
+            models,
             version: env!("CARGO_PKG_VERSION").to_string(),
         }
     }
@@ -34,6 +38,14 @@ impl RequestHandler {
             Request::GetSecret { provider } => self.handle_get_secret(&provider).await,
             Request::HasSecret { provider } => self.handle_has_secret(&provider).await,
             Request::ListProviders => self.handle_list_providers().await,
+
+            // Model commands
+            Request::ModelList => self.handle_model_list().await,
+            Request::ModelPull { name } => self.handle_model_pull(&name).await,
+            Request::ModelLoad { name, config } => self.handle_model_load(&name, config).await,
+            Request::ModelUnload { name } => self.handle_model_unload(&name).await,
+            Request::ModelStatus => self.handle_model_status().await,
+            Request::ModelDelete { name } => self.handle_model_delete(&name).await,
         }
     }
 
@@ -66,16 +78,88 @@ impl RequestHandler {
         let providers = self.secrets.list_cached().await;
         Response::Providers { providers }
     }
+
+    // ==================== Model Handlers ====================
+
+    async fn handle_model_list(&self) -> Response {
+        match self.models.list_models().await {
+            Ok(models) => Response::Models { models },
+            Err(e) => Response::Error {
+                message: e.to_string(),
+            },
+        }
+    }
+
+    async fn handle_model_pull(&self, name: &str) -> Response {
+        match self.models.pull(name).await {
+            Ok(()) => Response::Success { success: true },
+            Err(e) => Response::Error {
+                message: e.to_string(),
+            },
+        }
+    }
+
+    async fn handle_model_load(
+        &self,
+        name: &str,
+        config: Option<spn_client::LoadConfig>,
+    ) -> Response {
+        match self.models.load(name, config).await {
+            Ok(()) => Response::Success { success: true },
+            Err(e) => Response::Error {
+                message: e.to_string(),
+            },
+        }
+    }
+
+    async fn handle_model_unload(&self, name: &str) -> Response {
+        match self.models.unload(name).await {
+            Ok(()) => Response::Success { success: true },
+            Err(e) => Response::Error {
+                message: e.to_string(),
+            },
+        }
+    }
+
+    async fn handle_model_status(&self) -> Response {
+        match self.models.running_models().await {
+            Ok(running) => Response::RunningModels { running },
+            Err(e) => Response::Error {
+                message: e.to_string(),
+            },
+        }
+    }
+
+    async fn handle_model_delete(&self, name: &str) -> Response {
+        match self.models.delete(name).await {
+            Ok(()) => Response::Success { success: true },
+            Err(e) => Response::Error {
+                message: e.to_string(),
+            },
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn create_handler() -> RequestHandler {
+        let secrets = Arc::new(SecretManager::new());
+        let models = Arc::new(ModelManager::new());
+        RequestHandler::new(secrets, models)
+    }
+
+    fn create_handler_with_secrets() -> (RequestHandler, Arc<SecretManager>) {
+        let secrets = Arc::new(SecretManager::new());
+        let models = Arc::new(ModelManager::new());
+        let handler = RequestHandler::new(Arc::clone(&secrets), models);
+        (handler, secrets)
+    }
+
     #[tokio::test]
     async fn test_handle_ping() {
-        let secrets = Arc::new(SecretManager::new());
-        let handler = RequestHandler::new(secrets);
+        let handler = create_handler();
 
         let response = handler.handle(Request::Ping).await;
 
@@ -89,10 +173,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_get_secret_found() {
-        let secrets = Arc::new(SecretManager::new());
+        let (handler, secrets) = create_handler_with_secrets();
         secrets.set_cached("test", "secret-value").await.unwrap();
-
-        let handler = RequestHandler::new(secrets);
 
         let response = handler
             .handle(Request::GetSecret {
@@ -110,8 +192,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_get_secret_not_found() {
-        let secrets = Arc::new(SecretManager::new());
-        let handler = RequestHandler::new(secrets);
+        let handler = create_handler();
 
         let response = handler
             .handle(Request::GetSecret {
@@ -129,10 +210,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_has_secret() {
-        let secrets = Arc::new(SecretManager::new());
+        let (handler, secrets) = create_handler_with_secrets();
         secrets.set_cached("test", "value").await.unwrap();
-
-        let handler = RequestHandler::new(secrets);
 
         // Existing secret
         let response = handler
@@ -153,11 +232,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_list_providers() {
-        let secrets = Arc::new(SecretManager::new());
+        let (handler, secrets) = create_handler_with_secrets();
         secrets.set_cached("anthropic", "key1").await.unwrap();
         secrets.set_cached("openai", "key2").await.unwrap();
-
-        let handler = RequestHandler::new(secrets);
 
         let response = handler.handle(Request::ListProviders).await;
 

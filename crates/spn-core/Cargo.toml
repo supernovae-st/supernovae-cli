@@ -14,16 +14,13 @@ readme = "README.md"
 rust-version = "1.75"
 
 [dependencies]
-# NONE - pure Rust, zero dependencies
-# This crate is intentionally dependency-free for:
-# - Fast compilation
-# - WASM compatibility
-# - No transitive dependency risk
+# Optional serde support for IPC serialization
+serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
 # None needed - pure unit tests
 
 [features]
 default = []
-# Reserved for future use (e.g., serde support)
-# serde = ["dep:serde"]
+# Enable serde Serialize/Deserialize derives
+serde = ["dep:serde"]

@@ -12,7 +12,7 @@ use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
 
 use super::{
-    handler::RequestHandler, paths, secrets::SecretManager,
+    handler::RequestHandler, model_manager::ModelManager, paths, secrets::SecretManager,
     socket::{verify_peer_credentials, SocketUtils}, DaemonError,
 };
 
@@ -41,6 +41,7 @@ impl Default for DaemonConfig {
 pub struct DaemonServer {
     config: DaemonConfig,
     secrets: Arc<SecretManager>,
+    models: Arc<ModelManager>,
     handler: Arc<RequestHandler>,
     shutdown_tx: broadcast::Sender<()>,
 }
@@ -49,12 +50,14 @@ impl DaemonServer {
     /// Create a new daemon server.
     pub fn new(config: DaemonConfig) -> Self {
         let secrets = Arc::new(SecretManager::new());
-        let handler = Arc::new(RequestHandler::new(Arc::clone(&secrets)));
+        let models = Arc::new(ModelManager::new());
+        let handler = Arc::new(RequestHandler::new(Arc::clone(&secrets), Arc::clone(&models)));
         let (shutdown_tx, _) = broadcast::channel(1);
 
         Self {
             config,
             secrets,
+            models,
             handler,
             shutdown_tx,
         }

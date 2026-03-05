@@ -38,11 +38,13 @@
 
 mod error;
 mod handler;
+mod model_manager;
 mod secrets;
 mod server;
 mod socket;
 
 pub use error::DaemonError;
+pub use model_manager::ModelManager;
 pub use secrets::SecretManager;
 pub use server::{DaemonConfig, DaemonServer};
 

@@ -527,7 +527,7 @@ impl ModelBackend for LlamaCppBackend {
 - [x] spn-keyring: 6 tests, 0 clippy warnings
 - [x] spn-ollama: 6 tests, ModelBackend trait + OllamaBackend + DynModelBackend
 - [x] spn-client v0.2.0 with re-exports (7 tests, 0 clippy)
-- [ ] spn daemon with ModelManager
+- [x] spn daemon with ModelManager (model_manager.rs, handler.rs updated)
 - [ ] Nika: `model:` field in AST
 - [ ] Nika: LSP completions/diagnostics
 - [ ] Multi-model workflow E2E test passes
@@ -548,8 +548,8 @@ impl ModelBackend for LlamaCppBackend {
 [x] Phase 1D completed: 2026-03-05 (6 tests, ModelBackend trait + OllamaBackend)
 [x] Phase 2 started: 2026-03-05
 [x] Phase 2 completed: 2026-03-05 (spn-client v0.2.0, re-exports spn-core, 7 tests)
-[ ] Phase 3 started:
-[ ] Phase 3 completed:
+[x] Phase 3 started: 2026-03-05
+[x] Phase 3 completed: 2026-03-05 (ModelManager, IPC protocol extended, serde feature)
 [ ] Phase 4A started:
 [ ] Phase 4A completed:
 [ ] Phase 4B started:
@@ -566,7 +566,6 @@ impl ModelBackend for LlamaCppBackend {
 
 ## Next Actions
 
-1. **Phase 3:** Update spn daemon with ModelManager
-2. **Phase 4:** Migrate nika (secrets, AST model field, LSP)
+1. **Phase 4:** Migrate nika (secrets, AST model field, LSP)
 
-All foundation crates complete. spn-client v0.2.0 now re-exports spn-core types.
+Daemon complete with ModelManager. Ready for nika integration.

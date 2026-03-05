@@ -21,6 +21,7 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
+use spn_core::{LoadConfig, ModelInfo, RunningModel};
 
 /// Request sent to the daemon.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,6 +42,36 @@ pub enum Request {
     /// List all available providers.
     #[serde(rename = "LIST_PROVIDERS")]
     ListProviders,
+
+    // ==================== Model Commands ====================
+
+    /// List all installed models.
+    #[serde(rename = "MODEL_LIST")]
+    ModelList,
+
+    /// Pull/download a model.
+    #[serde(rename = "MODEL_PULL")]
+    ModelPull { name: String },
+
+    /// Load a model into memory.
+    #[serde(rename = "MODEL_LOAD")]
+    ModelLoad {
+        name: String,
+        #[serde(default)]
+        config: Option<LoadConfig>,
+    },
+
+    /// Unload a model from memory.
+    #[serde(rename = "MODEL_UNLOAD")]
+    ModelUnload { name: String },
+
+    /// Get status of running models.
+    #[serde(rename = "MODEL_STATUS")]
+    ModelStatus,
+
+    /// Delete a model.
+    #[serde(rename = "MODEL_DELETE")]
+    ModelDelete { name: String },
 }
 
 /// Response from the daemon.
@@ -58,6 +89,17 @@ pub enum Response {
 
     /// Provider list response.
     Providers { providers: Vec<String> },
+
+    // ==================== Model Responses ====================
+
+    /// List of installed models.
+    Models { models: Vec<ModelInfo> },
+
+    /// List of currently running/loaded models.
+    RunningModels { running: Vec<RunningModel> },
+
+    /// Generic success response.
+    Success { success: bool },
 
     /// Error response.
     Error { message: String },

@@ -2052,6 +2052,7 @@ dependencies = [
  "sha2",
  "similar",
  "spn-client",
+ "spn-ollama",
  "tar",
  "tempfile",
  "thiserror 2.0.18",
@@ -2084,6 +2085,9 @@ dependencies = [
 [[package]]
 name = "spn-core"
 version = "0.1.0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "spn-keyring"

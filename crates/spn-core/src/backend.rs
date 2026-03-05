@@ -41,8 +41,12 @@
 
 use std::fmt;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Progress information during model pull/download.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PullProgress {
     /// Current status message (e.g., "pulling manifest", "downloading").
     pub status: String,
@@ -88,6 +92,7 @@ impl fmt::Display for PullProgress {
 
 /// Information about an installed model.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ModelInfo {
     /// Model name (e.g., "llama3.2:7b").
     pub name: String,
@@ -128,6 +133,7 @@ impl fmt::Display for ModelInfo {
 
 /// Information about a currently running/loaded model.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RunningModel {
     /// Model name.
     pub name: String,
@@ -160,6 +166,7 @@ impl fmt::Display for RunningModel {
 
 /// GPU device information.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct GpuInfo {
     /// GPU device ID.
     pub id: u32,
@@ -211,6 +218,7 @@ impl fmt::Display for GpuInfo {
 
 /// Error types for backend operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum BackendError {
     /// Backend server is not running.
     NotRunning,
@@ -246,6 +254,7 @@ impl fmt::Display for BackendError {
 
 /// Configuration for loading a model.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct LoadConfig {
     /// GPU IDs to use for this model (empty = auto).
     pub gpu_ids: Vec<u32>,

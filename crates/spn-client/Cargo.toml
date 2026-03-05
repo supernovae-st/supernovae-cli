@@ -15,7 +15,7 @@ rust-version = "1.75"
 
 [dependencies]
 # Core types (providers, validation, backend types)
-spn-core = { path = "../spn-core" }
+spn-core = { path = "../spn-core", features = ["serde"] }
 
 # Async runtime (minimal features)
 tokio = { version = "1.36", features = ["net", "io-util", "sync"] }
