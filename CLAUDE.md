@@ -66,35 +66,63 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  CARGO WORKSPACE — 5 INDEPENDENT CRATES                                         │
+│  UNIFIED 4-CRATE ARCHITECTURE                                                   │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
-│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐                        │
-│  │  spn-core    │   │  spn-keyring │   │  spn-ollama  │                        │
-│  │   v0.1.1     │   │    v0.1.1    │   │    v0.1.1    │                        │
-│  ├──────────────┤   ├──────────────┤   ├──────────────┤                        │
-│  │ • Provider   │   │ • OS keychain│   │ • Ollama API │                        │
-│  │   definitions│   │   (macOS/Win │   │ • ModelBackend│                        │
-│  │ • BackendErr │   │    /Linux)   │   │   trait      │                        │
-│  │ • ModelInfo  │   │ • Secret mgmt│   │ • Pull/Load/ │                        │
-│  │ • Validation │   │ • mlock()    │   │   Unload     │                        │
-│  └──────────────┘   └──────────────┘   └──────────────┘                        │
-│         │                  │                  │                                 │
-│         └──────────────────┼──────────────────┘                                 │
-│                            │                                                    │
-│                            ▼                                                    │
-│                   ┌──────────────┐                                              │
-│                   │  spn-client  │  ← SDK for external tools                   │
-│                   │    v0.2.2    │    (re-exports spn-core)                    │
-│                   └──────────────┘                                              │
-│                            │                                                    │
-│                            ▼                                                    │
-│                   ┌──────────────┐                                              │
-│                   │   spn-cli    │  ← Main binary                              │
-│                   │   v0.12.2    │    (all commands)                           │
-│                   └──────────────┘                                              │
+│  ┌──────────────────────────────────────────────────────────────────────────┐  │
+│  │  LAYER 1: spn-core (Zero Dependencies, WASM-Compatible)                  │  │
+│  │  ├── KNOWN_PROVIDERS (13 providers: 7 LLM + 6 MCP)                       │  │
+│  │  ├── Provider { id, name, env_var, category, key_prefix }                │  │
+│  │  ├── validate_key_format(), mask_key(), provider_to_env_var()            │  │
+│  │  └── McpServer, McpConfig (generic transport types)                      │  │
+│  └──────────────────────────────────────────────────────────────────────────┘  │
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌──────────────────────────────────────────────────────────────────────────┐  │
+│  │  LAYER 2: spn-keyring (OS Keychain Wrapper)                              │  │
+│  │  ├── SpnKeyring::get/set/delete/exists (macOS/Windows/Linux)             │  │
+│  │  ├── Zeroizing<String>, SecretString (memory protection)                 │  │
+│  │  └── resolve_key() with priority: keychain > env > .env                  │  │
+│  └──────────────────────────────────────────────────────────────────────────┘  │
+│                                      │                                          │
+│                                      ▼                                          │
+│  ┌──────────────────────────────────────────────────────────────────────────┐  │
+│  │  LAYER 3: spn-client (Unix Socket IPC + Re-exports)                      │  │
+│  │  ├── SpnClient::connect() → daemon at ~/.spn/daemon.sock                 │  │
+│  │  ├── SpnClient::connect_with_fallback() → env var fallback               │  │
+│  │  ├── Re-exports: KNOWN_PROVIDERS, Provider, validate_key_format()        │  │
+│  │  └── Protocol: Ping/GetSecret/HasSecret/ListProviders                    │  │
+│  └──────────────────────────────────────────────────────────────────────────┘  │
+│                                      │                                          │
+│              ┌───────────────────────┴───────────────────────┐                  │
+│              │                                               │                  │
+│              ▼                                               ▼                  │
+│  ┌────────────────────────┐                   ┌────────────────────────┐        │
+│  │  spn-cli (v0.12.2)     │                   │  Nika (v0.21.0)        │        │
+│  │  • provider set/get    │                   │  • spn-daemon feature  │        │
+│  │  • model pull/load     │                   │  • KNOWN_PROVIDERS     │        │
+│  │  • setup wizard        │                   │  • Unified secrets     │        │
+│  └────────────────────────┘                   └────────────────────────┘        │
+│                                                                                 │
+│  Also in workspace: spn-ollama (ModelBackend trait, Ollama API client)          │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why This Architecture?
+
+**Problem Solved:** macOS Keychain popup fatigue. Each process accessing Keychain
+triggers "allow access?" dialogs. With Nika spawning multiple MCP servers, this
+was unbearable.
+
+**Solution:** The `spn daemon` is the SOLE keychain accessor. Consumers (Nika, MCP
+servers) connect via Unix socket IPC. One auth prompt at daemon start, then silence.
+
+```
+Without daemon:           With daemon:
+Nika → Keychain (popup)   Nika → spn-client → daemon.sock → Keychain
+MCP1 → Keychain (popup)                        (one accessor, no popups)
+MCP2 → Keychain (popup)
 ```
 
 ## Project Structure
