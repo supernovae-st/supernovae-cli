@@ -11,7 +11,7 @@ documentation = "https://github.com/supernovae-st/supernovae-cli#readme"
 keywords = ["cli", "package-manager", "ai", "mcp", "secrets"]
 categories = ["command-line-utilities", "development-tools"]
 readme = "../../README.md"
-rust-version = "1.75"
+rust-version = "1.78"
 
 [[bin]]
 name = "spn"

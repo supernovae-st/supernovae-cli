@@ -257,7 +257,7 @@ cargo install --path crates/spn
 
 - **610 tests passing** across workspace
 - **Zero clippy errors** with `-D warnings`
-- **MSRV:** Rust 1.75+
+- **MSRV:** Rust 1.78+
 
 ## Crate Versions
 
@@ -307,7 +307,7 @@ ln -s ../supernovae-agi/dx/.claude .claude
 | Commits | `type(scope): description` with co-authors |
 | Code Style | `cargo fmt` + `cargo clippy -- -D warnings` |
 | Testing | TDD preferred, 80% coverage target |
-| MSRV | Rust 1.75+ |
+| MSRV | Rust 1.78+ |
 
 ---
 

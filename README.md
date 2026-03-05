@@ -20,7 +20,7 @@
 
 <!-- Primary Badges -->
 [![Version](https://img.shields.io/badge/v0.10.0-000000?style=for-the-badge&logo=semver&logoColor=white&labelColor=6366f1)](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.10.0)
-[![Rust](https://img.shields.io/badge/rust_1.75+-f97316?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/rust_1.78+-f97316?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/AGPL--3.0-10b981?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 [![Website](https://img.shields.io/badge/🌟_spn.sh-8b5cf6?style=for-the-badge)](https://supernovae.studio)
 
