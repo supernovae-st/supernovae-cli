@@ -68,9 +68,13 @@ pub use spn_core::{
 };
 
 use std::path::PathBuf;
+#[cfg(unix)]
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+#[cfg(unix)]
 use tokio::net::UnixStream;
-use tracing::{debug, warn};
+use tracing::debug;
+#[cfg(unix)]
+use tracing::warn;
 
 /// Default socket path for the spn daemon.
 pub fn default_socket_path() -> PathBuf {
@@ -88,8 +92,12 @@ pub fn daemon_socket_exists() -> bool {
 ///
 /// The client uses Unix socket IPC to communicate with the daemon,
 /// which handles all keychain access to avoid repeated auth prompts.
+///
+/// On non-Unix platforms (Windows), the client always operates in fallback mode,
+/// reading secrets from environment variables.
 #[derive(Debug)]
 pub struct SpnClient {
+    #[cfg(unix)]
     stream: Option<UnixStream>,
     fallback_mode: bool,
 }
@@ -98,11 +106,17 @@ impl SpnClient {
     /// Connect to the spn daemon.
     ///
     /// Returns an error if the daemon is not running.
+    ///
+    /// This method is only available on Unix platforms.
+    #[cfg(unix)]
     pub async fn connect() -> Result<Self, Error> {
         Self::connect_to(&default_socket_path()).await
     }
 
     /// Connect to the daemon at a specific socket path.
+    ///
+    /// This method is only available on Unix platforms.
+    #[cfg(unix)]
     pub async fn connect_to(socket_path: &PathBuf) -> Result<Self, Error> {
         debug!("Connecting to spn daemon at {:?}", socket_path);
 
@@ -129,6 +143,9 @@ impl SpnClient {
     ///
     /// This is the recommended way to connect in applications that should
     /// work even without the daemon running.
+    ///
+    /// On non-Unix platforms (Windows), this always returns a fallback client.
+    #[cfg(unix)]
     pub async fn connect_with_fallback() -> Result<Self, Error> {
         match Self::connect().await {
             Ok(client) => Ok(client),
@@ -142,12 +159,27 @@ impl SpnClient {
         }
     }
 
+    /// Connect to the daemon, falling back to env vars if daemon is unavailable.
+    ///
+    /// On non-Unix platforms (Windows), this always returns a fallback client
+    /// since Unix sockets are not available.
+    #[cfg(not(unix))]
+    pub async fn connect_with_fallback() -> Result<Self, Error> {
+        debug!("Non-Unix platform: using env var fallback mode");
+        Ok(Self {
+            fallback_mode: true,
+        })
+    }
+
     /// Check if the client is in fallback mode (daemon not connected).
     pub fn is_fallback_mode(&self) -> bool {
         self.fallback_mode
     }
 
     /// Ping the daemon to verify the connection.
+    ///
+    /// This method is only available on Unix platforms.
+    #[cfg(unix)]
     pub async fn ping(&mut self) -> Result<String, Error> {
         let response = self.send_request(Request::Ping).await?;
         match response {
@@ -161,6 +193,7 @@ impl SpnClient {
     ///
     /// In fallback mode, attempts to read from the environment variable
     /// associated with the provider (e.g., ANTHROPIC_API_KEY).
+    #[cfg(unix)]
     pub async fn get_secret(&mut self, provider: &str) -> Result<SecretString, Error> {
         if self.fallback_mode {
             return self.get_secret_from_env(provider);
@@ -182,7 +215,16 @@ impl SpnClient {
         }
     }
 
+    /// Get a secret for the given provider.
+    ///
+    /// On non-Unix platforms, always reads from environment variables.
+    #[cfg(not(unix))]
+    pub async fn get_secret(&mut self, provider: &str) -> Result<SecretString, Error> {
+        self.get_secret_from_env(provider)
+    }
+
     /// Check if a secret exists for the given provider.
+    #[cfg(unix)]
     pub async fn has_secret(&mut self, provider: &str) -> Result<bool, Error> {
         if self.fallback_mode {
             return Ok(self.get_secret_from_env(provider).is_ok());
@@ -201,7 +243,16 @@ impl SpnClient {
         }
     }
 
+    /// Check if a secret exists for the given provider.
+    ///
+    /// On non-Unix platforms, checks environment variables.
+    #[cfg(not(unix))]
+    pub async fn has_secret(&mut self, provider: &str) -> Result<bool, Error> {
+        Ok(self.get_secret_from_env(provider).is_ok())
+    }
+
     /// List all available providers.
+    #[cfg(unix)]
     pub async fn list_providers(&mut self) -> Result<Vec<String>, Error> {
         if self.fallback_mode {
             return Ok(self.list_env_providers());
@@ -216,7 +267,16 @@ impl SpnClient {
         }
     }
 
+    /// List all available providers.
+    ///
+    /// On non-Unix platforms, lists providers from environment variables.
+    #[cfg(not(unix))]
+    pub async fn list_providers(&mut self) -> Result<Vec<String>, Error> {
+        Ok(self.list_env_providers())
+    }
+
     /// Send a request to the daemon and receive a response.
+    #[cfg(unix)]
     async fn send_request(&mut self, request: Request) -> Result<Response, Error> {
         let stream = self
             .stream
