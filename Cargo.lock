@@ -2068,12 +2068,13 @@ dependencies = [
 
 [[package]]
 name = "spn-client"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "dirs",
  "secrecy",
  "serde",
  "serde_json",
+ "spn-core",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",

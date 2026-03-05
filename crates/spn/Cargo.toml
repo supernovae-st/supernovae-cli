@@ -23,7 +23,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Workspace crates
-spn-client = { version = "0.1", path = "../spn-client" }
+spn-client = { version = "0.2", path = "../spn-client" }
 
 # CLI framework
 clap = { version = "4.5", features = ["derive", "env"] }

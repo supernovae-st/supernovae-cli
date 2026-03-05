@@ -52,6 +52,21 @@ pub use error::Error;
 pub use protocol::{Request, Response};
 pub use secrecy::{ExposeSecret, SecretString};
 
+// Re-export all spn-core types for convenience
+pub use spn_core::{
+    // Providers
+    Provider, ProviderCategory, KNOWN_PROVIDERS,
+    find_provider, provider_to_env_var, providers_by_category,
+    // Validation
+    ValidationResult, validate_key_format, mask_key,
+    // MCP
+    McpServer, McpServerType, McpConfig, McpSource,
+    // Registry
+    PackageRef, PackageManifest, PackageType,
+    // Backend
+    PullProgress, ModelInfo, RunningModel, GpuInfo, LoadConfig, BackendError,
+};
+
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
@@ -252,60 +267,27 @@ impl SpnClient {
     // Fallback helpers
 
     fn get_secret_from_env(&self, provider: &str) -> Result<SecretString, Error> {
-        let env_var = provider_to_env_var(provider);
-        std::env::var(&env_var)
+        let env_var = provider_to_env_var(provider).ok_or_else(|| Error::SecretNotFound {
+            provider: provider.to_string(),
+            details: format!("Unknown provider: {provider}"),
+        })?;
+        std::env::var(env_var)
             .map(SecretString::from)
             .map_err(|_| Error::SecretNotFound {
                 provider: provider.to_string(),
-                details: format!("Environment variable {} not set", env_var),
+                details: format!("Environment variable {env_var} not set"),
             })
     }
 
     fn list_env_providers(&self) -> Vec<String> {
         KNOWN_PROVIDERS
             .iter()
-            .filter(|p| std::env::var(provider_to_env_var(p)).is_ok())
-            .map(|s| s.to_string())
+            .filter(|p| std::env::var(p.env_var).is_ok())
+            .map(|p| p.id.to_string())
             .collect()
     }
 }
 
-/// Known provider names.
-const KNOWN_PROVIDERS: &[&str] = &[
-    "anthropic",
-    "openai",
-    "mistral",
-    "groq",
-    "deepseek",
-    "gemini",
-    "ollama",
-    "neo4j",
-    "github",
-    "slack",
-    "perplexity",
-    "firecrawl",
-    "supadata",
-];
-
-/// Convert a provider name to its environment variable.
-fn provider_to_env_var(provider: &str) -> String {
-    match provider.to_lowercase().as_str() {
-        "anthropic" => "ANTHROPIC_API_KEY".to_string(),
-        "openai" => "OPENAI_API_KEY".to_string(),
-        "mistral" => "MISTRAL_API_KEY".to_string(),
-        "groq" => "GROQ_API_KEY".to_string(),
-        "deepseek" => "DEEPSEEK_API_KEY".to_string(),
-        "gemini" => "GEMINI_API_KEY".to_string(),
-        "ollama" => "OLLAMA_HOST".to_string(),
-        "neo4j" => "NEO4J_PASSWORD".to_string(),
-        "github" => "GITHUB_TOKEN".to_string(),
-        "slack" => "SLACK_TOKEN".to_string(),
-        "perplexity" => "PERPLEXITY_API_KEY".to_string(),
-        "firecrawl" => "FIRECRAWL_API_KEY".to_string(),
-        "supadata" => "SUPADATA_API_KEY".to_string(),
-        other => format!("{}_API_KEY", other.to_uppercase()),
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -313,11 +295,12 @@ mod tests {
 
     #[test]
     fn test_provider_to_env_var() {
-        assert_eq!(provider_to_env_var("anthropic"), "ANTHROPIC_API_KEY");
-        assert_eq!(provider_to_env_var("openai"), "OPENAI_API_KEY");
-        assert_eq!(provider_to_env_var("neo4j"), "NEO4J_PASSWORD");
-        assert_eq!(provider_to_env_var("github"), "GITHUB_TOKEN");
-        assert_eq!(provider_to_env_var("unknown"), "UNKNOWN_API_KEY");
+        // These now use spn_core::provider_to_env_var which returns Option
+        assert_eq!(provider_to_env_var("anthropic"), Some("ANTHROPIC_API_KEY"));
+        assert_eq!(provider_to_env_var("openai"), Some("OPENAI_API_KEY"));
+        assert_eq!(provider_to_env_var("neo4j"), Some("NEO4J_PASSWORD"));
+        assert_eq!(provider_to_env_var("github"), Some("GITHUB_TOKEN"));
+        assert_eq!(provider_to_env_var("unknown"), None);
     }
 
     #[test]
