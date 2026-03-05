@@ -1,6 +1,7 @@
 //! CLI command implementations.
 
 pub mod add;
+pub mod model;
 pub mod config;
 pub mod daemon;
 pub mod doctor;

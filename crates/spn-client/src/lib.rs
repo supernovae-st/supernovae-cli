@@ -293,8 +293,11 @@ impl SpnClient {
     }
 
     /// Send a request to the daemon and receive a response.
+    ///
+    /// This is a low-level method for sending arbitrary requests.
+    /// For common operations, use the convenience methods like `get_secret()`.
     #[cfg(unix)]
-    async fn send_request(&mut self, request: Request) -> Result<Response, Error> {
+    pub async fn send_request(&mut self, request: Request) -> Result<Response, Error> {
         let stream = self.stream.as_mut().ok_or(Error::NotConnected)?;
 
         // Serialize request

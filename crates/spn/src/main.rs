@@ -248,6 +248,12 @@ enum Commands {
         #[command(subcommand)]
         command: DaemonCommands,
     },
+
+    /// Manage local LLM models (Ollama)
+    Model {
+        #[command(subcommand)]
+        command: ModelCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -558,6 +564,59 @@ enum DaemonCommands {
 }
 
 #[derive(Subcommand)]
+pub enum ModelCommands {
+    /// List installed models
+    List {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+
+        /// Only show loaded models
+        #[arg(long)]
+        running: bool,
+    },
+
+    /// Pull/download a model from Ollama registry
+    Pull {
+        /// Model name (e.g., llama3.2:7b, mistral:latest)
+        name: String,
+    },
+
+    /// Load a model into memory
+    Load {
+        /// Model name
+        name: String,
+
+        /// Keep model loaded indefinitely
+        #[arg(long)]
+        keep_alive: bool,
+    },
+
+    /// Unload a model from memory
+    Unload {
+        /// Model name
+        name: String,
+    },
+
+    /// Delete a model
+    Delete {
+        /// Model name
+        name: String,
+
+        /// Skip confirmation prompt
+        #[arg(long, short)]
+        yes: bool,
+    },
+
+    /// Show running models and resource usage
+    Status {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand)]
 enum ProviderCommands {
     /// List all stored API keys (masked)
     List {
@@ -654,5 +713,6 @@ async fn main() -> Result<()> {
         Commands::Secrets { command } => commands::secrets::run(command).await,
         Commands::Setup { quick } => commands::setup::run(quick).await,
         Commands::Daemon { command } => commands::daemon::run(command).await,
+        Commands::Model { command } => commands::model::run(command).await,
     }
 }
