@@ -130,13 +130,13 @@ enum Commands {
         bump: String,
     },
 
-    /// Skill commands (via skills.sh)
+    /// Manage skills from the skills.sh ecosystem
     Skill {
         #[command(subcommand)]
         command: SkillCommands,
     },
 
-    /// MCP server commands (via npm)
+    /// Manage MCP servers
     Mcp {
         #[command(subcommand)]
         command: McpCommands,
@@ -187,7 +187,7 @@ enum Commands {
         command: ConfigCommands,
     },
 
-    /// Schema commands (for NovaNet)
+    /// Manage NovaNet schema
     Schema {
         #[command(subcommand)]
         command: SchemaCommands,
@@ -202,7 +202,7 @@ enum Commands {
         command: ProviderCommands,
     },
 
-    /// Show ecosystem status (MCP servers, packages, skills, editors)
+    /// Show ecosystem status
     Status {
         /// Output as JSON
         #[arg(long)]
@@ -224,9 +224,9 @@ enum Commands {
         template: Option<String>,
     },
 
-    /// Show detailed help for a topic (config, scopes, mcp, sync, workflows, registry)
+    /// Show detailed help for a topic
     Topic {
-        /// Topic name
+        /// Topic name (config, scopes, mcp, sync, workflows, registry)
         name: Option<String>,
     },
 
@@ -258,11 +258,17 @@ enum SkillCommands {
         name: String,
     },
     /// Remove a skill
-    Remove { name: String },
+    Remove {
+        /// Skill name to remove
+        name: String,
+    },
     /// List installed skills
     List,
     /// Search skills on skills.sh
-    Search { query: String },
+    Search {
+        /// Search query (e.g., "tdd", "git")
+        query: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -374,7 +380,7 @@ enum NovaNetCommands {
         /// Realm (shared, org)
         #[arg(long)]
         realm: String,
-        /// Layer
+        /// Layer (e.g., config, semantic, foundation, structure, output)
         #[arg(long)]
         layer: String,
     },
@@ -393,7 +399,7 @@ enum NovaNetCommands {
     Override {
         /// Node name to override
         name: String,
-        /// Add a property
+        /// Add a property (format: "name:type", e.g., "status:string")
         #[arg(long)]
         add_property: Option<String>,
     },
@@ -428,7 +434,7 @@ enum DbCommands {
 enum ConfigCommands {
     /// Show resolved configuration
     Show {
-        /// Config section to show
+        /// Config section to show (providers, paths, sync, ui)
         section: Option<String>,
     },
     /// Show config file locations

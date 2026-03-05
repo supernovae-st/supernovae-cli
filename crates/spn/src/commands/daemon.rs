@@ -159,8 +159,15 @@ async fn status(json: bool) -> Result<()> {
             }
         } else {
             println!("  Status:  {} stopped", "○".red());
+            println!();
+            println!(
+                "  {} Run '{}' to start",
+                "→".cyan(),
+                "spn daemon start".cyan()
+            );
         }
 
+        println!();
         println!("  Socket:  {:?}", paths::socket());
         println!("  PID file: {:?}", paths::pid_file());
 
