@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-03-05
+
+### Fixed
+
+- **🐳 Docker**: Fixed missing `libdbus` in container (switched from distroless to debian-slim)
+- Binary now runs correctly in Docker environment
+
 ## [0.12.0] - 2026-03-05
 
 ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -345,7 +352,8 @@ spn CLI ──► spn daemon (IPC) ──► spn-ollama ──► Ollama API (lo
 
 ---
 
-[Unreleased]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.9.0...v0.10.0

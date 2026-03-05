@@ -15,7 +15,14 @@
 #   docker run --rm -v $(pwd):/workspace ghcr.io/supernovae-st/spn:latest list
 # =============================================================================
 
-FROM gcr.io/distroless/cc-debian12:nonroot
+FROM debian:bookworm-slim
+
+# Install minimal runtime dependencies (dbus for keyring fallback)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libdbus-1-3 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 1000 spn
 
 # OCI Labels (https://github.com/opencontainers/image-spec/blob/main/annotations.md)
 LABEL org.opencontainers.image.source="https://github.com/supernovae-st/supernovae-cli"
@@ -34,10 +41,10 @@ LABEL org.opencontainers.image.version="${VERSION}"
 
 # Copy pre-built binary for target architecture
 # CI creates: docker-context/{amd64,arm64}/spn
-COPY --chown=nonroot:nonroot ${TARGETARCH}/spn /usr/local/bin/spn
+COPY --chown=spn:spn ${TARGETARCH}/spn /usr/local/bin/spn
 
-# Run as non-root user (UID 65532 in distroless)
-USER nonroot:nonroot
+# Run as non-root user
+USER spn
 
 # Working directory for mounted projects
 WORKDIR /workspace
