@@ -79,8 +79,19 @@ impl SecretManager {
     /// Load a secret from keyring into cache.
     ///
     /// Returns Ok(true) if loaded, Ok(false) if not found, Err on error.
+    ///
+    /// Note: Keyring access is blocking, so we use spawn_blocking to avoid
+    /// blocking the async runtime.
     async fn load_from_keyring(&self, provider: &str) -> Result<bool, DaemonError> {
-        match SpnKeyring::get(provider) {
+        // Clone provider for the blocking task
+        let provider_owned = provider.to_string();
+
+        // Run blocking keychain operation in a dedicated thread
+        let result = tokio::task::spawn_blocking(move || SpnKeyring::get(&provider_owned))
+            .await
+            .map_err(|e| DaemonError::KeychainError(format!("Spawn blocking failed: {}", e)))?;
+
+        match result {
             Ok(secret) => {
                 // Create locked string (mlock protected)
                 // secret is Zeroizing<String>, we need to dereference to get &str

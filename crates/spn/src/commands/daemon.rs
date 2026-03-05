@@ -36,7 +36,7 @@ async fn start(foreground: bool) -> Result<()> {
         println!("Press Ctrl+C to stop");
 
         let config = DaemonConfig::default();
-        let server = DaemonServer::new(config);
+        let mut server = DaemonServer::new(config);
 
         server.run().await.map_err(|e| {
             anyhow::anyhow!("Daemon error: {}", e)

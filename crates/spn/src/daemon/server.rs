@@ -9,6 +9,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::signal;
 use tokio::sync::broadcast;
+use tokio::task::JoinSet;
 use tracing::{debug, error, info, warn};
 
 use super::{
@@ -44,6 +45,8 @@ pub struct DaemonServer {
     models: Arc<ModelManager>,
     handler: Arc<RequestHandler>,
     shutdown_tx: broadcast::Sender<()>,
+    /// PID file handle - held to maintain flock until shutdown
+    pid_file_lock: Option<File>,
 }
 
 impl DaemonServer {
@@ -60,16 +63,17 @@ impl DaemonServer {
             models,
             handler,
             shutdown_tx,
+            pid_file_lock: None,
         }
     }
 
     /// Run the daemon server.
-    pub async fn run(&self) -> Result<(), DaemonError> {
+    pub async fn run(&mut self) -> Result<(), DaemonError> {
         // Ensure the .spn directory exists
         self.ensure_spn_dir()?;
 
-        // Create PID file (with flock)
-        self.create_pid_file()?;
+        // Create PID file (with flock) and store handle to maintain lock
+        self.pid_file_lock = Some(self.create_pid_file()?);
 
         // Clean up any stale socket
         SocketUtils::cleanup_stale_socket(&self.config.socket_path)?;
@@ -92,7 +96,7 @@ impl DaemonServer {
         // Run the accept loop with graceful shutdown
         self.accept_loop(listener).await?;
 
-        // Cleanup
+        // Cleanup (pid_file_lock is dropped automatically, releasing flock)
         self.cleanup();
 
         Ok(())
@@ -111,7 +115,10 @@ impl DaemonServer {
     }
 
     /// Create PID file with exclusive lock.
-    fn create_pid_file(&self) -> Result<(), DaemonError> {
+    ///
+    /// Returns the File handle which MUST be held to maintain the flock.
+    /// Dropping the File releases the lock.
+    fn create_pid_file(&self) -> Result<File, DaemonError> {
         let pid = std::process::id();
         let path = &self.config.pid_file;
 
@@ -158,7 +165,9 @@ impl DaemonServer {
         })?;
 
         debug!("Created PID file: {:?} (PID: {})", path, pid);
-        Ok(())
+
+        // Return the file handle - caller MUST hold it to maintain the lock
+        Ok(file)
     }
 
     /// Bind to the Unix socket.
@@ -178,8 +187,16 @@ impl DaemonServer {
     }
 
     /// Accept loop with graceful shutdown.
+    ///
+    /// Tracks all spawned connection handlers and drains them on shutdown.
+    #[cfg(unix)]
     async fn accept_loop(&self, listener: UnixListener) -> Result<(), DaemonError> {
         let mut shutdown_rx = self.shutdown_tx.subscribe();
+        let mut tasks: JoinSet<()> = JoinSet::new();
+
+        // Set up SIGTERM handler
+        let mut sigterm = signal::unix::signal(signal::unix::SignalKind::terminate())
+            .map_err(DaemonError::IoError)?;
 
         loop {
             tokio::select! {
@@ -188,7 +205,7 @@ impl DaemonServer {
                     match result {
                         Ok((stream, _addr)) => {
                             let handler = Arc::clone(&self.handler);
-                            tokio::spawn(async move {
+                            tasks.spawn(async move {
                                 if let Err(e) = handle_connection(stream, handler).await {
                                     error!("Connection error: {}", e);
                                 }
@@ -200,9 +217,23 @@ impl DaemonServer {
                     }
                 }
 
-                // Shutdown signal
+                // Clean up completed tasks
+                Some(result) = tasks.join_next() => {
+                    if let Err(e) = result {
+                        error!("Task panicked: {:?}", e);
+                    }
+                }
+
+                // SIGINT (Ctrl+C)
                 _ = signal::ctrl_c() => {
                     info!("Received SIGINT, shutting down...");
+                    let _ = self.shutdown_tx.send(());
+                    break;
+                }
+
+                // SIGTERM
+                _ = sigterm.recv() => {
+                    info!("Received SIGTERM, shutting down...");
                     let _ = self.shutdown_tx.send(());
                     break;
                 }
@@ -215,7 +246,23 @@ impl DaemonServer {
             }
         }
 
+        // Graceful shutdown: wait for all in-flight connections to complete
+        Self::drain_tasks(&mut tasks).await;
+
         Ok(())
+    }
+
+    /// Drain all remaining tasks on shutdown.
+    async fn drain_tasks(tasks: &mut JoinSet<()>) {
+        if !tasks.is_empty() {
+            info!("Waiting for {} active connections to complete...", tasks.len());
+            while let Some(result) = tasks.join_next().await {
+                if let Err(e) = result {
+                    error!("Task panicked during shutdown: {:?}", e);
+                }
+            }
+            info!("All connections completed");
+        }
     }
 
     /// Clean up resources on shutdown.
