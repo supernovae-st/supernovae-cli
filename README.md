@@ -19,14 +19,14 @@
 <sup>✨ MCP servers • LLM providers • Packages • Secrets — all in one CLI ✨</sup>
 
 <!-- Primary Badges -->
-[![Version](https://img.shields.io/badge/v0.8.1-000000?style=for-the-badge&logo=semver&logoColor=white&labelColor=6366f1)](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.8.1)
-[![Rust](https://img.shields.io/badge/rust_1.86+-f97316?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/badge/MIT-10b981?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
+[![Version](https://img.shields.io/badge/v0.10.0-000000?style=for-the-badge&logo=semver&logoColor=white&labelColor=6366f1)](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.10.0)
+[![Rust](https://img.shields.io/badge/rust_1.75+-f97316?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/badge/AGPL--3.0-10b981?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 [![Website](https://img.shields.io/badge/🌟_spn.sh-8b5cf6?style=for-the-badge)](https://supernovae.studio)
 
 <!-- GitHub Badges -->
 [![CI](https://img.shields.io/github/actions/workflow/status/supernovae-st/supernovae-cli/ci.yml?style=flat-square&logo=github&label=CI)](https://github.com/supernovae-st/supernovae-cli/actions)
-[![Tests](https://img.shields.io/badge/tests-251_passing-10b981?style=flat-square&logo=checkmarx)](https://github.com/supernovae-st/supernovae-cli/actions)
+[![Tests](https://img.shields.io/badge/tests-610_passing-10b981?style=flat-square&logo=checkmarx)](https://github.com/supernovae-st/supernovae-cli/actions)
 [![Downloads](https://img.shields.io/crates/d/spn?style=flat-square&logo=rust&label=downloads)](https://crates.io/crates/spn)
 [![Stars](https://img.shields.io/github/stars/supernovae-st/supernovae-cli?style=flat-square&logo=github&label=stars)](https://github.com/supernovae-st/supernovae-cli/stargazers)
 
