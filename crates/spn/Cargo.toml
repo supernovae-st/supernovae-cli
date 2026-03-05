@@ -1,6 +1,6 @@
 [package]
 name = "spn-cli"
-version = "0.12.1"
+version = "0.12.2"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "SuperNovae Package Manager - unified CLI for AI workflows, secrets, MCP servers, and daemon management"
@@ -20,6 +20,19 @@ path = "src/main.rs"
 [[bin]]
 name = "supernovae"
 path = "src/main.rs"
+
+[features]
+default = ["native"]
+
+# Full native OS integrations (keychain, clipboard, notifications)
+# Use for local development and native installs (Homebrew, cargo install)
+native = ["os-keychain"]
+
+# OS keychain integration (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+os-keychain = ["dep:keyring"]
+
+# Minimal build for Docker/static linking - env vars only, no OS deps
+docker = []
 
 [dependencies]
 # Workspace crates
@@ -72,7 +85,7 @@ colored = "2.1"
 similar = { version = "2.6", features = ["inline"] }
 
 # Security
-keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"], optional = true }
 secrecy = { version = "0.10", features = ["serde"] }
 zeroize = { version = "1", features = ["derive"] }
 dotenvy = "0.15"

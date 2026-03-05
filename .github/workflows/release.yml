@@ -20,6 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # === Native targets (full features, for Homebrew/GitHub Releases) ===
           - target: aarch64-apple-darwin
             os: macos-latest
           - target: x86_64-apple-darwin
@@ -29,6 +30,14 @@ jobs:
             cross: true
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+          # === Docker targets (musl static, no keychain) ===
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            docker: true
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            docker: true
+            cross: true
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -40,21 +49,33 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install cross (Linux ARM64)
+      - name: Install cross (cross-compilation)
         if: matrix.cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Install Linux dependencies
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && !matrix.docker
         run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
 
-      - name: Build (native)
-        if: "!matrix.cross"
+      - name: Install musl tools
+        if: matrix.docker && !matrix.cross
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Build (native, full features)
+        if: "!matrix.cross && !matrix.docker"
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Build (cross)
-        if: matrix.cross
+      - name: Build (native, docker features)
+        if: "!matrix.cross && matrix.docker"
+        run: cargo build --release --target ${{ matrix.target }} --no-default-features --features docker
+
+      - name: Build (cross, full features)
+        if: matrix.cross && !matrix.docker
         run: cross build --release --target ${{ matrix.target }}
+
+      - name: Build (cross, docker features)
+        if: matrix.cross && matrix.docker
+        run: cross build --release --target ${{ matrix.target }} --no-default-features --features docker
 
       - name: Package
         run: |
@@ -84,24 +105,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Linux amd64 artifact
+      - name: Download Linux amd64 artifact (musl static)
         uses: actions/download-artifact@v4
         with:
-          name: spn-x86_64-unknown-linux-gnu
+          name: spn-x86_64-unknown-linux-musl
           path: artifacts/amd64
 
-      - name: Download Linux arm64 artifact
+      - name: Download Linux arm64 artifact (musl static)
         uses: actions/download-artifact@v4
         with:
-          name: spn-aarch64-unknown-linux-gnu
+          name: spn-aarch64-unknown-linux-musl
           path: artifacts/arm64
 
       - name: Extract binaries for Docker
         run: |
           mkdir -p docker-context/amd64 docker-context/arm64
-          tar -xzf artifacts/amd64/spn-x86_64-unknown-linux-gnu.tar.gz -C docker-context/amd64
-          tar -xzf artifacts/arm64/spn-aarch64-unknown-linux-gnu.tar.gz -C docker-context/arm64
+          tar -xzf artifacts/amd64/spn-x86_64-unknown-linux-musl.tar.gz -C docker-context/amd64
+          tar -xzf artifacts/arm64/spn-aarch64-unknown-linux-musl.tar.gz -C docker-context/arm64
           chmod +x docker-context/*/spn
+          # Verify static linking
+          file docker-context/amd64/spn
           ls -la docker-context/*/
 
       - name: Set up QEMU

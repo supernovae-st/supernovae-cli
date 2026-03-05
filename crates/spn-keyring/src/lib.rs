@@ -37,6 +37,7 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
+#[cfg(feature = "os-keychain")]
 use keyring::Entry;
 use secrecy::SecretString;
 use thiserror::Error;
@@ -49,6 +50,7 @@ pub use spn_core::{
 };
 
 /// Service name for keyring entries.
+#[cfg(feature = "os-keychain")]
 const SERVICE_NAME: &str = "spn";
 
 /// Keyring error types.
@@ -88,6 +90,12 @@ pub enum KeyringError {
 /// All methods that return keys use `Zeroizing<String>` or `SecretString`
 /// to ensure automatic memory clearing.
 ///
+/// # Feature: `os-keychain`
+///
+/// When the `os-keychain` feature is enabled (default), this uses the OS keychain.
+/// When disabled (for Docker/static builds), all operations return `KeyringError::Locked`,
+/// causing automatic fallback to environment variables.
+///
 /// # Example
 ///
 /// ```rust,ignore
@@ -107,6 +115,10 @@ pub enum KeyringError {
 /// ```
 pub struct SpnKeyring;
 
+// ============================================================================
+// Real implementation with OS keychain (default)
+// ============================================================================
+#[cfg(feature = "os-keychain")]
 impl SpnKeyring {
     /// Get API key for a provider as zeroizing string.
     ///
@@ -230,6 +242,64 @@ impl SpnKeyring {
     /// Get the provider definition from spn-core.
     ///
     /// Returns `None` if the provider is not in `KNOWN_PROVIDERS`.
+    #[must_use]
+    pub fn provider_info(provider: &str) -> Option<&'static Provider> {
+        find_provider(provider)
+    }
+}
+
+// ============================================================================
+// Stub implementation for Docker/static builds (no OS keychain)
+// All operations return Locked, triggering env var fallback
+// ============================================================================
+#[cfg(not(feature = "os-keychain"))]
+impl SpnKeyring {
+    /// Get API key - always returns Locked (use env vars in Docker).
+    pub fn get(_provider: &str) -> Result<Zeroizing<String>, KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Get API key as SecretString - always returns Locked.
+    pub fn get_secret(_provider: &str) -> Result<SecretString, KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Store API key - always returns Locked (use env vars in Docker).
+    pub fn set(_provider: &str, _key: &str) -> Result<(), KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Store API key from SecretString - always returns Locked.
+    pub fn set_secret(_provider: &str, _key: &SecretString) -> Result<(), KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Delete API key - always returns Locked.
+    pub fn delete(_provider: &str) -> Result<(), KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Check if key exists - always false (no keychain).
+    pub fn exists(_provider: &str) -> bool {
+        false
+    }
+
+    /// Get masked version - always None (no keychain).
+    pub fn get_masked(_provider: &str) -> Option<String> {
+        None
+    }
+
+    /// List all providers - always empty (no keychain).
+    pub fn list() -> Vec<String> {
+        Vec::new()
+    }
+
+    /// Verify keychain is accessible - always false.
+    pub fn is_accessible() -> bool {
+        false
+    }
+
+    /// Get the provider definition from spn-core.
     #[must_use]
     pub fn provider_info(provider: &str) -> Option<&'static Provider> {
         find_provider(provider)

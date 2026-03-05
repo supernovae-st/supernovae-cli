@@ -5,6 +5,12 @@
 //! - Windows: Credential Manager
 //! - Linux: Secret Service (GNOME Keyring, KWallet)
 //!
+//! # Feature: `os-keychain`
+//!
+//! When the `os-keychain` feature is enabled (default), this uses the OS keychain.
+//! When disabled (for Docker/static builds), keychain operations return `KeyringError::Locked`,
+//! causing automatic fallback to environment variables.
+//!
 //! # Security Design
 //!
 //! All keys are:
@@ -14,6 +20,7 @@
 //! 4. Never logged or printed in full
 
 use colored::Colorize;
+#[cfg(feature = "os-keychain")]
 use keyring::Entry;
 use secrecy::SecretString;
 use thiserror::Error;
@@ -22,6 +29,7 @@ use zeroize::Zeroizing;
 use super::types::SecretSource;
 
 /// Service name for keyring entries.
+#[cfg(feature = "os-keychain")]
 const SERVICE_NAME: &str = "spn";
 
 /// Keyring error types.
@@ -45,8 +53,18 @@ pub enum KeyringError {
 ///
 /// All methods that return keys use `Zeroizing<String>` or `SecretString`
 /// to ensure automatic memory clearing.
+///
+/// # Feature: `os-keychain`
+///
+/// When the `os-keychain` feature is disabled (for Docker/static builds),
+/// all operations return `KeyringError::Locked`, triggering automatic
+/// fallback to environment variables via `resolve_api_key()`.
 pub struct SpnKeyring;
 
+// ============================================================================
+// Real implementation with OS keychain (default)
+// ============================================================================
+#[cfg(feature = "os-keychain")]
 impl SpnKeyring {
     /// Get API key for a provider as zeroizing string.
     ///
@@ -130,6 +148,61 @@ impl SpnKeyring {
     pub fn is_accessible() -> bool {
         // Try to create an entry (doesn't store anything)
         Entry::new(SERVICE_NAME, "__test__").is_ok()
+    }
+}
+
+// ============================================================================
+// Stub implementation for Docker/static builds (no OS keychain)
+// All operations return Locked, triggering env var fallback
+// ============================================================================
+#[cfg(not(feature = "os-keychain"))]
+impl SpnKeyring {
+    /// Get API key - always returns Locked (use env vars in Docker).
+    pub fn get(_provider: &str) -> Result<Zeroizing<String>, KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Get API key as SecretString - always returns Locked.
+    pub fn get_secret(_provider: &str) -> Result<SecretString, KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Store API key - always returns Locked (use env vars in Docker).
+    #[allow(clippy::unnecessary_wraps)]
+    pub fn set(_provider: &str, _key: &str) -> Result<(), KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Store API key from SecretString - always returns Locked.
+    #[allow(clippy::unnecessary_wraps)]
+    pub fn set_secret(_provider: &str, _key: &SecretString) -> Result<(), KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Delete API key - always returns Locked.
+    #[allow(clippy::unnecessary_wraps)]
+    pub fn delete(_provider: &str) -> Result<(), KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Check if key exists - always false (no keychain).
+    pub fn exists(_provider: &str) -> bool {
+        false
+    }
+
+    /// Get masked version - always None (no keychain).
+    pub fn get_masked(_provider: &str) -> Option<String> {
+        None
+    }
+
+    /// List all providers - always empty (no keychain).
+    pub fn list_stored() -> Vec<String> {
+        Vec::new()
+    }
+
+    /// Verify keychain is accessible - always false.
+    pub fn is_accessible() -> bool {
+        false
     }
 }
 
@@ -306,6 +379,12 @@ impl MigrationReport {
 }
 
 /// Migrate API keys from environment variables to system keychain.
+///
+/// # Feature: `os-keychain`
+///
+/// When the `os-keychain` feature is disabled, this function returns an error
+/// indicating that keychain is unavailable (use env vars instead).
+#[cfg(feature = "os-keychain")]
 pub fn migrate_env_to_keyring() -> MigrationReport {
     let mut report = MigrationReport::default();
 
@@ -356,6 +435,22 @@ pub fn migrate_env_to_keyring() -> MigrationReport {
         }
     }
 
+    report
+}
+
+/// Migrate API keys - stub for Docker builds (keychain unavailable).
+#[cfg(not(feature = "os-keychain"))]
+pub fn migrate_env_to_keyring() -> MigrationReport {
+    println!(
+        "  {} {}",
+        "⚠".yellow(),
+        "Keychain unavailable (Docker build). Use environment variables.".yellow()
+    );
+    let mut report = MigrationReport::default();
+    report.errors.push((
+        "all".to_string(),
+        "Keychain not available in this build".to_string(),
+    ));
     report
 }
 

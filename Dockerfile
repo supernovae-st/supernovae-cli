@@ -1,28 +1,25 @@
 # syntax=docker/dockerfile:1.6
 # =============================================================================
-# SuperNovae CLI (spn) — Multi-Platform Docker Image
+# SuperNovae CLI (spn) — Static Multi-Platform Docker Image
 # =============================================================================
-# This Dockerfile uses pre-built binaries from GitHub Actions.
-# It does NOT compile Rust — binaries are injected at build time.
+# This Dockerfile uses pre-built STATIC binaries (musl) from GitHub Actions.
+# No runtime dependencies needed - uses scratch base for minimal image (~5MB).
 #
 # Build context structure (created by CI):
 #   docker-context/
-#   ├── amd64/spn    (x86_64-unknown-linux-gnu binary)
-#   └── arm64/spn    (aarch64-unknown-linux-gnu binary)
+#   ├── amd64/spn    (x86_64-unknown-linux-musl binary)
+#   └── arm64/spn    (aarch64-unknown-linux-musl binary)
 #
 # Usage:
 #   docker run --rm ghcr.io/supernovae-st/spn:latest --version
 #   docker run --rm -v $(pwd):/workspace ghcr.io/supernovae-st/spn:latest list
+#
+# Note: This build uses --no-default-features --features docker which disables
+# OS keychain support. Use environment variables for secrets:
+#   -e ANTHROPIC_API_KEY="sk-ant-..."
 # =============================================================================
 
-FROM debian:bookworm-slim
-
-# Install minimal runtime dependencies (dbus for keyring fallback)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libdbus-1-3 \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --uid 1000 spn
+FROM scratch
 
 # OCI Labels (https://github.com/opencontainers/image-spec/blob/main/annotations.md)
 LABEL org.opencontainers.image.source="https://github.com/supernovae-st/supernovae-cli"
@@ -39,16 +36,13 @@ ARG VERSION=dev
 
 LABEL org.opencontainers.image.version="${VERSION}"
 
-# Copy pre-built binary for target architecture
+# Copy pre-built static binary for target architecture
 # CI creates: docker-context/{amd64,arm64}/spn
-COPY --chown=spn:spn ${TARGETARCH}/spn /usr/local/bin/spn
-
-# Run as non-root user
-USER spn
+COPY ${TARGETARCH}/spn /spn
 
 # Working directory for mounted projects
 WORKDIR /workspace
 
 # Default entrypoint
-ENTRYPOINT ["/usr/local/bin/spn"]
+ENTRYPOINT ["/spn"]
 CMD ["--help"]

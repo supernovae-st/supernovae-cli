@@ -1,6 +1,6 @@
 [package]
 name = "spn-keyring"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "OS keychain wrapper for SuperNovae CLI"
 license = "MIT OR Apache-2.0"
@@ -9,9 +9,15 @@ readme = "README.md"
 keywords = ["keyring", "keychain", "credentials", "secrets"]
 categories = ["authentication", "cryptography"]
 
+[features]
+default = ["os-keychain"]
+# Enable OS keychain integration (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+# Disable for static builds / Docker where keychain is unavailable
+os-keychain = ["dep:keyring"]
+
 [dependencies]
 spn-core = "0.1"
-keyring = "3"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"], optional = true }
 secrecy = "0.10"
 zeroize = { version = "1", features = ["derive"] }
 thiserror = "2"

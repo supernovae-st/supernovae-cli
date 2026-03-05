@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-03-05
+
+### Changed
+
+- **🐳 Docker**: Static musl builds for minimal `scratch` image (~5MB)
+- **🔧 Feature flags**: `os-keychain` feature for conditional keychain support
+- **📦 Build matrix**: Separate musl targets for Docker, gnu for native releases
+
+### Technical
+
+- Added `--no-default-features --features docker` for container builds
+- `spn-keyring` now has `os-keychain` feature (default enabled)
+- Keyring operations gracefully return `Locked` when feature disabled
+- Automatic fallback to environment variables in Docker
+
 ## [0.12.1] - 2026-03-05
 
 ### Fixed
@@ -352,7 +367,8 @@ spn CLI ──► spn daemon (IPC) ──► spn-ollama ──► Ollama API (lo
 
 ---
 
-[Unreleased]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.2...HEAD
+[0.12.2]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.10.0...v0.11.0
