@@ -309,11 +309,7 @@ async fn status(json: bool) -> Result<()> {
                     "->".cyan()
                 );
             } else {
-                println!(
-                    "  {:<30} {:>12}",
-                    "MODEL".dimmed(),
-                    "VRAM".dimmed()
-                );
+                println!("  {:<30} {:>12}", "MODEL".dimmed(), "VRAM".dimmed());
                 println!("  {}", "-".repeat(44));
 
                 let mut total_vram: u64 = 0;
@@ -328,12 +324,7 @@ async fn status(json: bool) -> Result<()> {
                         "-".to_string()
                     };
 
-                    println!(
-                        "  {} {:<28} {:>12}",
-                        "*".green(),
-                        model.name,
-                        vram_str
-                    );
+                    println!("  {} {:<28} {:>12}", "*".green(), model.name, vram_str);
                 }
 
                 if total_vram > 0 {

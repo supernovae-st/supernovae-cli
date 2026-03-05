@@ -1,7 +1,6 @@
 //! CLI command implementations.
 
 pub mod add;
-pub mod model;
 pub mod config;
 pub mod daemon;
 pub mod doctor;
@@ -11,6 +10,7 @@ pub mod init;
 pub mod install;
 pub mod list;
 pub mod mcp;
+pub mod model;
 pub mod nk;
 pub mod nv;
 pub mod outdated;
