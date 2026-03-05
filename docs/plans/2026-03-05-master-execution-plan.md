@@ -528,6 +528,7 @@ impl ModelBackend for LlamaCppBackend {
 - [x] spn-ollama: 6 tests, ModelBackend trait + OllamaBackend + DynModelBackend
 - [x] spn-client v0.2.0 with re-exports (7 tests, 0 clippy)
 - [x] spn daemon with ModelManager (model_manager.rs, handler.rs updated)
+- [x] Nika: secrets migration to spn-core (3,808 tests, 0 clippy)
 - [ ] Nika: `model:` field in AST
 - [ ] Nika: LSP completions/diagnostics
 - [ ] Multi-model workflow E2E test passes
@@ -550,8 +551,8 @@ impl ModelBackend for LlamaCppBackend {
 [x] Phase 2 completed: 2026-03-05 (spn-client v0.2.0, re-exports spn-core, 7 tests)
 [x] Phase 3 started: 2026-03-05
 [x] Phase 3 completed: 2026-03-05 (ModelManager, IPC protocol extended, serde feature)
-[ ] Phase 4A started:
-[ ] Phase 4A completed:
+[x] Phase 4A started: 2026-03-05
+[x] Phase 4A completed: 2026-03-05 (nika keyring.rs → spn-core, tokio::sync::Mutex fix)
 [ ] Phase 4B started:
 [ ] Phase 4B completed:
 [ ] Phase 4C started:
