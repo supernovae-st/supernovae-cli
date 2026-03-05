@@ -25,7 +25,7 @@
 [![Website](https://img.shields.io/badge/🌟_spn.sh-8b5cf6?style=for-the-badge)](https://supernovae.studio)
 
 <!-- GitHub Badges -->
-[![CI](https://img.shields.io/github/actions/workflow/status/supernovae-st/supernovae-cli/ci.yml?style=flat-square&logo=github&label=CI)](https://github.com/supernovae-st/supernovae-cli/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/supernovae-st/supernovae-cli/test.yml?style=flat-square&logo=github&label=CI)](https://github.com/supernovae-st/supernovae-cli/actions)
 [![Tests](https://img.shields.io/badge/tests-610_passing-10b981?style=flat-square&logo=checkmarx)](https://github.com/supernovae-st/supernovae-cli/actions)
 [![Downloads](https://img.shields.io/crates/d/spn?style=flat-square&logo=rust&label=downloads)](https://crates.io/crates/spn)
 [![Stars](https://img.shields.io/github/stars/supernovae-st/supernovae-cli?style=flat-square&logo=github&label=stars)](https://github.com/supernovae-st/supernovae-cli/stargazers)
