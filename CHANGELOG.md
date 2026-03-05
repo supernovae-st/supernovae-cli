@@ -7,6 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-03-05
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║  🐳 SPN v0.12.0 — DOCKER DISTRIBUTION                                         ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║  🐳 Docker  │  ghcr.io  │  Multi-arch  │  SLSA Provenance                     ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+### ✨ Highlights
+
+| Feature | Status | Impact |
+|---------|--------|--------|
+| **🐳 Docker Images** | ✅ New | `ghcr.io/supernovae-st/spn` |
+| **🏗️ Multi-arch** | ✅ New | linux/amd64 + linux/arm64 |
+| **🔐 SLSA Provenance** | ✅ New | Supply chain security |
+| **📦 SBOM** | ✅ New | Software Bill of Materials |
+
+### 🐳 Docker Usage
+
+```bash
+# Run directly
+docker run --rm ghcr.io/supernovae-st/spn:latest --version
+
+# With project mount
+docker run --rm -v $(pwd):/workspace ghcr.io/supernovae-st/spn:latest list
+
+# With API keys
+docker run --rm \
+  -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+  ghcr.io/supernovae-st/spn:latest provider test anthropic
+```
+
+### 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  DOCKER DISTRIBUTION PIPELINE                                                   │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  build job (existing)                                                           │
+│  ├── aarch64-unknown-linux-gnu ──┐                                             │
+│  └── x86_64-unknown-linux-gnu  ──┼── docker-publish job (new)                  │
+│                                  │   ├── Extract binaries                      │
+│                                  │   ├── Build multi-arch image                │
+│                                  │   ├── Push to ghcr.io                       │
+│                                  │   └── Generate attestations                 │
+│                                  │                                              │
+│  Tags: :latest, :0.12.0, :0.12, :0, :sha-XXXXXX                                │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 🔧 Technical Details
+
+- **Base Image**: `gcr.io/distroless/cc-debian12:nonroot` (~18MB total)
+- **Platforms**: `linux/amd64`, `linux/arm64`
+- **Security**: Non-root user, SLSA provenance, SBOM
+- **Registry**: `ghcr.io/supernovae-st/spn`
+
+### ⚠️ Limitations
+
+| Feature | Docker | Native |
+|---------|--------|--------|
+| OS Keychain | ❌ Use env vars | ✅ Full support |
+| Daemon socket | ⚠️ Volume mount | ✅ Direct |
+| Ollama | ⚠️ Network/sidecar | ✅ Direct |
+
+### 📦 Distribution Channels
+
+| Channel | Command |
+|---------|---------|
+| **Homebrew** | `brew install supernovae-st/tap/spn` |
+| **Cargo** | `cargo install spn-cli` |
+| **Docker** | `docker pull ghcr.io/supernovae-st/spn:latest` |
+| **Binaries** | GitHub Releases |
+
 ## [0.11.0] - 2026-03-05
 
 ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -267,7 +345,9 @@ spn CLI ──► spn daemon (IPC) ──► spn-ollama ──► Ollama API (lo
 
 ---
 
-[Unreleased]: https://github.com/supernovae-st/supernovae-cli/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/supernovae-st/supernovae-cli/compare/v0.8.0...v0.8.1
