@@ -136,9 +136,19 @@ impl SpnKeyring {
     /// # Errors
     ///
     /// Same as [`SpnKeyring::get`].
+    ///
+    /// # Security
+    ///
+    /// The intermediate String is wrapped in `Zeroizing` to ensure it's cleared
+    /// even if a panic occurs before SecretString takes ownership.
     pub fn get_secret(provider: &str) -> Result<SecretString, KeyringError> {
         let key = Self::get(provider)?;
-        Ok(SecretString::from((*key).clone()))
+        // Wrap clone in Zeroizing for panic safety - if anything panics,
+        // the intermediate will still be zeroized on drop
+        let mut temp = Zeroizing::new((*key).clone());
+        // Take the inner value - SecretString will own and zeroize it on drop
+        let inner = std::mem::take(&mut *temp);
+        Ok(SecretString::new(inner.into()))
     }
 
     /// Store API key for a provider.

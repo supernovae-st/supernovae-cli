@@ -31,6 +31,7 @@
 
 use std::alloc::{alloc_zeroed, dealloc, Layout};
 use std::ptr::NonNull;
+use tracing::warn;
 use zeroize::Zeroize;
 
 /// Error type for memory operations.
@@ -153,6 +154,9 @@ impl LockedBuffer {
     }
 
     /// Try to lock memory pages in RAM.
+    ///
+    /// If mlock fails (often due to ulimit restrictions), we log a warning
+    /// and continue. This is a defense-in-depth measure, not a hard requirement.
     #[cfg(unix)]
     fn try_lock(&mut self) -> Result<(), MemoryError> {
         let result =
@@ -163,14 +167,19 @@ impl LockedBuffer {
             Ok(())
         } else {
             // mlock failed - this is often due to ulimit restrictions
-            // We continue anyway but log the failure
             let errno = std::io::Error::last_os_error().raw_os_error().unwrap_or(-1);
-            // Don't fail hard - mlock is a security enhancement, not a requirement
-            // In production, you might want to log this
             self.locked = false;
-            // Return Ok to allow operation to continue
-            // For strict security, change to: Err(MemoryError::LockFailed(errno))
-            let _ = errno; // Suppress unused warning
+
+            // Log warning so operators know secrets may be swapped to disk
+            warn!(
+                errno = errno,
+                size = self.layout.size(),
+                "mlock failed - secrets may be swapped to disk. \
+                 Consider increasing ulimit -l or running as root for maximum security."
+            );
+
+            // Return Ok to allow operation to continue (defense-in-depth, not hard requirement)
+            // For strict security environments, change to: Err(MemoryError::LockFailed(errno))
             Ok(())
         }
     }

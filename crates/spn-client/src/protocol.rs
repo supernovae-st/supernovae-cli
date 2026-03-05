@@ -82,6 +82,13 @@ pub enum Response {
     Pong { version: String },
 
     /// Secret value response.
+    ///
+    /// # Security Note
+    ///
+    /// The secret is transmitted as plain JSON over the Unix socket. This is secure because:
+    /// - Unix socket requires peer credential verification (same UID only)
+    /// - Socket permissions are 0600 (owner-only)
+    /// - Connection is local-only (no network exposure)
     Secret { value: String },
 
     /// Secret existence check response.

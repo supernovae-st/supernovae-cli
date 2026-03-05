@@ -57,9 +57,17 @@ impl RequestHandler {
 
     async fn handle_get_secret(&self, provider: &str) -> Response {
         match self.secrets.get_cached(provider).await {
-            Some(secret) => Response::Secret {
-                value: secret.expose_secret().to_string(),
-            },
+            Some(secret) => {
+                // NOTE: Security consideration - the secret is exposed as plain String in the
+                // Response for JSON serialization over IPC. This is acceptable because:
+                // 1. Unix socket uses peer credential verification (same UID only)
+                // 2. Socket has 0600 permissions (owner-only access)
+                // 3. The secret exposure is short-lived (serialized immediately, then dropped)
+                // A future protocol version could use encrypted payloads if needed.
+                Response::Secret {
+                    value: secret.expose_secret().to_string(),
+                }
+            }
             None => {
                 warn!("Secret not found for provider: {}", provider);
                 Response::Error {
