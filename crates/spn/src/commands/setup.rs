@@ -11,9 +11,11 @@ use crate::error::{Result, SpnError};
 use crate::secrets::{
     mask_api_key, migrate_env_to_keyring, resolve_api_key, run_wizard, security_audit, SecretSource,
 };
+use crate::SetupCommands;
 
 use colored::Colorize;
 use dialoguer::{theme::ColorfulTheme, Confirm, MultiSelect};
+use std::process::Command;
 
 /// Helper to convert dialoguer errors to SpnError.
 fn dialog_err(e: dialoguer::Error) -> SpnError {
@@ -82,7 +84,19 @@ const PROVIDER_INFO: &[ProviderInfo] = &[
 ];
 
 /// Run the onboarding setup wizard.
-pub async fn run(quick: bool) -> Result<()> {
+pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
+    // Dispatch to specific setup if command provided
+    if let Some(cmd) = command {
+        return match cmd {
+            SetupCommands::Nika { no_sync, no_lsp, method } => {
+                run_nika_setup(no_sync, no_lsp, &method).await
+            }
+            SetupCommands::Novanet { no_sync } => {
+                run_novanet_setup(no_sync).await
+            }
+        };
+    }
+
     let theme = ColorfulTheme::default();
 
     // Welcome banner
@@ -557,6 +571,291 @@ fn print_summary(total_configured: usize, in_keychain: usize) {
         "Need help? Run `spn topic` for detailed guides.".dimmed()
     );
     println!();
+}
+
+// ============================================================================
+// Nika Setup
+// ============================================================================
+
+/// Install and configure Nika workflow engine.
+async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()> {
+    print_nika_banner();
+
+    println!("{}", "CHECKING PREREQUISITES".bold().underline());
+    println!();
+
+    // Check prerequisites
+    let has_cargo = Command::new("cargo").arg("--version").output().is_ok();
+    let has_brew = Command::new("brew").arg("--version").output().is_ok();
+
+    if !has_cargo && !has_brew && method != "source" {
+        println!(
+            "{}",
+            "⚠️  Neither cargo nor brew found. Install one of:".yellow()
+        );
+        println!("     {}", "• cargo: https://rustup.rs".dimmed());
+        println!("     {}", "• brew: https://brew.sh".dimmed());
+        return Err(SpnError::NotFound(
+            "cargo or brew required for installation".into(),
+        ));
+    }
+
+    // Step 1: Install nika CLI
+    println!("{}", "STEP 1/3: Installing Nika CLI".bold().underline());
+    println!();
+
+    let install_result = match method {
+        "cargo" if has_cargo => {
+            println!("  {} cargo install nika-cli", "Running:".cyan());
+            Command::new("cargo")
+                .args(["install", "nika-cli"])
+                .status()
+        }
+        "brew" if has_brew => {
+            println!("  {} brew install supernovae-st/tap/nika", "Running:".cyan());
+            Command::new("brew")
+                .args(["install", "supernovae-st/tap/nika"])
+                .status()
+        }
+        "source" => {
+            println!(
+                "  {}",
+                "Source installation: clone and build manually".yellow()
+            );
+            println!("     {}", "git clone https://github.com/supernovae-st/nika".dimmed());
+            println!("     {}", "cd nika && cargo install --path tools/nika".dimmed());
+            return Ok(());
+        }
+        _ => {
+            // Fallback to what's available
+            if has_cargo {
+                println!("  {} cargo install nika-cli", "Running:".cyan());
+                Command::new("cargo")
+                    .args(["install", "nika-cli"])
+                    .status()
+            } else {
+                println!("  {} brew install supernovae-st/tap/nika", "Running:".cyan());
+                Command::new("brew")
+                    .args(["install", "supernovae-st/tap/nika"])
+                    .status()
+            }
+        }
+    };
+
+    match install_result {
+        Ok(status) if status.success() => {
+            println!("  {} Nika CLI installed", "✓".green());
+        }
+        Ok(status) => {
+            println!(
+                "  {} Installation failed (exit code: {:?})",
+                "✗".red(),
+                status.code()
+            );
+        }
+        Err(e) => {
+            println!("  {} Installation error: {}", "✗".red(), e);
+        }
+    }
+    println!();
+
+    // Step 2: Install nika-lsp (optional)
+    if !no_lsp {
+        println!("{}", "STEP 2/3: Installing Nika LSP".bold().underline());
+        println!();
+
+        if has_cargo {
+            println!("  {} cargo install nika-lsp", "Running:".cyan());
+            match Command::new("cargo")
+                .args(["install", "nika-lsp"])
+                .status()
+            {
+                Ok(status) if status.success() => {
+                    println!("  {} Nika LSP installed", "✓".green());
+                }
+                Ok(_) => {
+                    println!(
+                        "  {}",
+                        "⚠️  LSP installation failed (optional, continuing)".yellow()
+                    );
+                }
+                Err(_) => {
+                    println!(
+                        "  {}",
+                        "⚠️  LSP installation failed (optional, continuing)".yellow()
+                    );
+                }
+            }
+        } else {
+            println!(
+                "  {}",
+                "⚠️  Skipping LSP (requires cargo)".yellow()
+            );
+        }
+        println!();
+    }
+
+    // Step 3: Configure editors
+    if !no_sync {
+        println!("{}", "STEP 3/3: Configuring Editors".bold().underline());
+        println!();
+
+        // Detect Claude Code
+        let claude_config = dirs::config_dir()
+            .map(|d| d.join("claude-code"))
+            .filter(|d| d.exists());
+
+        if claude_config.is_some() {
+            println!("  {} Claude Code detected, syncing...", "→".cyan());
+            match Command::new("spn")
+                .args(["sync", "--enable", "claude-code"])
+                .status()
+            {
+                Ok(status) if status.success() => {
+                    println!("  {} Claude Code configured", "✓".green());
+                }
+                _ => {
+                    println!("  {} Claude Code sync failed", "⚠️".yellow());
+                }
+            }
+        }
+
+        // Detect VS Code
+        let vscode_config = dirs::config_dir()
+            .map(|d| d.join("Code/User/settings.json"))
+            .filter(|f| f.exists());
+
+        if let Some(settings_path) = vscode_config {
+            println!("  {} VS Code detected, configuring yaml.schemas...", "→".cyan());
+            if let Err(e) = configure_vscode_yaml_schema(&settings_path) {
+                println!("  {} VS Code config failed: {}", "⚠️".yellow(), e);
+            } else {
+                println!("  {} VS Code configured", "✓".green());
+            }
+        }
+
+        // Detect Cursor
+        let cursor_config = dirs::home_dir()
+            .map(|d| d.join(".cursor/User/settings.json"))
+            .filter(|f| f.exists());
+
+        if let Some(settings_path) = cursor_config {
+            println!("  {} Cursor detected, configuring yaml.schemas...", "→".cyan());
+            if let Err(e) = configure_cursor_yaml_schema(&settings_path) {
+                println!("  {} Cursor config failed: {}", "⚠️".yellow(), e);
+            } else {
+                println!("  {} Cursor configured", "✓".green());
+            }
+        }
+        println!();
+    }
+
+    print_nika_success();
+    Ok(())
+}
+
+/// Configure VS Code yaml.schemas for .nika.yaml files.
+fn configure_vscode_yaml_schema(settings_path: &std::path::Path) -> Result<()> {
+    let content = std::fs::read_to_string(settings_path)?;
+    let mut settings: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| SpnError::InvalidInput(format!("Invalid JSON: {}", e)))?;
+
+    // Add yaml.schemas if not present
+    let schemas = settings
+        .as_object_mut()
+        .ok_or_else(|| SpnError::InvalidInput("settings must be object".into()))?
+        .entry("yaml.schemas")
+        .or_insert(serde_json::json!({}));
+
+    // Add nika schema
+    if let Some(obj) = schemas.as_object_mut() {
+        obj.insert(
+            "https://nika.dev/schema/workflow.json".into(),
+            serde_json::json!(["*.nika.yaml", "*.nika.yml"]),
+        );
+    }
+
+    let pretty = serde_json::to_string_pretty(&settings)
+        .map_err(|e| SpnError::InvalidInput(format!("JSON serialize error: {}", e)))?;
+    std::fs::write(settings_path, pretty)?;
+    Ok(())
+}
+
+/// Configure Cursor yaml.schemas for .nika.yaml files.
+fn configure_cursor_yaml_schema(settings_path: &std::path::Path) -> Result<()> {
+    // Same logic as VS Code
+    configure_vscode_yaml_schema(settings_path)
+}
+
+fn print_nika_banner() {
+    println!();
+    println!(
+        "{}",
+        r#"
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║                                                               ║
+    ║   ███╗   ██╗██╗██╗  ██╗ █████╗                               ║
+    ║   ████╗  ██║██║██║ ██╔╝██╔══██╗                              ║
+    ║   ██╔██╗ ██║██║█████╔╝ ███████║                              ║
+    ║   ██║╚██╗██║██║██╔═██╗ ██╔══██║                              ║
+    ║   ██║ ╚████║██║██║  ██╗██║  ██║                              ║
+    ║   ╚═╝  ╚═══╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝                              ║
+    ║                                                               ║
+    ║   Semantic YAML Workflow Engine                               ║
+    ║   https://github.com/supernovae-st/nika                       ║
+    ║                                                               ║
+    ╚═══════════════════════════════════════════════════════════════╝
+"#
+        .cyan()
+    );
+    println!();
+}
+
+fn print_nika_success() {
+    println!("{}", "🎉 NIKA SETUP COMPLETE!".bold().green());
+    println!();
+    println!("{}", "WHAT'S NEXT?".bold());
+    println!();
+    println!("  {} Try the TUI:", "1.".cyan().bold());
+    println!("     {}", "nika".cyan());
+    println!();
+    println!("  {} Start a chat:", "2.".cyan().bold());
+    println!("     {}", "nika chat".cyan());
+    println!();
+    println!("  {} Create a workflow:", "3.".cyan().bold());
+    println!("     {}", "nika new my-workflow".cyan());
+    println!();
+    println!("  {} Run a workflow:", "4.".cyan().bold());
+    println!("     {}", "nika my-workflow.nika.yaml".cyan());
+    println!();
+    println!(
+        "{}",
+        "Documentation: https://github.com/supernovae-st/nika#readme".dimmed()
+    );
+    println!();
+}
+
+// ============================================================================
+// NovaNet Setup (placeholder)
+// ============================================================================
+
+/// Install and configure NovaNet knowledge graph.
+async fn run_novanet_setup(_no_sync: bool) -> Result<()> {
+    println!();
+    println!(
+        "{}",
+        "NovaNet setup is not yet implemented.".yellow()
+    );
+    println!(
+        "{}",
+        "For now, follow the manual setup at:".dimmed()
+    );
+    println!(
+        "  {}",
+        "https://github.com/supernovae-st/novanet#readme".cyan()
+    );
+    println!();
+    Ok(())
 }
 
 #[cfg(test)]

@@ -238,6 +238,9 @@ enum Commands {
 
     /// Interactive onboarding wizard for first-time setup
     Setup {
+        #[command(subcommand)]
+        command: Option<SetupCommands>,
+
         /// Quick setup: auto-detect and migrate keys
         #[arg(long)]
         quick: bool,
@@ -544,6 +547,31 @@ enum SecretsCommands {
 }
 
 #[derive(Subcommand)]
+pub enum SetupCommands {
+    /// Install and configure Nika workflow engine
+    Nika {
+        /// Skip sync to editors
+        #[arg(long)]
+        no_sync: bool,
+
+        /// Skip LSP installation
+        #[arg(long)]
+        no_lsp: bool,
+
+        /// Installation method: cargo, brew, or source
+        #[arg(long, default_value = "cargo")]
+        method: String,
+    },
+
+    /// Install and configure NovaNet knowledge graph
+    Novanet {
+        /// Skip sync to editors
+        #[arg(long)]
+        no_sync: bool,
+    },
+}
+
+#[derive(Subcommand)]
 enum DaemonCommands {
     /// Start the daemon
     Start {
@@ -711,7 +739,7 @@ async fn main() -> Result<()> {
         } => commands::init::run(local, mcp, template).await,
         Commands::Topic { name } => commands::help::run(name.as_deref()).await,
         Commands::Secrets { command } => commands::secrets::run(command).await,
-        Commands::Setup { quick } => commands::setup::run(quick).await,
+        Commands::Setup { command, quick } => commands::setup::run(command, quick).await,
         Commands::Daemon { command } => commands::daemon::run(command).await,
         Commands::Model { command } => commands::model::run(command).await,
     }
