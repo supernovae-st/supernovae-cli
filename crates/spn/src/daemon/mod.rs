@@ -41,12 +41,14 @@ mod handler;
 mod model_manager;
 mod secrets;
 mod server;
+pub mod service;
 mod socket;
 
 pub use error::DaemonError;
 pub use model_manager::ModelManager;
 pub use secrets::SecretManager;
 pub use server::{DaemonConfig, DaemonServer};
+pub use service::{ServiceError, ServiceManager, ServiceManagerType, ServiceStatus};
 
 /// Default daemon configuration paths
 pub mod paths {

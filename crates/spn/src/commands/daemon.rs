@@ -2,7 +2,7 @@
 //!
 //! Start, stop, and manage the spn daemon.
 
-use crate::daemon::{paths, DaemonConfig, DaemonServer};
+use crate::daemon::{paths, DaemonConfig, DaemonServer, ServiceManager};
 use crate::error::Result;
 use crate::DaemonCommands;
 use colored::Colorize;
@@ -16,6 +16,8 @@ pub async fn run(command: DaemonCommands) -> Result<()> {
         DaemonCommands::Stop => stop().await,
         DaemonCommands::Status { json } => status(json).await,
         DaemonCommands::Restart => restart().await,
+        DaemonCommands::Install => install().await,
+        DaemonCommands::Uninstall => uninstall().await,
     }
 }
 
@@ -221,6 +223,79 @@ fn get_daemon_pid() -> Option<i32> {
     fs::read_to_string(&pid_file)
         .ok()
         .and_then(|s| s.trim().parse().ok())
+}
+
+/// Install daemon as a system service.
+async fn install() -> Result<()> {
+    println!("{} Installing daemon as system service...", "🔧".cyan());
+
+    let manager = ServiceManager::detect()
+        .map_err(|e| anyhow::anyhow!("Service management: {}", e))?;
+
+    println!(
+        "   {} Service manager: {:?}",
+        "→".blue(),
+        manager.manager_type()
+    );
+
+    match manager.install() {
+        Ok(()) => {
+            println!("{} Daemon installed successfully!", "✓".green());
+            println!();
+            println!("The daemon will now start automatically at login.");
+            println!();
+            println!(
+                "To check status:     {}",
+                "spn daemon status".cyan()
+            );
+            println!(
+                "To uninstall:        {}",
+                "spn daemon uninstall".cyan()
+            );
+        }
+        Err(crate::daemon::ServiceError::AlreadyInstalled) => {
+            println!("{} Daemon is already installed as a service", "⚠".yellow());
+            println!();
+            println!(
+                "To reinstall, first run: {}",
+                "spn daemon uninstall".cyan()
+            );
+        }
+        Err(e) => {
+            println!("{} Installation failed: {}", "✗".red(), e);
+            return Err(anyhow::anyhow!("Service install failed: {}", e).into());
+        }
+    }
+
+    Ok(())
+}
+
+/// Uninstall daemon system service.
+async fn uninstall() -> Result<()> {
+    println!("{} Uninstalling daemon service...", "🔧".cyan());
+
+    let manager = ServiceManager::detect()
+        .map_err(|e| anyhow::anyhow!("Service management: {}", e))?;
+
+    match manager.uninstall() {
+        Ok(()) => {
+            println!("{} Daemon service uninstalled", "✓".green());
+            println!();
+            println!("The daemon will no longer start at login.");
+            println!();
+            println!("To run manually:     {}", "spn daemon start".cyan());
+            println!("To reinstall:        {}", "spn daemon install".cyan());
+        }
+        Err(crate::daemon::ServiceError::NotInstalled) => {
+            println!("{} Daemon is not installed as a service", "⚠".yellow());
+        }
+        Err(e) => {
+            println!("{} Uninstall failed: {}", "✗".red(), e);
+            return Err(anyhow::anyhow!("Service uninstall failed: {}", e).into());
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -565,6 +565,10 @@ enum DaemonCommands {
     },
     /// Restart the daemon
     Restart,
+    /// Install daemon as a system service (auto-start at login)
+    Install,
+    /// Uninstall daemon system service
+    Uninstall,
 }
 
 #[derive(Subcommand)]
