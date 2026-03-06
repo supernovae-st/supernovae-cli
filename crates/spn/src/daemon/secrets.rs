@@ -4,32 +4,20 @@
 //! - Single-point keychain access (solves macOS popup issue)
 //! - In-memory cache with mlock protection
 //! - Automatic preloading at daemon start
+//!
+//! TODO(v0.14): Integrate stats and advanced cache management
+
+#![allow(dead_code)]
 
 use crate::secrets::{memory::LockedString, SpnKeyring};
 use rustc_hash::FxHashMap;
 use secrecy::SecretString;
+use spn_client::{provider_to_env_var, KNOWN_PROVIDERS};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
 use super::DaemonError;
-
-/// Known provider names and their environment variable mappings.
-const PROVIDERS: &[(&str, &str)] = &[
-    ("anthropic", "ANTHROPIC_API_KEY"),
-    ("openai", "OPENAI_API_KEY"),
-    ("mistral", "MISTRAL_API_KEY"),
-    ("groq", "GROQ_API_KEY"),
-    ("deepseek", "DEEPSEEK_API_KEY"),
-    ("gemini", "GEMINI_API_KEY"),
-    ("ollama", "OLLAMA_HOST"),
-    ("neo4j", "NEO4J_PASSWORD"),
-    ("github", "GITHUB_TOKEN"),
-    ("slack", "SLACK_TOKEN"),
-    ("perplexity", "PERPLEXITY_API_KEY"),
-    ("firecrawl", "FIRECRAWL_API_KEY"),
-    ("supadata", "SUPADATA_API_KEY"),
-];
 
 /// Manages secrets with secure in-memory caching.
 ///
@@ -57,17 +45,17 @@ impl SecretManager {
         info!("Preloading secrets from keychain...");
         let mut loaded = 0;
 
-        for (provider, _env_var) in PROVIDERS {
-            match self.load_from_keyring(provider).await {
+        for provider in KNOWN_PROVIDERS {
+            match self.load_from_keyring(provider.id).await {
                 Ok(true) => {
                     loaded += 1;
-                    debug!("Loaded secret for {}", provider);
+                    debug!("Loaded secret for {}", provider.id);
                 }
                 Ok(false) => {
-                    debug!("No secret found for {}", provider);
+                    debug!("No secret found for {}", provider.id);
                 }
                 Err(e) => {
-                    warn!("Failed to load secret for {}: {}", provider, e);
+                    warn!("Failed to load secret for {}: {}", provider.id, e);
                 }
             }
         }
@@ -147,7 +135,7 @@ impl SecretManager {
 
         for provider in needed {
             if let Some(locked) = cache.get(*provider) {
-                if let Some((_, env_var)) = PROVIDERS.iter().find(|(p, _)| p == provider) {
+                if let Some(env_var) = provider_to_env_var(provider) {
                     env.insert(env_var.to_string(), locked.as_str().to_string());
                 }
             }
