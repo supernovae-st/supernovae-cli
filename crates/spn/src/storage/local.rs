@@ -18,6 +18,7 @@
 //! └── state.json                # Installed packages state
 //! ```
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -102,6 +103,10 @@ pub struct LocalStorage {
 
     /// State file path.
     state_file: PathBuf,
+
+    /// In-memory state cache for repeated reads within same process.
+    /// Invalidated on save. Uses RefCell since LocalStorage is not Send/Sync.
+    state_cache: RefCell<Option<StorageState>>,
 }
 
 impl LocalStorage {
@@ -135,6 +140,7 @@ impl LocalStorage {
             packages_dir,
             cache_dir,
             state_file,
+            state_cache: RefCell::new(None),
         })
     }
 
@@ -157,21 +163,47 @@ impl LocalStorage {
     }
 
     /// Load the storage state.
+    ///
+    /// Uses an in-memory cache for repeated reads within the same process.
+    /// The cache is invalidated on `save_state()`.
     pub fn load_state(&self) -> Result<StorageState, StorageError> {
-        if !self.state_file.exists() {
-            return Ok(StorageState::new());
+        // Check cache first
+        if let Some(cached) = self.state_cache.borrow().as_ref() {
+            return Ok(cached.clone());
         }
 
-        let content = std::fs::read_to_string(&self.state_file)?;
-        let state: StorageState = serde_json::from_str(&content)?;
+        // Load from disk
+        let state = if !self.state_file.exists() {
+            StorageState::new()
+        } else {
+            let content = std::fs::read_to_string(&self.state_file)?;
+            serde_json::from_str(&content)?
+        };
+
+        // Cache the state
+        *self.state_cache.borrow_mut() = Some(state.clone());
         Ok(state)
     }
 
     /// Save the storage state.
+    ///
+    /// Also updates the in-memory cache.
     pub fn save_state(&self, state: &StorageState) -> Result<(), StorageError> {
+        // Update cache
+        *self.state_cache.borrow_mut() = Some(state.clone());
+
+        // Write to disk
         let content = serde_json::to_string_pretty(state)?;
         std::fs::write(&self.state_file, content)?;
         Ok(())
+    }
+
+    /// Invalidate the state cache.
+    ///
+    /// Call this if you know the state file was modified externally.
+    #[allow(dead_code)] // Reserved for future API
+    pub fn invalidate_cache(&self) {
+        *self.state_cache.borrow_mut() = None;
     }
 
     /// Validate that a path component doesn't contain traversal sequences.
@@ -649,5 +681,65 @@ mod tests {
         // Must be under packages_dir
         assert!(path.starts_with(temp.path()));
         assert!(path.starts_with(storage.packages_dir()));
+    }
+
+    // === State Cache Tests ===
+
+    #[test]
+    fn test_state_cache_avoids_disk_reads() {
+        let (_temp, storage) = create_test_storage();
+
+        // First load should read from disk (cache is empty)
+        let state1 = storage.load_state().unwrap();
+        assert!(state1.packages.is_empty());
+
+        // Second load should use cache (no disk read)
+        let state2 = storage.load_state().unwrap();
+        assert!(state2.packages.is_empty());
+
+        // Verify cache is populated
+        assert!(storage.state_cache.borrow().is_some());
+    }
+
+    #[test]
+    fn test_save_state_updates_cache() {
+        let (_temp, storage) = create_test_storage();
+
+        // Create a state and save it
+        let mut state = StorageState::new();
+        state.packages.insert(
+            "@test/pkg".to_string(),
+            InstalledPackage {
+                name: "@test/pkg".to_string(),
+                version: "1.0.0".to_string(),
+                checksum: "sha256:test".to_string(),
+                path: std::path::PathBuf::from("/tmp/test"),
+                installed_at: "2024-01-01T00:00:00Z".to_string(),
+            },
+        );
+        storage.save_state(&state).unwrap();
+
+        // Load should return cached state (same data)
+        let loaded = storage.load_state().unwrap();
+        assert_eq!(loaded.packages.len(), 1);
+        assert!(loaded.packages.contains_key("@test/pkg"));
+    }
+
+    #[test]
+    fn test_invalidate_cache() {
+        let (_temp, storage) = create_test_storage();
+
+        // Load to populate cache
+        storage.load_state().unwrap();
+        assert!(storage.state_cache.borrow().is_some());
+
+        // Invalidate cache
+        storage.invalidate_cache();
+        assert!(storage.state_cache.borrow().is_none());
+
+        // Next load should read from disk again
+        let state = storage.load_state().unwrap();
+        assert!(state.packages.is_empty());
+        assert!(storage.state_cache.borrow().is_some());
     }
 }
