@@ -2034,7 +2034,7 @@ dependencies = [
 
 [[package]]
 name = "spn-cli"
-version = "0.12.3"
+version = "0.12.4"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2102,25 +2102,25 @@ dependencies = [
 
 [[package]]
 name = "spn-core"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "080b293b715c0eda90e4f4cb21d2ca5669d1f0ddf79e08d4b3485f87a57c67a7"
-
-[[package]]
-name = "spn-core"
 version = "0.1.1"
 dependencies = [
  "serde",
 ]
 
 [[package]]
-name = "spn-keyring"
+name = "spn-core"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d984921f9d66136b29f4aa2c890d8cb8075973f12191256dca0c337711863e4"
+
+[[package]]
+name = "spn-keyring"
+version = "0.1.2"
 dependencies = [
  "keyring",
  "secrecy",
  "serial_test",
- "spn-core 0.1.0",
+ "spn-core 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.18",
  "zeroize",
 ]

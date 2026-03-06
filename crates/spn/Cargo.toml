@@ -1,6 +1,6 @@
 [package]
 name = "spn-cli"
-version = "0.12.3"
+version = "0.12.4"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "SuperNovae Package Manager - unified CLI for AI workflows, secrets, MCP servers, and daemon management"
@@ -34,7 +34,7 @@ default = ["native"]
 native = ["os-keychain"]
 
 # OS keychain integration (macOS Keychain, Windows Credential Manager, Linux Secret Service)
-os-keychain = ["dep:keyring"]
+os-keychain = ["dep:keyring", "spn-keyring/os-keychain"]
 
 # Minimal build for Docker/static linking - env vars only, no OS deps
 docker = []
@@ -42,7 +42,7 @@ docker = []
 [dependencies]
 # Workspace crates
 spn-client = { version = "0.2.3", path = "../spn-client" }
-spn-keyring = { version = "0.1.2", path = "../spn-keyring" }
+spn-keyring = { version = "0.1.2", path = "../spn-keyring", default-features = false }
 spn-ollama = { version = "0.1.1", path = "../spn-ollama" }
 
 # CLI framework
