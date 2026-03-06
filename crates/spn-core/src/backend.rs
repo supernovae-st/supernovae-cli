@@ -333,7 +333,7 @@ impl ChatMessage {
 }
 
 /// Options for chat completion.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChatOptions {
     /// Temperature for sampling (0.0 to 2.0).
@@ -348,19 +348,6 @@ pub struct ChatOptions {
     pub stop: Vec<String>,
     /// Seed for reproducibility.
     pub seed: Option<u64>,
-}
-
-impl Default for ChatOptions {
-    fn default() -> Self {
-        Self {
-            temperature: None,
-            top_p: None,
-            top_k: None,
-            max_tokens: None,
-            stop: Vec::new(),
-            seed: None,
-        }
-    }
 }
 
 impl ChatOptions {

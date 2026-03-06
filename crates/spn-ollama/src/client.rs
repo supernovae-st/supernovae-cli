@@ -763,9 +763,9 @@ enum ChatRoleResponse {
 impl From<ChatRoleResponse> for ChatRole {
     fn from(role: ChatRoleResponse) -> Self {
         match role {
-            ChatRoleResponse::System => ChatRole::System,
-            ChatRoleResponse::User => ChatRole::User,
-            ChatRoleResponse::Assistant => ChatRole::Assistant,
+            ChatRoleResponse::System => Self::System,
+            ChatRoleResponse::User => Self::User,
+            ChatRoleResponse::Assistant => Self::Assistant,
         }
     }
 }

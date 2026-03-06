@@ -325,8 +325,7 @@ impl McpRegistry {
         if let Ok(modified) = metadata.modified() {
             let age = modified.elapsed().unwrap_or_default();
             if age.as_secs() > self.config.cache_ttl {
-                return Err(McpRegistryError::Io(std::io::Error::new(
-                    std::io::ErrorKind::Other,
+                return Err(McpRegistryError::Io(std::io::Error::other(
                     "Cache expired",
                 )));
             }
