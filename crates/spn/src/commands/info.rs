@@ -98,3 +98,60 @@ pub async fn run(package: &str, json: bool) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_package_info_serialization() {
+        let info = PackageInfo {
+            name: "test-package".to_string(),
+            versions: vec![
+                VersionInfo {
+                    version: "1.0.0".to_string(),
+                    yanked: false,
+                    latest: true,
+                },
+                VersionInfo {
+                    version: "0.9.0".to_string(),
+                    yanked: false,
+                    latest: false,
+                },
+            ],
+            installed: Some("1.0.0".to_string()),
+        };
+
+        let json = serde_json::to_string(&info).unwrap();
+        assert!(json.contains("test-package"));
+        assert!(json.contains("1.0.0"));
+        assert!(json.contains("0.9.0"));
+        assert!(json.contains("\"latest\":true"));
+        assert!(json.contains("\"installed\":\"1.0.0\""));
+    }
+
+    #[test]
+    fn test_package_info_no_installed() {
+        let info = PackageInfo {
+            name: "test-package".to_string(),
+            versions: vec![],
+            installed: None,
+        };
+
+        let json = serde_json::to_string(&info).unwrap();
+        assert!(json.contains("\"installed\":null"));
+    }
+
+    #[test]
+    fn test_version_info_yanked() {
+        let info = VersionInfo {
+            version: "1.0.0".to_string(),
+            yanked: true,
+            latest: false,
+        };
+
+        let json = serde_json::to_string(&info).unwrap();
+        assert!(json.contains("\"yanked\":true"));
+        assert!(json.contains("\"latest\":false"));
+    }
+}

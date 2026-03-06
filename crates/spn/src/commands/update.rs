@@ -91,3 +91,35 @@ pub async fn run(package: Option<&str>) -> Result<()> {
 
     Ok(())
 }
+
+/// Check if a version update is needed.
+#[inline]
+fn needs_update(installed_version: &str, latest_version: &str) -> bool {
+    installed_version != latest_version
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_needs_update_different_versions() {
+        assert!(needs_update("1.0.0", "2.0.0"));
+        assert!(needs_update("1.0.0", "1.0.1"));
+        assert!(needs_update("1.0.0", "1.1.0"));
+    }
+
+    #[test]
+    fn test_needs_update_same_version() {
+        assert!(!needs_update("1.0.0", "1.0.0"));
+        assert!(!needs_update("2.5.3", "2.5.3"));
+    }
+
+    #[test]
+    fn test_needs_update_handles_prerelease() {
+        // Simple string comparison - semantic version comparison
+        // would be done by the index client
+        assert!(needs_update("1.0.0-alpha", "1.0.0"));
+        assert!(needs_update("1.0.0", "1.0.0-beta"));
+    }
+}

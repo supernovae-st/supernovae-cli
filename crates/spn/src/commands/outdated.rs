@@ -57,3 +57,34 @@ pub async fn run() -> Result<()> {
 
     Ok(())
 }
+
+/// Check if a package is outdated (installed version differs from latest).
+#[inline]
+fn is_outdated(installed_version: &str, latest_version: &str) -> bool {
+    installed_version != latest_version
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_outdated_true() {
+        assert!(is_outdated("1.0.0", "2.0.0"));
+        assert!(is_outdated("1.0.0", "1.0.1"));
+        assert!(is_outdated("0.9.0", "1.0.0"));
+    }
+
+    #[test]
+    fn test_is_outdated_false() {
+        assert!(!is_outdated("1.0.0", "1.0.0"));
+        assert!(!is_outdated("2.5.3", "2.5.3"));
+    }
+
+    #[test]
+    fn test_is_outdated_prerelease() {
+        // Pre-release versions are considered different
+        assert!(is_outdated("1.0.0-alpha", "1.0.0"));
+        assert!(is_outdated("1.0.0", "1.0.0-rc1"));
+    }
+}

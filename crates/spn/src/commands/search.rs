@@ -181,3 +181,104 @@ pub async fn run(query: &str, json: bool) -> Result<()> {
 
     Ok(())
 }
+
+/// Sort search results: exact matches first, then alphabetically.
+fn sort_results(results: &mut [(String, String, String, String)], query: &str) {
+    let query_lower = query.to_lowercase();
+    results.sort_by(|a, b| {
+        let a_exact = a.0.to_lowercase() == query_lower;
+        let b_exact = b.0.to_lowercase() == query_lower;
+
+        match (a_exact, b_exact) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.0.cmp(&b.0),
+        }
+    });
+}
+
+/// Check if a package name or description matches a query.
+fn matches_query(name: &str, description: &str, query: &str) -> bool {
+    let query_lower = query.to_lowercase();
+    let name_lower = name.to_lowercase();
+    let desc_lower = description.to_lowercase();
+    name_lower.contains(&query_lower) || desc_lower.contains(&query_lower)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_search_result_serialization() {
+        let result = SearchResult {
+            name: "test-package".to_string(),
+            version: "1.0.0".to_string(),
+            description: "A test package".to_string(),
+            r#type: "workflow".to_string(),
+        };
+
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(json.contains("test-package"));
+        assert!(json.contains("1.0.0"));
+        assert!(json.contains("workflow"));
+    }
+
+    #[test]
+    fn test_matches_query_name() {
+        assert!(matches_query("my-workflow", "Description", "workflow"));
+        assert!(matches_query("MY-WORKFLOW", "Description", "workflow"));
+        assert!(!matches_query("my-agent", "Description", "workflow"));
+    }
+
+    #[test]
+    fn test_matches_query_description() {
+        assert!(matches_query("package", "A workflow for testing", "workflow"));
+        assert!(matches_query("package", "A WORKFLOW for testing", "workflow"));
+        assert!(!matches_query("package", "An agent for testing", "workflow"));
+    }
+
+    #[test]
+    fn test_sort_results_exact_match_first() {
+        let mut results = vec![
+            ("alpha-workflow".to_string(), "1.0".to_string(), "".to_string(), "".to_string()),
+            ("workflow".to_string(), "2.0".to_string(), "".to_string(), "".to_string()),
+            ("beta-workflow".to_string(), "1.0".to_string(), "".to_string(), "".to_string()),
+        ];
+
+        sort_results(&mut results, "workflow");
+
+        // Exact match should be first
+        assert_eq!(results[0].0, "workflow");
+        // Then alphabetically
+        assert_eq!(results[1].0, "alpha-workflow");
+        assert_eq!(results[2].0, "beta-workflow");
+    }
+
+    #[test]
+    fn test_sort_results_case_insensitive() {
+        let mut results = vec![
+            ("alpha".to_string(), "1.0".to_string(), "".to_string(), "".to_string()),
+            ("WORKFLOW".to_string(), "2.0".to_string(), "".to_string(), "".to_string()),
+        ];
+
+        sort_results(&mut results, "workflow");
+
+        // Case-insensitive exact match should be first
+        assert_eq!(results[0].0, "WORKFLOW");
+    }
+
+    #[test]
+    fn test_sort_results_alphabetical_when_no_exact() {
+        let mut results = vec![
+            ("zebra-workflow".to_string(), "1.0".to_string(), "".to_string(), "".to_string()),
+            ("alpha-workflow".to_string(), "2.0".to_string(), "".to_string(), "".to_string()),
+        ];
+
+        sort_results(&mut results, "workflow");
+
+        // Alphabetical order when no exact match
+        assert_eq!(results[0].0, "alpha-workflow");
+        assert_eq!(results[1].0, "zebra-workflow");
+    }
+}
