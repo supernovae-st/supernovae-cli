@@ -339,7 +339,7 @@ cargo run -p spn-cli -- setup              # Interactive wizard
 cargo run -p spn-cli -- setup nika         # Install Nika
 cargo run -p spn-cli -- setup novanet      # Install NovaNet
 
-# Test (610 tests across workspace)
+# Test (666 tests across workspace)
 cargo test --workspace
 
 # Lint (warnings = errors)
@@ -351,7 +351,7 @@ cargo install --path crates/spn
 
 ## Test Stats
 
-- **610 tests passing** across workspace
+- **666 tests passing** across workspace
 - **Zero clippy errors** with `-D warnings`
 - **MSRV:** Rust 1.85+
 
