@@ -106,17 +106,17 @@ pub struct LocalStorage {
 
 impl LocalStorage {
     /// Create a new local storage manager with default paths.
+    ///
+    /// Uses [`spn_client::SpnPaths`] as the single source of truth.
     pub fn new() -> Result<Self, StorageError> {
-        let root = dirs::home_dir()
-            .ok_or_else(|| {
-                StorageError::Io(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    "Could not determine home directory",
-                ))
-            })?
-            .join(".spn");
+        let paths = spn_client::SpnPaths::new().map_err(|_| {
+            StorageError::Io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Could not determine home directory",
+            ))
+        })?;
 
-        Self::with_root(root)
+        Self::with_root(paths.root())
     }
 
     /// Create a local storage manager with a custom root directory.
