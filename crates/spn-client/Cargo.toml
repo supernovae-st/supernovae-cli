@@ -15,10 +15,10 @@ rust-version = "1.75"
 
 [dependencies]
 # Core types (providers, validation, backend types)
-spn-core = { version = "0.1.0", path = "../spn-core", features = ["serde"] }
+spn-core = { version = "0.1.1", path = "../spn-core", features = ["serde"] }
 
 # Async runtime (minimal features)
-tokio = { version = "1.36", features = ["net", "io-util", "sync"] }
+tokio = { version = "1.36", features = ["net", "io-util", "sync", "time"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
