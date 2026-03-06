@@ -70,19 +70,37 @@ impl BinaryRunner {
     }
 
     /// Find the binary in PATH or ~/.spn/bin/.
+    ///
+    /// Resolves symlinks to canonical paths to ensure consistent behavior.
     fn find_binary(binary_type: BinaryType) -> Option<PathBuf> {
         let name = binary_type.name();
 
-        // Check PATH first
+        // Check PATH first (handles symlinks via which)
         if let Ok(path) = which::which(name) {
-            return Some(path);
+            // Resolve symlinks to canonical path
+            return Some(path.canonicalize().unwrap_or(path));
         }
 
         // Check ~/.spn/bin/
         if let Some(home) = dirs::home_dir() {
             let spn_bin = home.join(".spn").join("bin").join(name);
             if spn_bin.exists() {
-                return Some(spn_bin);
+                // Resolve symlinks to canonical path
+                return Some(spn_bin.canonicalize().unwrap_or(spn_bin));
+            }
+        }
+
+        // Check Homebrew Cellar (common on macOS)
+        #[cfg(target_os = "macos")]
+        {
+            let homebrew_paths = [
+                PathBuf::from("/opt/homebrew/bin").join(name),
+                PathBuf::from("/usr/local/bin").join(name),
+            ];
+            for path in homebrew_paths {
+                if path.exists() {
+                    return Some(path.canonicalize().unwrap_or(path));
+                }
             }
         }
 
@@ -183,5 +201,47 @@ mod tests {
         let runner = BinaryRunner::new(BinaryType::Nika);
         // Binary may or may not be available depending on environment
         assert_eq!(runner.binary_type, BinaryType::Nika);
+    }
+
+    #[test]
+    fn test_binary_error_display() {
+        let err = BinaryError::NotFound("nika".to_string());
+        assert!(err.to_string().contains("nika"));
+        assert!(err.to_string().contains("brew install"));
+    }
+
+    #[test]
+    fn test_binary_error_execution_failed() {
+        let err = BinaryError::ExecutionFailed {
+            binary: "nika".to_string(),
+            message: "exit code 1".to_string(),
+        };
+        assert!(err.to_string().contains("nika"));
+        assert!(err.to_string().contains("exit code 1"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_symlink_resolution() {
+        use std::os::unix::fs::symlink;
+        use tempfile::TempDir;
+
+        let temp = TempDir::new().unwrap();
+        let real_binary = temp.path().join("real_binary");
+        let symlink_binary = temp.path().join("symlink_binary");
+
+        // Create a dummy file
+        std::fs::write(&real_binary, "#!/bin/sh\necho test").unwrap();
+
+        // Create symlink
+        symlink(&real_binary, &symlink_binary).unwrap();
+
+        // Both should exist
+        assert!(real_binary.exists());
+        assert!(symlink_binary.exists());
+
+        // Symlink resolution should give canonical path
+        let canonical = symlink_binary.canonicalize().unwrap();
+        assert_eq!(canonical, real_binary.canonicalize().unwrap());
     }
 }
