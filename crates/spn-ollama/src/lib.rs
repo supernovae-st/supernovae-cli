@@ -21,7 +21,7 @@
 //! │  │ • load(), unload(), running_models()                                 │   │
 //! │  │                                                                      │   │
 //! │  │ Inference:                                                           │   │
-//! │  │ • chat() - Chat completions                                          │   │
+//! │  │ • chat(), chat_stream() - Chat completions                           │   │
 //! │  │ • embed(), embed_batch() - Text embeddings                           │   │
 //! │  └─────────────────────────────────────────────────────────────────────┘   │
 //! │                          ▲                                                  │
@@ -141,9 +141,13 @@ mod ollama;
 
 // Re-export the main types
 pub use backend::{
-    BoxedBackend, BoxedProgressCallback, DynModelBackend, ModelBackend, ProgressCallback,
+    BoxedBackend, BoxedProgressCallback, BoxedTokenCallback, DynModelBackend, ModelBackend,
+    ProgressCallback,
 };
-pub use client::{OllamaClient, DEFAULT_ENDPOINT};
+pub use client::{
+    ClientConfig, OllamaClient, DEFAULT_CONNECT_TIMEOUT, DEFAULT_ENDPOINT, DEFAULT_MODEL_TIMEOUT,
+    DEFAULT_REQUEST_TIMEOUT,
+};
 pub use ollama::OllamaBackend;
 
 // Re-export spn-core types for convenience

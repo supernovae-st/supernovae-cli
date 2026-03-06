@@ -2,7 +2,7 @@
 //!
 //! Implements the `ModelBackend` trait for Ollama.
 
-use crate::backend::{DynModelBackend, ModelBackend, ProgressCallback};
+use crate::backend::{BoxedTokenCallback, DynModelBackend, ModelBackend, ProgressCallback};
 use crate::client::OllamaClient;
 use spn_core::{
     BackendError, ChatMessage, ChatOptions, ChatResponse, EmbeddingResponse, GpuInfo, LoadConfig,
@@ -253,6 +253,24 @@ impl OllamaBackend {
         debug!(model = %model, count = inputs.len(), "Generating batch embeddings");
         self.client.embed_batch(model, inputs).await
     }
+
+    async fn impl_chat_stream<F>(
+        &self,
+        model: &str,
+        messages: &[ChatMessage],
+        options: Option<&ChatOptions>,
+        on_token: F,
+    ) -> Result<ChatResponse, BackendError>
+    where
+        F: FnMut(&str),
+    {
+        if !self.impl_is_running().await {
+            return Err(BackendError::NotRunning);
+        }
+
+        info!(model = %model, messages = messages.len(), "Streaming chat request");
+        self.client.chat_stream(model, messages, options, on_token).await
+    }
 }
 
 impl Default for OllamaBackend {
@@ -341,6 +359,19 @@ impl ModelBackend for OllamaBackend {
         inputs: &[&str],
     ) -> Result<Vec<EmbeddingResponse>, BackendError> {
         self.impl_embed_batch(model, inputs).await
+    }
+
+    async fn chat_stream<F>(
+        &self,
+        model: &str,
+        messages: &[ChatMessage],
+        options: Option<&ChatOptions>,
+        on_token: F,
+    ) -> Result<ChatResponse, BackendError>
+    where
+        F: FnMut(&str) + Send,
+    {
+        self.impl_chat_stream(model, messages, options, on_token).await
     }
 }
 
@@ -464,6 +495,20 @@ impl DynModelBackend for OllamaBackend {
         Box::pin(async move {
             let refs: Vec<&str> = inputs.iter().map(String::as_str).collect();
             self.impl_embed_batch(&model, &refs).await
+        })
+    }
+
+    fn chat_stream(
+        &self,
+        model: &str,
+        messages: Vec<ChatMessage>,
+        options: Option<ChatOptions>,
+        on_token: BoxedTokenCallback,
+    ) -> Pin<Box<dyn Future<Output = Result<ChatResponse, BackendError>> + Send + '_>> {
+        let model = model.to_string();
+        Box::pin(async move {
+            self.impl_chat_stream(&model, &messages, options.as_ref(), on_token)
+                .await
         })
     }
 }

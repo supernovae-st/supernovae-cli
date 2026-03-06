@@ -3,7 +3,7 @@
 //! Manage local LLM models via the spn daemon + Ollama.
 //! Search and discover models from the SuperNovae registry.
 
-use crate::error::Result;
+use crate::error::{Result, SpnError};
 use crate::interop::model_registry::ModelRegistry;
 use crate::ModelCommands;
 use colored::Colorize;
@@ -106,13 +106,11 @@ async fn list(json: bool, running_only: bool) -> Result<()> {
         }
 
         Response::Error { message } => {
-            eprintln!("{} {}", "Error:".red(), message);
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed(message));
         }
 
         _ => {
-            eprintln!("{}", "Unexpected response from daemon".red());
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
         }
     }
 
@@ -141,16 +139,13 @@ async fn pull(name: &str) -> Result<()> {
             println!("{} Model '{}' pulled successfully", "*".green(), name);
         }
         Response::Success { success: false } => {
-            eprintln!("{} Pull failed", "x".red());
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed("Pull failed".to_string()));
         }
         Response::Error { message } => {
-            eprintln!("{} {}", "Error:".red(), message);
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed(message));
         }
         _ => {
-            eprintln!("{}", "Unexpected response".red());
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
         }
     }
 
@@ -193,12 +188,10 @@ async fn load(name: &str, keep_alive: bool) -> Result<()> {
             }
         }
         Response::Error { message } => {
-            eprintln!("{} {}", "Error:".red(), message);
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed(message));
         }
         _ => {
-            eprintln!("{}", "Unexpected response".red());
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
         }
     }
 
@@ -226,12 +219,10 @@ async fn unload(name: &str) -> Result<()> {
             println!("{} Model '{}' unloaded", "*".green(), name);
         }
         Response::Error { message } => {
-            eprintln!("{} {}", "Error:".red(), message);
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed(message));
         }
         _ => {
-            eprintln!("{}", "Unexpected response".red());
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
         }
     }
 
@@ -272,12 +263,10 @@ async fn delete(name: &str, skip_confirm: bool) -> Result<()> {
             println!("{} Model '{}' deleted", "*".green(), name);
         }
         Response::Error { message } => {
-            eprintln!("{} {}", "Error:".red(), message);
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed(message));
         }
         _ => {
-            eprintln!("{}", "Unexpected response".red());
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
         }
     }
 
@@ -344,13 +333,11 @@ async fn status(json: bool) -> Result<()> {
         }
 
         Response::Error { message } => {
-            eprintln!("{} {}", "Error:".red(), message);
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed(message));
         }
 
         _ => {
-            eprintln!("{}", "Unexpected response".red());
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
         }
     }
 
@@ -362,15 +349,12 @@ async fn status(json: bool) -> Result<()> {
 // ============================================================================
 
 async fn connect_to_daemon() -> Result<SpnClient> {
-    match SpnClient::connect().await {
-        Ok(client) => Ok(client),
-        Err(_) => {
-            eprintln!("{} Daemon is not running", "x".red());
-            eprintln!();
-            eprintln!("Start the daemon with: {} spn daemon start", "->".cyan());
-            std::process::exit(1);
-        }
-    }
+    SpnClient::connect().await.map_err(|_| {
+        SpnError::CommandFailed(format!(
+            "Daemon is not running\n\nStart the daemon with: {} spn daemon start",
+            "->".cyan()
+        ))
+    })
 }
 
 fn format_size(bytes: u64) -> String {

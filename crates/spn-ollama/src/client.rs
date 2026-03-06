@@ -11,14 +11,109 @@ use spn_core::{
 };
 use tracing::{debug, trace};
 
+use std::time::Duration;
+
 /// Default Ollama API endpoint.
 pub const DEFAULT_ENDPOINT: &str = "http://localhost:11434";
+
+/// Default timeout for connection checks.
+pub const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Default timeout for regular requests.
+pub const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Default timeout for model operations (pull, chat, etc.).
+pub const DEFAULT_MODEL_TIMEOUT: Duration = Duration::from_secs(300); // 5 minutes
+
+/// Default maximum retry attempts for transient failures.
+pub const DEFAULT_MAX_RETRIES: u32 = 3;
+
+/// Default delay between retries.
+pub const DEFAULT_RETRY_DELAY: Duration = Duration::from_millis(500);
+
+/// Configuration options for the Ollama client.
+#[derive(Debug, Clone)]
+pub struct ClientConfig {
+    /// Timeout for connection checks.
+    pub connect_timeout: Duration,
+    /// Timeout for regular requests (list, info, etc.).
+    pub request_timeout: Duration,
+    /// Timeout for model operations (pull, chat, embeddings).
+    pub model_timeout: Duration,
+    /// Maximum retry attempts for transient failures.
+    pub max_retries: u32,
+    /// Delay between retries (exponentially backed off).
+    pub retry_delay: Duration,
+}
+
+impl Default for ClientConfig {
+    fn default() -> Self {
+        Self {
+            connect_timeout: DEFAULT_CONNECT_TIMEOUT,
+            request_timeout: DEFAULT_REQUEST_TIMEOUT,
+            model_timeout: DEFAULT_MODEL_TIMEOUT,
+            max_retries: DEFAULT_MAX_RETRIES,
+            retry_delay: DEFAULT_RETRY_DELAY,
+        }
+    }
+}
+
+impl ClientConfig {
+    /// Create a new config with default timeouts.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the connect timeout.
+    #[must_use]
+    pub const fn with_connect_timeout(mut self, timeout: Duration) -> Self {
+        self.connect_timeout = timeout;
+        self
+    }
+
+    /// Set the request timeout.
+    #[must_use]
+    pub const fn with_request_timeout(mut self, timeout: Duration) -> Self {
+        self.request_timeout = timeout;
+        self
+    }
+
+    /// Set the model operation timeout.
+    #[must_use]
+    pub const fn with_model_timeout(mut self, timeout: Duration) -> Self {
+        self.model_timeout = timeout;
+        self
+    }
+
+    /// Set the maximum retry attempts.
+    #[must_use]
+    pub const fn with_max_retries(mut self, retries: u32) -> Self {
+        self.max_retries = retries;
+        self
+    }
+
+    /// Set the retry delay (base delay, exponentially backed off).
+    #[must_use]
+    pub const fn with_retry_delay(mut self, delay: Duration) -> Self {
+        self.retry_delay = delay;
+        self
+    }
+
+    /// Disable retries.
+    #[must_use]
+    pub const fn no_retries(mut self) -> Self {
+        self.max_retries = 0;
+        self
+    }
+}
 
 /// Ollama API client.
 #[derive(Debug, Clone)]
 pub struct OllamaClient {
     client: Client,
     endpoint: String,
+    config: ClientConfig,
 }
 
 impl OllamaClient {
@@ -31,12 +126,25 @@ impl OllamaClient {
     /// Create a new Ollama client with a custom endpoint.
     #[must_use]
     pub fn with_endpoint(endpoint: impl Into<String>) -> Self {
+        Self::with_config(endpoint, ClientConfig::default())
+    }
+
+    /// Create a new Ollama client with custom endpoint and config.
+    #[must_use]
+    pub fn with_config(endpoint: impl Into<String>, config: ClientConfig) -> Self {
         let endpoint = endpoint.into();
         debug!(endpoint = %endpoint, "Creating Ollama client");
         Self {
             client: Client::new(),
             endpoint,
+            config,
         }
+    }
+
+    /// Get the client configuration.
+    #[must_use]
+    pub const fn config(&self) -> &ClientConfig {
+        &self.config
     }
 
     /// Get the endpoint URL.
@@ -45,13 +153,62 @@ impl OllamaClient {
         &self.endpoint
     }
 
+    /// Execute a request with automatic retry on transient failures.
+    ///
+    /// Uses exponential backoff: delay * 2^attempt
+    async fn with_retry<F, Fut, T>(&self, operation: F) -> Result<T, BackendError>
+    where
+        F: Fn() -> Fut,
+        Fut: std::future::Future<Output = Result<T, BackendError>>,
+    {
+        let mut last_error = BackendError::NetworkError("No attempts made".to_string());
+
+        for attempt in 0..=self.config.max_retries {
+            match operation().await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    // Only retry on transient network errors
+                    if !Self::is_retryable(&e) {
+                        return Err(e);
+                    }
+
+                    last_error = e;
+
+                    if attempt < self.config.max_retries {
+                        let delay = self.config.retry_delay * 2u32.saturating_pow(attempt);
+                        debug!(
+                            attempt = attempt + 1,
+                            max_retries = self.config.max_retries,
+                            delay_ms = delay.as_millis(),
+                            "Retrying after transient failure"
+                        );
+                        tokio::time::sleep(delay).await;
+                    }
+                }
+            }
+        }
+
+        Err(last_error)
+    }
+
+    /// Check if an error is retryable (transient network issue).
+    fn is_retryable(error: &BackendError) -> bool {
+        matches!(error, BackendError::NetworkError(msg) if
+            msg.contains("timeout") ||
+            msg.contains("connection") ||
+            msg.contains("Connection") ||
+            msg.contains("reset") ||
+            msg.contains("timed out")
+        )
+    }
+
     /// Check if Ollama is running by pinging the API.
     pub async fn is_running(&self) -> bool {
         let url = format!("{}/api/tags", self.endpoint);
         trace!(url = %url, "Checking if Ollama is running");
         self.client
             .get(&url)
-            .timeout(std::time::Duration::from_secs(2))
+            .timeout(self.config.connect_timeout)
             .send()
             .await
             .is_ok()
@@ -69,6 +226,7 @@ impl OllamaClient {
         let response = self
             .client
             .get(&url)
+            .timeout(self.config.request_timeout)
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
@@ -104,6 +262,7 @@ impl OllamaClient {
             .json(&ShowRequest {
                 name: name.to_string(),
             })
+            .timeout(self.config.request_timeout)
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
@@ -214,6 +373,7 @@ impl OllamaClient {
             .json(&DeleteRequest {
                 name: name.to_string(),
             })
+            .timeout(self.config.request_timeout)
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
@@ -244,6 +404,7 @@ impl OllamaClient {
         let response = self
             .client
             .get(&url)
+            .timeout(self.config.request_timeout)
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
@@ -294,6 +455,7 @@ impl OllamaClient {
             .client
             .post(&url)
             .json(&request)
+            .timeout(self.config.model_timeout)
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
@@ -339,6 +501,7 @@ impl OllamaClient {
             .client
             .post(&url)
             .json(&request)
+            .timeout(self.config.model_timeout)
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
@@ -485,6 +648,7 @@ impl OllamaClient {
             .client
             .post(&url)
             .json(&request)
+            .timeout(self.config.model_timeout)
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
@@ -543,6 +707,7 @@ impl OllamaClient {
             .client
             .post(&url)
             .json(&request)
+            .timeout(self.config.model_timeout)
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;

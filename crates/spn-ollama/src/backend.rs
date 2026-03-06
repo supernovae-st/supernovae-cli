@@ -171,10 +171,27 @@ pub trait ModelBackend: Send + Sync {
         model: &str,
         inputs: &[&str],
     ) -> impl Future<Output = Result<Vec<EmbeddingResponse>, BackendError>> + Send;
+
+    /// Stream a chat completion request.
+    ///
+    /// Calls the callback for each token as it's generated.
+    /// Returns the final complete response when done.
+    fn chat_stream<F>(
+        &self,
+        model: &str,
+        messages: &[ChatMessage],
+        options: Option<&ChatOptions>,
+        on_token: F,
+    ) -> impl Future<Output = Result<ChatResponse, BackendError>> + Send
+    where
+        F: FnMut(&str) + Send;
 }
 
 /// Boxed version of the progress callback for trait objects.
 pub type BoxedProgressCallback = Box<dyn Fn(PullProgress) + Send + Sync + 'static>;
+
+/// Boxed token callback for streaming chat in trait objects.
+pub type BoxedTokenCallback = Box<dyn FnMut(&str) + Send + 'static>;
 
 /// Type alias for a boxed `ModelBackend` trait object.
 pub type BoxedBackend = Box<dyn DynModelBackend>;
@@ -270,4 +287,15 @@ pub trait DynModelBackend: Send + Sync {
         model: &str,
         inputs: Vec<String>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<EmbeddingResponse>, BackendError>> + Send + '_>>;
+
+    /// Stream a chat completion request.
+    ///
+    /// Calls the callback for each token as it's generated.
+    fn chat_stream(
+        &self,
+        model: &str,
+        messages: Vec<ChatMessage>,
+        options: Option<ChatOptions>,
+        on_token: BoxedTokenCallback,
+    ) -> Pin<Box<dyn Future<Output = Result<ChatResponse, BackendError>> + Send + '_>>;
 }
