@@ -223,3 +223,84 @@ async fn test_backend_with_config() {
         Duration::from_secs(600)
     );
 }
+
+// ============================================================================
+// Timeout Tests
+// ============================================================================
+
+/// Test that connection to unreachable host times out correctly.
+///
+/// Uses RFC 5737 TEST-NET-1 address (192.0.2.1) which is guaranteed non-routable.
+#[tokio::test]
+async fn test_connection_timeout_unreachable() {
+    let config = ClientConfig::new().with_connect_timeout(Duration::from_millis(500));
+
+    // 192.0.2.1 is from TEST-NET-1 (RFC 5737) - guaranteed non-routable
+    let client = OllamaClient::with_config("http://192.0.2.1:11434", config);
+
+    let start = std::time::Instant::now();
+    let is_running = client.is_running().await;
+    let elapsed = start.elapsed();
+
+    // Should return false (not running)
+    assert!(!is_running, "Non-routable IP should not be reachable");
+
+    // Should complete within reasonable time (timeout + overhead)
+    // Allow 2 seconds for test overhead on slow CI
+    assert!(
+        elapsed < Duration::from_secs(2),
+        "Connection should timeout within configured time, took {:?}",
+        elapsed
+    );
+}
+
+/// Test that operations on unreachable host fail gracefully.
+#[tokio::test]
+async fn test_list_models_unreachable() {
+    let config = ClientConfig::new()
+        .with_connect_timeout(Duration::from_millis(500))
+        .with_request_timeout(Duration::from_secs(2))
+        .no_retries(); // Disable retries for faster test
+
+    let client = OllamaClient::with_config("http://192.0.2.1:11434", config);
+
+    let start = std::time::Instant::now();
+    let result = client.list_models().await;
+    let elapsed = start.elapsed();
+
+    // Should fail with connection error
+    assert!(result.is_err(), "Should fail to connect to unreachable IP");
+
+    // Should fail within configured timeout + overhead
+    assert!(
+        elapsed < Duration::from_secs(5),
+        "Should fail within timeout, took {:?}",
+        elapsed
+    );
+}
+
+/// Test that chat operations fail gracefully on unreachable host.
+#[tokio::test]
+async fn test_chat_unreachable() {
+    use spn_core::ChatMessage;
+
+    let config = ClientConfig::new()
+        .with_connect_timeout(Duration::from_millis(500))
+        .with_request_timeout(Duration::from_secs(2))
+        .with_model_timeout(Duration::from_secs(2))
+        .no_retries();
+
+    let client = OllamaClient::with_config("http://192.0.2.1:11434", config);
+    let messages = vec![ChatMessage::user("Hello")];
+
+    let start = std::time::Instant::now();
+    let result = client.chat("any-model", &messages, None).await;
+    let elapsed = start.elapsed();
+
+    assert!(result.is_err(), "Should fail to connect to unreachable IP");
+    assert!(
+        elapsed < Duration::from_secs(5),
+        "Should fail within timeout, took {:?}",
+        elapsed
+    );
+}
