@@ -97,8 +97,8 @@ impl RegistryConfig {
 pub struct IndexClient {
     config: RegistryConfig,
     http_client: Option<ClientWithMiddleware>,
-    /// Cache: package name → Vec<IndexEntry>
-    cache: Arc<DashMap<String, Vec<IndexEntry>>>,
+    /// Cache: package name → Arc<Vec<IndexEntry>> for zero-copy cache hits
+    cache: DashMap<String, Arc<Vec<IndexEntry>>>,
 }
 
 impl IndexClient {
@@ -127,7 +127,7 @@ impl IndexClient {
         Self {
             config,
             http_client,
-            cache: Arc::new(DashMap::new()),
+            cache: DashMap::new(),
         }
     }
 
@@ -142,10 +142,12 @@ impl IndexClient {
     }
 
     /// Fetch all versions of a package from the index.
-    pub async fn fetch_package(&self, name: &str) -> Result<Vec<IndexEntry>, IndexError> {
-        // Check cache first
+    ///
+    /// Returns `Arc<Vec<IndexEntry>>` for zero-copy cache hits.
+    pub async fn fetch_package(&self, name: &str) -> Result<Arc<Vec<IndexEntry>>, IndexError> {
+        // Check cache first - Arc clone is O(1)
         if let Some(cached) = self.cache.get(name) {
-            return Ok(cached.clone());
+            return Ok(Arc::clone(&cached));
         }
 
         let scope = PackageScope::parse(name)
@@ -154,10 +156,10 @@ impl IndexClient {
         let index_path = scope.index_path();
         let content = self.fetch_index_file(&index_path).await?;
 
-        let entries = self.parse_index_content(&content, name)?;
+        let entries = Arc::new(self.parse_index_content(&content, name)?);
 
         // Store in cache
-        self.cache.insert(name.to_string(), entries.clone());
+        self.cache.insert(name.to_string(), Arc::clone(&entries));
 
         Ok(entries)
     }
@@ -167,9 +169,10 @@ impl IndexClient {
         let entries = self.fetch_package(name).await?;
 
         entries
-            .into_iter()
+            .iter()
             .filter(|e| e.is_available())
             .max_by(|a, b| a.semver().ok().cmp(&b.semver().ok()))
+            .cloned()
             .ok_or_else(|| IndexError::NoVersions(name.to_string()))
     }
 
@@ -178,8 +181,9 @@ impl IndexClient {
         let entries = self.fetch_package(name).await?;
 
         entries
-            .into_iter()
+            .iter()
             .find(|e| e.version == version)
+            .cloned()
             .ok_or_else(|| IndexError::PackageNotFound(format!("{}@{}", name, version)))
     }
 

@@ -219,13 +219,14 @@ impl DependencyResolver {
             None => {
                 // Get latest non-yanked version
                 entries
-                    .into_iter()
+                    .iter()
                     .filter(|e| !e.yanked)
                     .max_by(|a, b| {
                         let va = Version::parse(&a.version).ok();
                         let vb = Version::parse(&b.version).ok();
                         va.cmp(&vb)
                     })
+                    .cloned()
                     .ok_or_else(|| ResolverError::PackageNotFound(name.to_string()))
             }
         }
