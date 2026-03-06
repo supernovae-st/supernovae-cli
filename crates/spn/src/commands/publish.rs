@@ -362,6 +362,10 @@ async fn git_publish_workflow(
     std::fs::write(&index_file, index_content)
         .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to write index: {}", e)))?;
 
+    // Update registry.json (package catalog for search)
+    println!("   Updating registry.json...");
+    update_registry_json(registry_path, manifest)?;
+
     // Git add and commit
     println!("   Committing changes...");
     Command::new("git")
@@ -584,6 +588,66 @@ fn get_index_path(name: &str) -> String {
     name.trim_start_matches('@').to_string()
 }
 
+/// Update registry.json with the new package.
+fn update_registry_json(registry_path: &Path, manifest: &SpnManifest) -> Result<()> {
+    let registry_file = registry_path.join("registry.json");
+
+    // Read existing registry
+    let content = std::fs::read_to_string(&registry_file)
+        .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to read registry.json: {}", e)))?;
+
+    let mut registry: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to parse registry.json: {}", e)))?;
+
+    // Detect package type from scope or content
+    let pkg_type = detect_package_type(&manifest.name);
+
+    // Create package entry
+    let package_entry = serde_json::json!({
+        "version": manifest.version,
+        "type": pkg_type,
+        "description": manifest.description.clone().unwrap_or_default(),
+        "path": format!("packages/{}", manifest.name.replace('@', "")),
+    });
+
+    // Add/update in packages map
+    if let Some(packages) = registry.get_mut("packages") {
+        if let Some(obj) = packages.as_object_mut() {
+            obj.insert(manifest.name.clone(), package_entry);
+        }
+    }
+
+    // Write back with pretty formatting
+    let output = serde_json::to_string_pretty(&registry)
+        .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to serialize registry.json: {}", e)))?;
+
+    std::fs::write(&registry_file, output)
+        .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to write registry.json: {}", e)))?;
+
+    Ok(())
+}
+
+/// Detect package type from scope name.
+fn detect_package_type(name: &str) -> &'static str {
+    if name.starts_with("@workflows/") || name.contains(".nika.") {
+        "workflow"
+    } else if name.starts_with("@agents/") {
+        "agent"
+    } else if name.starts_with("@skills/") {
+        "skill"
+    } else if name.starts_with("@prompts/") {
+        "prompt"
+    } else if name.starts_with("@jobs/") {
+        "job"
+    } else if name.starts_with("@schemas/") || name.starts_with("@novanet/") {
+        "schema"
+    } else if name.starts_with("@nika/") {
+        "workflow" // Default for @nika scope
+    } else {
+        "workflow" // Default fallback
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -710,5 +774,17 @@ mod tests {
             checksum,
             "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
         );
+    }
+
+    #[test]
+    fn test_detect_package_type() {
+        assert_eq!(detect_package_type("@workflows/dev/code-review"), "workflow");
+        assert_eq!(detect_package_type("@agents/researcher"), "agent");
+        assert_eq!(detect_package_type("@skills/tdd"), "skill");
+        assert_eq!(detect_package_type("@prompts/greeting"), "prompt");
+        assert_eq!(detect_package_type("@jobs/daily-digest"), "job");
+        assert_eq!(detect_package_type("@schemas/seo"), "schema");
+        assert_eq!(detect_package_type("@novanet/seo-audit"), "schema");
+        assert_eq!(detect_package_type("@nika/my-workflow"), "workflow");
     }
 }
