@@ -157,7 +157,7 @@ docker run --rm \
 ### Verify Installation
 
 ```bash
-spn --version  # spn-cli 0.12.0
+spn --version  # spn-cli 0.12.2
 spn doctor     # System diagnostic
 ```
 

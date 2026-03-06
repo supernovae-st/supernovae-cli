@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **🦙 spn-ollama**: Added `chat_stream()` method to `ModelBackend` trait for streaming chat completions
+- **🦙 spn-ollama**: Added `BoxedTokenCallback` type for trait object compatibility
+- **🦙 spn-ollama**: Added `DynModelBackend::chat_stream()` for runtime polymorphism with streaming
+- **⏱️ spn-ollama**: Added `ClientConfig` with configurable timeouts (connect, request, model)
+- **🔄 spn-ollama**: Added retry logic infrastructure (`with_retry()`, `is_retryable()`)
+
+### Fixed
+
+- **🔧 CLI**: Replaced all `exit(1)` calls with proper `SpnError::CommandFailed` in provider.rs (11 calls)
+- **🔧 CLI**: Replaced all `exit(1)` calls with proper `SpnError::CommandFailed` in mcp.rs (4 calls)
+- **🔧 CLI**: Replaced all `exit(1)` calls with proper `SpnError::CommandFailed` in skill.rs (3 calls)
+- **🔧 CLI**: Replaced all `exit(1)` calls with proper `SpnError::CommandFailed` in model.rs (previous commit)
+- **🔧 CLI**: Fixed `if_same_then_else` clippy warning in publish.rs
+
+### Technical
+
+- Error handling now returns `Result<(), SpnError>` consistently across all CLI commands
+- Improved error messages with proper context and suggestions
+
 ## [0.12.2] - 2026-03-05
 
 ### Changed
