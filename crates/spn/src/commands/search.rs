@@ -3,7 +3,7 @@
 //! Searches for packages in the registry.
 
 use colored::Colorize;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::error::Result;
@@ -26,9 +26,20 @@ struct PackageMetadata {
     version: String,
 }
 
+/// Search result for JSON output.
+#[derive(Debug, Serialize)]
+struct SearchResult {
+    name: String,
+    version: String,
+    description: String,
+    r#type: String,
+}
+
 /// Run the search command.
-pub async fn run(query: &str) -> Result<()> {
-    println!("{} Searching SuperNovae Registry...\n", "🔍".cyan());
+pub async fn run(query: &str, json: bool) -> Result<()> {
+    if !json {
+        println!("{} Searching SuperNovae Registry...\n", "🔍".cyan());
+    }
 
     let client = IndexClient::new();
     let query_lower = query.to_lowercase();
@@ -97,7 +108,23 @@ pub async fn run(query: &str) -> Result<()> {
         }
     });
 
-    // Display results
+    // JSON output
+    if json {
+        let json_results: Vec<SearchResult> = results
+            .iter()
+            .map(|(name, version, description, pkg_type)| SearchResult {
+                name: name.clone(),
+                version: version.clone(),
+                description: description.clone(),
+                r#type: pkg_type.clone(),
+            })
+            .collect();
+
+        println!("{}", serde_json::to_string_pretty(&json_results)?);
+        return Ok(());
+    }
+
+    // Human-readable output
     if results.is_empty() {
         println!(
             "   {} No packages found matching '{}'",

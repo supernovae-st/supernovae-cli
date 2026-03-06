@@ -4,11 +4,36 @@
 
 use std::env;
 
+use serde::Serialize;
+
 use crate::error::Result;
 use crate::manifest::SpnManifest;
 use crate::storage::LocalStorage;
 
-pub async fn run() -> Result<()> {
+/// Package list for JSON output.
+#[derive(Debug, Serialize)]
+struct PackageList {
+    manifest_packages: Vec<ManifestPackage>,
+    installed_packages: Vec<InstalledPackage>,
+}
+
+/// Manifest package for JSON output.
+#[derive(Debug, Serialize)]
+struct ManifestPackage {
+    name: String,
+    version: String,
+    installed: bool,
+}
+
+/// Installed package for JSON output.
+#[derive(Debug, Serialize)]
+struct InstalledPackage {
+    name: String,
+    version: String,
+    in_manifest: bool,
+}
+
+pub async fn run(json: bool) -> Result<()> {
     let cwd = env::current_dir()?;
 
     // Try to load manifest
@@ -18,6 +43,43 @@ pub async fn run() -> Result<()> {
     let storage = LocalStorage::new()?;
     let installed = storage.scan_filesystem()?;
 
+    // JSON output
+    if json {
+        let manifest_packages: Vec<ManifestPackage> = manifest
+            .as_ref()
+            .map(|m| {
+                m.dependencies
+                    .iter()
+                    .map(|(name, dep)| ManifestPackage {
+                        name: name.clone(),
+                        version: dep.version().to_string(),
+                        installed: installed.iter().any(|p| &p.name == name),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let installed_packages: Vec<InstalledPackage> = installed
+            .iter()
+            .map(|pkg| InstalledPackage {
+                name: pkg.name.clone(),
+                version: pkg.version.clone(),
+                in_manifest: manifest
+                    .as_ref()
+                    .is_some_and(|m| m.dependencies.contains_key(&pkg.name)),
+            })
+            .collect();
+
+        let list = PackageList {
+            manifest_packages,
+            installed_packages,
+        };
+
+        println!("{}", serde_json::to_string_pretty(&list)?);
+        return Ok(());
+    }
+
+    // Human-readable output
     println!("📦 Installed packages:\n");
 
     if installed.is_empty() && manifest.as_ref().is_none_or(|m| m.dependencies.is_empty()) {

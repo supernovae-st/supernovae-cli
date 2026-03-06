@@ -106,16 +106,28 @@ enum Commands {
     Search {
         /// Search query
         query: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
 
     /// Show package information
     Info {
         /// Package name
         package: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
 
     /// List installed packages
-    List,
+    List {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 
     /// Publish current package to registry
     Publish {
@@ -742,9 +754,9 @@ async fn main() -> Result<()> {
         Commands::Install { frozen } => commands::install::run(frozen).await,
         Commands::Update { package } => commands::update::run(package.as_deref()).await,
         Commands::Outdated => commands::outdated::run().await,
-        Commands::Search { query } => commands::search::run(&query).await,
-        Commands::Info { package } => commands::info::run(&package).await,
-        Commands::List => commands::list::run().await,
+        Commands::Search { query, json } => commands::search::run(&query, json).await,
+        Commands::Info { package, json } => commands::info::run(&package, json).await,
+        Commands::List { json } => commands::list::run(json).await,
         Commands::Publish { dry_run } => commands::publish::run(dry_run).await,
         Commands::Version { bump } => commands::version::run(&bump).await,
         Commands::Skill { command } => commands::skill::run(command).await,
