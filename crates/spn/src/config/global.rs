@@ -10,10 +10,12 @@ use std::fs;
 use std::path::PathBuf;
 
 /// Get path to global config file (~/.spn/config.toml).
+///
+/// Uses [`spn_client::SpnPaths`] as the single source of truth.
 pub fn config_path() -> Result<PathBuf> {
-    let home = dirs::home_dir()
-        .ok_or_else(|| SpnError::ConfigError("Home directory not found".to_string()))?;
-    Ok(home.join(".spn").join("config.toml"))
+    spn_client::SpnPaths::new()
+        .map(|p| p.config_file())
+        .map_err(|e| SpnError::ConfigError(e.to_string()))
 }
 
 /// Load global configuration.
