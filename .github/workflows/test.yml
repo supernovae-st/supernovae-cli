@@ -13,6 +13,7 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  # Main test job with default features
   test:
     name: Test (${{ matrix.os }})
     strategy:
@@ -48,4 +49,55 @@ jobs:
 
       - name: Test
         run: cargo test --workspace
+
+  # Feature flag matrix tests
+  feature-matrix:
+    name: Features (${{ matrix.crate }}/${{ matrix.features }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # spn-cli with docker feature (no OS keychain)
+          - crate: spn-cli
+            features: docker
+            package: spn-cli
+          # spn-cli with no default features
+          - crate: spn-cli
+            features: ""
+            package: spn-cli
+          # spn-keyring without os-keychain (env vars only)
+          - crate: spn-keyring
+            features: ""
+            package: spn-keyring
+          # spn-core with serde
+          - crate: spn-core
+            features: serde
+            package: spn-core
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build with features
+        run: |
+          if [ -z "${{ matrix.features }}" ]; then
+            cargo build -p ${{ matrix.package }} --no-default-features
+          else
+            cargo build -p ${{ matrix.package }} --no-default-features --features ${{ matrix.features }}
+          fi
+
+      - name: Test with features
+        run: |
+          if [ -z "${{ matrix.features }}" ]; then
+            cargo test -p ${{ matrix.package }} --no-default-features
+          else
+            cargo test -p ${{ matrix.package }} --no-default-features --features ${{ matrix.features }}
+          fi
 
