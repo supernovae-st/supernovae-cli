@@ -28,7 +28,6 @@ mod secrets;
 mod storage;
 mod sync;
 
-use error::Result;
 
 /// SuperNovae CLI - AI Development Toolkit
 #[derive(Parser)]
@@ -740,7 +739,7 @@ enum ProviderCommands {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
     let cli = Cli::parse();
 
     // Initialize logging
@@ -748,7 +747,7 @@ async fn main() -> Result<()> {
         .with_env_filter(if cli.verbose { "spn=debug" } else { "spn=info" })
         .init();
 
-    match cli.command {
+    let result = match cli.command {
         Commands::Add { package, r#type } => commands::add::run(&package, r#type.as_deref()).await,
         Commands::Remove { package } => commands::remove::run(&package).await,
         Commands::Install { frozen } => commands::install::run(frozen).await,
@@ -786,5 +785,11 @@ async fn main() -> Result<()> {
         Commands::Setup { quick, command } => commands::setup::run(command, quick).await,
         Commands::Daemon { command } => commands::daemon::run(command).await,
         Commands::Model { command } => commands::model::run(command).await,
+    };
+
+    // Handle errors with helpful messages
+    if let Err(e) = result {
+        e.print();
+        std::process::exit(1);
     }
 }
