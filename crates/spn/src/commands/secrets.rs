@@ -182,7 +182,7 @@ async fn run_doctor(fix: bool) -> Result<()> {
 fn check_keychain_access() -> Result<CheckResult> {
     // Try to access the keychain (read-only test)
     if SpnKeyring::is_accessible() {
-        let keys = SpnKeyring::list_stored();
+        let keys = SpnKeyring::list();
         let count = keys.len();
         Ok(CheckResult::Pass(format!(
             "Keychain access: OK ({} keys stored)",
@@ -271,16 +271,12 @@ fn check_key_formats() -> Vec<CheckResult> {
 
     for provider in all_providers {
         if let Some((key, _source)) = resolve_api_key(provider) {
-            match validate_key_format(provider, &key) {
-                Ok(()) => {
-                    // Key is valid - don't add a result for each valid key
-                }
-                Err(e) => {
-                    results.push(CheckResult::Error(format!(
-                        "Invalid key format for {}: {}",
-                        provider, e
-                    )));
-                }
+            let validation = validate_key_format(provider, &key);
+            if !validation.is_valid() {
+                results.push(CheckResult::Error(format!(
+                    "Invalid key format for {}: {}",
+                    provider, validation
+                )));
             }
         }
     }

@@ -10,7 +10,7 @@
 //! ├─────────────────────────────────────────────────────────────────────────────┤
 //! │                                                                             │
 //! │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────┐│
-//! │  │  keyring   │  │  secrecy   │  │  zeroize   │  │  dotenvy   │  │  libc  ││
+//! │  │ spn-keyring│  │  secrecy   │  │  zeroize   │  │  dotenvy   │  │  libc  ││
 //! │  │ (storage)  │  │ (wrapping) │  │ (mem wipe) │  │ (.env)     │  │ (mlock)││
 //! │  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └───┬────┘│
 //! │        │               │               │               │              │     │
@@ -78,12 +78,29 @@ mod storage;
 mod types;
 mod wizard;
 
-pub use env_storage::{is_gitignored, store_in_dotenv, store_in_global};
+// Core keyring exports (from spn_keyring via keyring.rs)
 pub use keyring::{
-    mask_api_key, migrate_env_to_keyring, provider_env_var, resolve_api_key, security_audit,
-    validate_key_format, SpnKeyring,
+    has_any_keys, mask_api_key, migrate_env_to_keyring, resolve_api_key, security_audit,
+    validate_key_format, KeyringError, MigrationReport, SpnKeyring,
 };
-pub use memory::{mlock_available, mlock_limit};
+
+// Storage exports
+pub use env_storage::{is_gitignored, store_in_dotenv, store_in_global};
 pub use storage::{global_secrets_path, project_env_path, StorageBackend};
-pub use types::{SecretSource, MCP_SECRET_TYPES, SUPPORTED_PROVIDERS};
+
+// Type exports (extended SecretSource with Inline variant, backward-compatible constants)
+pub use types::{
+    provider_env_var, SecretSource, MCP_SECRET_TYPES, SUPPORTED_PROVIDERS,
+};
+
+// Memory protection exports
+pub use memory::{mlock_available, mlock_limit};
+
+// Wizard exports
 pub use wizard::{run_quick_setup, run_wizard};
+
+// Re-export core types from spn_keyring/spn_core for convenience
+pub use types::{
+    find_provider, llm_provider_ids, mask_key, mcp_provider_ids, Provider, ProviderCategory,
+    ValidationResult, KNOWN_PROVIDERS,
+};

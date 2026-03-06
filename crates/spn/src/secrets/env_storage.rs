@@ -10,7 +10,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use zeroize::Zeroizing;
 
-use super::keyring::provider_env_var;
+use super::types::provider_env_var;
 use super::storage::global_secrets_path;
 
 /// RAII guard to clean up temp files on error.

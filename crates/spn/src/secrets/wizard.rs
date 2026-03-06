@@ -320,25 +320,23 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
         let key = Zeroizing::new(input);
 
         // Validate key format
-        match validate_key_format(provider, &key) {
-            Ok(()) => {
-                println!("  {} Key format valid", "✓".green());
-                break key;
-            }
-            Err(e) => {
-                println!("  {} Invalid format: {}", "✗".red(), e);
-                println!();
+        let validation = validate_key_format(provider, &key);
+        if validation.is_valid() {
+            println!("  {} Key format valid", "✓".green());
+            break key;
+        } else {
+            println!("  {} Invalid format: {}", "✗".red(), validation);
+            println!();
 
-                let retry = Confirm::with_theme(&theme)
-                    .with_prompt("Try again?")
-                    .default(true)
-                    .interact()?;
+            let retry = Confirm::with_theme(&theme)
+                .with_prompt("Try again?")
+                .default(true)
+                .interact()?;
 
-                if !retry {
-                    return Ok(None);
-                }
-                println!();
+            if !retry {
+                return Ok(None);
             }
+            println!();
         }
     };
 
@@ -530,7 +528,10 @@ pub fn run_quick_setup(provider: &str, key: &str, storage: StorageBackend) -> Re
     let api_key = Zeroizing::new(key.to_string());
 
     // Validate
-    validate_key_format(provider, &api_key).map_err(|e| anyhow::anyhow!(e))?;
+    let validation = validate_key_format(provider, &api_key);
+    if !validation.is_valid() {
+        return Err(anyhow::anyhow!("Invalid key format: {}", validation));
+    }
 
     let location = match storage {
         StorageBackend::Keychain => "OS Keychain".to_string(),

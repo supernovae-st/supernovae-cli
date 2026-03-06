@@ -12,7 +12,57 @@ use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
+// Re-export core types from spn-keyring (which re-exports from spn-core)
+pub use spn_keyring::{
+    find_provider, mask_key, validate_key_format, Provider, ProviderCategory, ValidationResult,
+    KNOWN_PROVIDERS,
+};
+
+/// Alias for backward compatibility: `mask_api_key` -> `mask_key`
+pub fn mask_api_key(key: &str) -> String {
+    mask_key(key)
+}
+
+/// Alias for backward compatibility: `provider_env_var` -> `provider_to_env_var`
+pub fn provider_env_var(provider: &str) -> &'static str {
+    spn_keyring::provider_to_env_var(provider).unwrap_or("UNKNOWN_API_KEY")
+}
+
+/// Get LLM provider IDs (for backward compatibility with SUPPORTED_PROVIDERS constant).
+///
+/// Returns provider IDs for LLM and Local categories.
+pub fn llm_provider_ids() -> impl Iterator<Item = &'static str> {
+    KNOWN_PROVIDERS.iter().filter_map(|p| {
+        if matches!(
+            p.category,
+            ProviderCategory::Llm | ProviderCategory::Local
+        ) {
+            Some(p.id)
+        } else {
+            None
+        }
+    })
+}
+
+/// Get MCP provider IDs (for backward compatibility with MCP_SECRET_TYPES constant).
+///
+/// Returns provider IDs for MCP category.
+pub fn mcp_provider_ids() -> impl Iterator<Item = &'static str> {
+    KNOWN_PROVIDERS
+        .iter()
+        .filter_map(|p| {
+            if p.category == ProviderCategory::Mcp {
+                Some(p.id)
+            } else {
+                None
+            }
+        })
+}
+
 /// Supported LLM providers with their key formats.
+///
+/// DEPRECATED: Use `llm_provider_ids()` or `KNOWN_PROVIDERS` from spn_core instead.
+/// This constant is kept for backward compatibility.
 pub const SUPPORTED_PROVIDERS: &[&str] = &[
     "anthropic", // ANTHROPIC_API_KEY (sk-ant-...)
     "openai",    // OPENAI_API_KEY (sk-...)
@@ -24,10 +74,13 @@ pub const SUPPORTED_PROVIDERS: &[&str] = &[
 ];
 
 /// MCP-related secret types.
+///
+/// DEPRECATED: Use `mcp_provider_ids()` or `KNOWN_PROVIDERS` from spn_core instead.
+/// This constant is kept for backward compatibility.
 pub const MCP_SECRET_TYPES: &[&str] = &[
     "neo4j",      // NEO4J_PASSWORD
     "github",     // GITHUB_TOKEN
-    "slack",      // SLACK_TOKEN
+    "slack",      // SLACK_BOT_TOKEN
     "perplexity", // PERPLEXITY_API_KEY
     "firecrawl",  // FIRECRAWL_API_KEY
     "supadata",   // SUPADATA_API_KEY
@@ -91,7 +144,12 @@ impl ProviderKey {
 
     /// Validate key format for this provider.
     pub fn validate(&self) -> Result<(), String> {
-        crate::secrets::validate_key_format(&self.provider, &self.key)
+        let result = validate_key_format(&self.provider, &self.key);
+        if result.is_valid() {
+            Ok(())
+        } else {
+            Err(result.to_string())
+        }
     }
 
     /// Explicitly zeroize the key (called automatically on drop).
@@ -116,20 +174,10 @@ impl std::fmt::Display for ProviderKey {
     }
 }
 
-/// Mask an API key for safe display.
-///
-/// Shows first 6 and last 1 character, with "..." in between.
-/// Short keys (≤10 chars) are fully masked.
-pub fn mask_key(key: &str) -> String {
-    if key.len() <= 10 {
-        return "****".to_string();
-    }
-    let prefix = &key[..6.min(key.len())];
-    let suffix = &key[key.len().saturating_sub(1)..];
-    format!("{}...{}", prefix, suffix)
-}
-
 /// Environment source for a secret.
+///
+/// Extended version with `Inline` variant for CLI-specific use cases.
+/// For the base version, see `spn_keyring::SecretSource`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SecretSource {
     /// Stored in OS keychain (most secure).
@@ -174,6 +222,17 @@ impl SecretSource {
     }
 }
 
+/// Convert from spn_keyring::SecretSource to our extended version.
+impl From<spn_keyring::SecretSource> for SecretSource {
+    fn from(source: spn_keyring::SecretSource) -> Self {
+        match source {
+            spn_keyring::SecretSource::Keychain => SecretSource::Keychain,
+            spn_keyring::SecretSource::Environment => SecretSource::Environment,
+            spn_keyring::SecretSource::DotEnv => SecretSource::DotEnv,
+        }
+    }
+}
+
 /// Secure buffer for temporarily holding sensitive data.
 ///
 /// Use this when you need to temporarily hold sensitive data
@@ -193,13 +252,16 @@ mod tests {
     #[test]
     fn test_provider_key_masked() {
         let key = ProviderKey::new("anthropic", "sk-ant-api03-abc123xyz789");
-        assert_eq!(key.masked(), "sk-ant...9");
+        // mask_key from spn-core shows first 7 chars + bullets
+        assert!(key.masked().starts_with("sk-ant-"));
+        assert!(key.masked().contains("••••••••"));
     }
 
     #[test]
     fn test_provider_key_masked_short() {
         let key = ProviderKey::new("test", "short");
-        assert_eq!(key.masked(), "****");
+        // mask_key from spn-core shows all chars (up to 7) + bullets
+        assert_eq!(key.masked(), "short••••••••");
     }
 
     #[test]
@@ -214,7 +276,7 @@ mod tests {
     fn test_provider_key_display_masked() {
         let key = ProviderKey::new("anthropic", "sk-ant-api03-abc123xyz789");
         let display = format!("{}", key);
-        assert!(display.contains("sk-ant...9"));
+        assert!(display.contains("ProviderKey"));
         assert!(!display.contains("abc123"));
     }
 
@@ -237,12 +299,8 @@ mod tests {
     }
 
     #[test]
-    fn test_mask_key() {
-        assert_eq!(mask_key("sk-ant-api03-abc123xyz789"), "sk-ant...9");
-        assert_eq!(mask_key("short"), "****");
-        assert_eq!(mask_key(""), "****");
-        assert_eq!(mask_key("1234567890"), "****");
-        assert_eq!(mask_key("12345678901"), "123456...1");
+    fn test_mask_api_key_alias() {
+        assert_eq!(mask_api_key("sk-ant-api03-abc123xyz789"), mask_key("sk-ant-api03-abc123xyz789"));
     }
 
     #[test]
@@ -251,5 +309,38 @@ mod tests {
         assert_eq!(*secure, "secret");
         secure.zeroize();
         assert!(secure.is_empty());
+    }
+
+    #[test]
+    fn test_llm_provider_ids() {
+        let providers: Vec<_> = llm_provider_ids().collect();
+        assert!(providers.contains(&"anthropic"));
+        assert!(providers.contains(&"openai"));
+        assert!(providers.contains(&"ollama"));
+        assert!(!providers.contains(&"github")); // MCP, not LLM
+    }
+
+    #[test]
+    fn test_mcp_provider_ids() {
+        let providers: Vec<_> = mcp_provider_ids().collect();
+        assert!(providers.contains(&"github"));
+        assert!(providers.contains(&"neo4j"));
+        assert!(!providers.contains(&"anthropic")); // LLM, not MCP
+    }
+
+    #[test]
+    fn test_provider_env_var_alias() {
+        assert_eq!(provider_env_var("anthropic"), "ANTHROPIC_API_KEY");
+        assert_eq!(provider_env_var("github"), "GITHUB_TOKEN");
+        assert_eq!(provider_env_var("unknown"), "UNKNOWN_API_KEY");
+    }
+
+    #[test]
+    fn test_secret_source_from_spn_keyring() {
+        let keychain: SecretSource = spn_keyring::SecretSource::Keychain.into();
+        assert_eq!(keychain, SecretSource::Keychain);
+
+        let env: SecretSource = spn_keyring::SecretSource::Environment.into();
+        assert_eq!(env, SecretSource::Environment);
     }
 }

@@ -260,8 +260,13 @@ async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result
     let api_key = Zeroizing::new(input);
 
     // Validate key format
-    validate_key_format(provider, &api_key)
-        .map_err(|e| SpnError::CommandFailed(format!("Invalid key format: {}", e)))?;
+    let validation = validate_key_format(provider, &api_key);
+    if !validation.is_valid() {
+        return Err(SpnError::CommandFailed(format!(
+            "Invalid key format: {}",
+            validation
+        )));
+    }
 
     // Store based on backend
     match backend {
@@ -561,8 +566,9 @@ async fn test_single_provider(provider: &str) {
         }
         Some((key, source)) => {
             // Basic validation
-            if let Err(e) = validate_key_format(provider, &key) {
-                println!("{} {}", "✗ Invalid format:".red(), e);
+            let validation = validate_key_format(provider, &key);
+            if !validation.is_valid() {
+                println!("{} {}", "✗ Invalid format:".red(), validation);
                 return;
             }
 

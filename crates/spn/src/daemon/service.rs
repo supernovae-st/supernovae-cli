@@ -181,7 +181,7 @@ impl ServiceManager {
         let home = dirs::home_dir().expect("HOME not set");
 
         // Load template and replace placeholders
-        let template = include_str!("../../../../assets/launchd/com.supernovae.spn-daemon.plist");
+        let template = include_str!("../../assets/launchd/com.supernovae.spn-daemon.plist");
         let content = template
             .replace("${SPN_BIN}", &spn_bin)
             .replace("${HOME}", &home.display().to_string());
@@ -272,10 +272,9 @@ impl ServiceManager {
         let home = dirs::home_dir().expect("HOME not set");
 
         // Load template and replace placeholders
-        let template = include_str!("../../../../assets/systemd/spn-daemon.service");
-        let content = template
-            .replace("${SPN_BIN}", &spn_bin)
-            .replace("%h", &home.display().to_string());
+        // NOTE: Do NOT replace %h - it's a systemd specifier resolved at runtime
+        let template = include_str!("../../assets/systemd/spn-daemon.service");
+        let content = template.replace("${SPN_BIN}", &spn_bin);
 
         // Ensure directory exists
         if let Some(parent) = unit_path.parent() {

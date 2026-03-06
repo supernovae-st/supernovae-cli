@@ -12,6 +12,11 @@ keywords = ["cli", "package-manager", "ai", "mcp", "secrets"]
 categories = ["command-line-utilities", "development-tools"]
 readme = "../../README.md"
 rust-version = "1.85"
+include = [
+    "src/**/*",
+    "assets/**/*",
+    "Cargo.toml",
+]
 
 [[bin]]
 name = "spn"
@@ -37,6 +42,7 @@ docker = []
 [dependencies]
 # Workspace crates
 spn-client = { version = "0.2", path = "../spn-client" }
+spn-keyring = { version = "0.1", path = "../spn-keyring" }
 spn-ollama = { version = "0.1", path = "../spn-ollama" }
 
 # CLI framework
