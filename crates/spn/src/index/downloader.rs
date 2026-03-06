@@ -46,6 +46,7 @@ pub enum DownloadError {
 }
 
 /// Downloaded package with verified content.
+#[derive(Debug)]
 pub struct DownloadedPackage {
     /// Package name.
     pub name: String,
@@ -484,5 +485,176 @@ mod tests {
             .unwrap();
 
         assert_eq!(pkg1.tarball_path, pkg2.tarball_path);
+    }
+
+    // === Additional Tests for Critical Path Coverage ===
+
+    #[tokio::test]
+    async fn test_corrupted_tarball_extraction() {
+        let temp = TempDir::new().unwrap();
+        let index_dir = temp.path().join("index");
+        let releases_dir = temp.path().join("releases");
+
+        // Create package dir structure
+        let pkg_dir = releases_dir.join("@w/data/corrupt-pkg");
+        std::fs::create_dir_all(&pkg_dir).unwrap();
+
+        // Create a corrupted tarball (invalid gzip)
+        let tarball_path = pkg_dir.join("1.0.0.tar.gz");
+        std::fs::write(&tarball_path, b"not a valid gzip file").unwrap();
+
+        // Compute checksum of the corrupted file
+        let mut file = std::fs::File::open(&tarball_path).unwrap();
+        let mut hasher = Sha256::new();
+        std::io::copy(&mut file, &mut hasher).unwrap();
+        let checksum = format!("sha256:{}", hex::encode(hasher.finalize()));
+
+        // Create index entry with matching checksum
+        let pkg_idx_dir = index_dir.join("@w/data");
+        std::fs::create_dir_all(&pkg_idx_dir).unwrap();
+        let mut file = std::fs::File::create(pkg_idx_dir.join("corrupt-pkg")).unwrap();
+        writeln!(
+            file,
+            r#"{{"name":"@workflows/data/corrupt-pkg","vers":"1.0.0","deps":[],"cksum":"{}","features":{{}},"yanked":false}}"#,
+            checksum
+        )
+        .unwrap();
+
+        let config = RegistryConfig::local(&index_dir, &releases_dir);
+        let downloader = Downloader::with_config(config);
+
+        // Download should succeed (checksum matches)
+        let pkg = downloader
+            .download_latest("@workflows/data/corrupt-pkg")
+            .await
+            .unwrap();
+
+        // Extraction should fail
+        let extract_dir = temp.path().join("extracted");
+        let result = downloader.extract(&pkg, &extract_dir);
+        assert!(
+            matches!(result, Err(DownloadError::ExtractError(_))),
+            "Expected ExtractError, got: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_package_not_found_in_index() {
+        let temp = TempDir::new().unwrap();
+        let index_dir = temp.path().join("index");
+        let releases_dir = temp.path().join("releases");
+
+        // Create empty index directory (no packages)
+        std::fs::create_dir_all(&index_dir).unwrap();
+        std::fs::create_dir_all(&releases_dir).unwrap();
+
+        let config = RegistryConfig::local(&index_dir, &releases_dir);
+        let downloader = Downloader::with_config(config);
+
+        let result = downloader
+            .download_latest("@nonexistent/package")
+            .await;
+        assert!(
+            matches!(result, Err(DownloadError::Index(_))),
+            "Expected Index error for missing package, got: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_missing_tarball_file() {
+        let temp = TempDir::new().unwrap();
+        let index_dir = temp.path().join("index");
+        let releases_dir = temp.path().join("releases");
+
+        // Create index entry but no tarball file
+        let pkg_dir = index_dir.join("@w/data");
+        std::fs::create_dir_all(&pkg_dir).unwrap();
+        std::fs::create_dir_all(&releases_dir).unwrap();
+
+        let mut file = std::fs::File::create(pkg_dir.join("missing-tarball")).unwrap();
+        writeln!(
+            file,
+            r#"{{"name":"@workflows/data/missing-tarball","vers":"1.0.0","deps":[],"cksum":"sha256:0000000000000000000000000000000000000000000000000000000000000000","features":{{}},"yanked":false}}"#
+        )
+        .unwrap();
+
+        let config = RegistryConfig::local(&index_dir, &releases_dir);
+        let downloader = Downloader::with_config(config);
+
+        let result = downloader
+            .download_latest("@workflows/data/missing-tarball")
+            .await;
+
+        // Should fail with HTTP error (file not found) or IO error
+        assert!(
+            result.is_err(),
+            "Expected error for missing tarball, got success"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_invalid_checksum_format() {
+        let temp = TempDir::new().unwrap();
+        let index_dir = temp.path().join("index");
+        let releases_dir = temp.path().join("releases");
+
+        // Create a valid tarball
+        create_test_tarball(temp.path(), "invalid-checksum", "1.0.0");
+
+        // Create index entry with invalid checksum format (no sha256: prefix)
+        let pkg_dir = index_dir.join("@w/data");
+        std::fs::create_dir_all(&pkg_dir).unwrap();
+
+        let mut file = std::fs::File::create(pkg_dir.join("invalid-checksum")).unwrap();
+        writeln!(
+            file,
+            r#"{{"name":"@workflows/data/invalid-checksum","vers":"1.0.0","deps":[],"cksum":"badformat0000000000000000000000000000000000000000000000000000000","features":{{}},"yanked":false}}"#
+        )
+        .unwrap();
+
+        let config = RegistryConfig::local(&index_dir, &releases_dir);
+        let downloader = Downloader::with_config(config);
+
+        let result = downloader
+            .download_latest("@workflows/data/invalid-checksum")
+            .await;
+
+        // Should fail with InvalidChecksum error
+        assert!(
+            matches!(result, Err(DownloadError::InvalidChecksum(_))),
+            "Expected InvalidChecksum error, got: {:?}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_clear_cache() {
+        let temp = TempDir::new().unwrap();
+        let cache_dir = temp.path().to_path_buf();
+
+        // Create cache structure
+        let tarballs_dir = cache_dir.join("tarballs");
+        std::fs::create_dir_all(&tarballs_dir).unwrap();
+        std::fs::write(tarballs_dir.join("test.tar.gz"), b"data").unwrap();
+
+        assert!(tarballs_dir.exists());
+
+        let config = RegistryConfig {
+            cache_dir: cache_dir.clone(),
+            ..Default::default()
+        };
+        let downloader = Downloader::with_config(config);
+
+        downloader.clear_cache().unwrap();
+
+        assert!(!tarballs_dir.exists());
+    }
+
+    #[test]
+    fn test_downloader_default() {
+        // Just verify Default impl doesn't panic
+        let _downloader = Downloader::default();
     }
 }
