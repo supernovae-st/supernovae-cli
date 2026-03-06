@@ -54,6 +54,9 @@ pub enum SpnError {
     #[error("Version conflict: {0}")]
     VersionConflict(String),
 
+    #[error("Dependency resolution failed: {0}")]
+    DependencyResolution(String),
+
     #[error("Command not found: {0}")]
     CommandNotFound(String),
 

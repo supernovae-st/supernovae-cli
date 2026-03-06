@@ -1,12 +1,13 @@
 //! Add command implementation.
 //!
 //! Adds a package to the project's spn.yaml manifest and installs it.
+//! Uses transitive dependency resolution to install all required packages.
 
 use colored::Colorize;
 
 use crate::error::{Result, SpnError};
-use crate::index::{Downloader, IndexClient};
-use crate::manifest::{ResolvedPackage, SpnLockfile, SpnManifest};
+use crate::index::{DependencyResolver, Downloader, IndexClient};
+use crate::manifest::{ResolvedPackage as LockfilePackage, SpnLockfile, SpnManifest};
 use crate::storage::LocalStorage;
 
 /// Package types in the registry.
@@ -111,28 +112,53 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
         SpnManifest::default()
     };
 
-    // 2. Fetch package info from registry
+    // 2. Resolve all dependencies transitively
     let client = IndexClient::new();
-    let entry = if let Some(ref version) = options.version {
-        client.fetch_version(&options.package, version).await
-    } else {
-        client.fetch_latest(&options.package).await
-    }
-    .map_err(|e| SpnError::PackageNotFound(format!("{}: {}", options.package, e)))?;
+    let mut resolver = DependencyResolver::new(client);
 
+    println!("   {} Resolving dependencies...", "→".blue());
+
+    let packages = resolver
+        .resolve(&options.package, options.version.as_deref())
+        .await
+        .map_err(|e| SpnError::DependencyResolution(e.to_string()))?;
+
+    let stats = resolver.stats();
+
+    // 3. Show installation plan
+    println!();
+    println!(
+        "   {} {} package(s) to install:",
+        "→".blue(),
+        packages.len()
+    );
+
+    for pkg in &packages {
+        let marker = if pkg.is_direct {
+            "●".green()
+        } else {
+            "○".blue()
+        };
+        println!("     {} {}@{}", marker, pkg.name, pkg.version);
+    }
+
+    if stats.transitive > 0 {
+        println!(
+            "   {} ({} direct, {} transitive)",
+            "ℹ".cyan(),
+            stats.direct,
+            stats.transitive
+        );
+    }
+    println!();
+
+    // 4. Add direct dependency to manifest
+    let root_pkg = packages.iter().find(|p| p.is_direct).unwrap();
     let version_constraint = options
         .version
         .clone()
-        .unwrap_or_else(|| format!("^{}", entry.version));
+        .unwrap_or_else(|| format!("^{}", root_pkg.version));
 
-    println!(
-        "   {} Found {}@{}",
-        "✓".green(),
-        options.package,
-        entry.version
-    );
-
-    // 3. Add to manifest
     if options.dev {
         manifest.dev_dependencies.insert(
             options.package.clone(),
@@ -144,40 +170,19 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
         println!("   {} Added to dependencies", "→".blue());
     }
 
-    // 4. Save manifest
+    // 5. Save manifest
     manifest
         .write_to_file(&manifest_path)
         .map_err(|e| SpnError::ConfigError(format!("Failed to save manifest: {}", e)))?;
     println!("   {} Updated spn.yaml", "✓".green());
 
-    // 5. Install package (unless manifest-only)
+    // 6. Install all packages (unless manifest-only)
     if !options.manifest_only {
         let storage = LocalStorage::new()
             .map_err(|e| SpnError::ConfigError(format!("Storage error: {}", e)))?;
 
         let downloader = Downloader::new();
-        let downloaded = downloader
-            .download_entry(&entry)
-            .await
-            .map_err(|e| SpnError::ConfigError(format!("Download failed: {}", e)))?;
 
-        println!(
-            "   {} Downloaded {}",
-            "✓".green(),
-            downloaded.tarball_path.display()
-        );
-
-        let installed = storage
-            .install(&downloaded)
-            .map_err(|e| SpnError::ConfigError(format!("Install failed: {}", e)))?;
-
-        println!(
-            "   {} Installed to {}",
-            "✓".green(),
-            installed.path.display()
-        );
-
-        // 6. Update lockfile
         let lockfile_path = manifest_path
             .parent()
             .map(|p| p.join("spn.lock"))
@@ -187,11 +192,35 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
             SpnLockfile::find_in_dir(manifest_path.parent().unwrap_or(std::path::Path::new(".")))
                 .unwrap_or_else(|_| SpnLockfile::new());
 
-        lockfile.add_package(ResolvedPackage::new(
-            &options.package,
-            &entry.version,
-            &entry.cksum,
-        ));
+        // Install packages in order (dependencies first, thanks to topo sort)
+        for (i, pkg) in packages.iter().enumerate() {
+            println!(
+                "   {} [{}/{}] Installing {}@{}...",
+                "→".blue(),
+                i + 1,
+                packages.len(),
+                pkg.name,
+                pkg.version
+            );
+
+            // Download
+            let downloaded = downloader
+                .download_entry(&pkg.entry)
+                .await
+                .map_err(|e| SpnError::ConfigError(format!("Download failed: {}", e)))?;
+
+            // Install
+            storage
+                .install(&downloaded)
+                .map_err(|e| SpnError::ConfigError(format!("Install failed: {}", e)))?;
+
+            // Add to lockfile
+            lockfile.add_package(LockfilePackage::new(
+                &pkg.name,
+                &pkg.version,
+                &pkg.entry.cksum,
+            ));
+        }
 
         lockfile
             .write_to_file(&lockfile_path)
@@ -201,9 +230,10 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
     }
 
     println!(
-        "{} Successfully added {}",
+        "{} Successfully added {} ({} package(s))",
         "✨".yellow(),
-        options.package.green()
+        options.package.green(),
+        packages.len()
     );
     Ok(())
 }
