@@ -153,57 +153,6 @@ impl OllamaClient {
         &self.endpoint
     }
 
-    /// Execute a request with automatic retry on transient failures.
-    ///
-    /// Uses exponential backoff: delay * 2^attempt
-    #[allow(dead_code)] // Infrastructure for future use
-    async fn with_retry<F, Fut, T>(&self, operation: F) -> Result<T, BackendError>
-    where
-        F: Fn() -> Fut,
-        Fut: std::future::Future<Output = Result<T, BackendError>>,
-    {
-        let mut last_error = BackendError::NetworkError("No attempts made".to_string());
-
-        for attempt in 0..=self.config.max_retries {
-            match operation().await {
-                Ok(result) => return Ok(result),
-                Err(e) => {
-                    // Only retry on transient network errors
-                    if !Self::is_retryable(&e) {
-                        return Err(e);
-                    }
-
-                    last_error = e;
-
-                    if attempt < self.config.max_retries {
-                        let delay = self.config.retry_delay * 2u32.saturating_pow(attempt);
-                        debug!(
-                            attempt = attempt + 1,
-                            max_retries = self.config.max_retries,
-                            delay_ms = delay.as_millis(),
-                            "Retrying after transient failure"
-                        );
-                        tokio::time::sleep(delay).await;
-                    }
-                }
-            }
-        }
-
-        Err(last_error)
-    }
-
-    /// Check if an error is retryable (transient network issue).
-    #[allow(dead_code)] // Used by with_retry
-    fn is_retryable(error: &BackendError) -> bool {
-        matches!(error, BackendError::NetworkError(msg) if
-            msg.contains("timeout") ||
-            msg.contains("connection") ||
-            msg.contains("Connection") ||
-            msg.contains("reset") ||
-            msg.contains("timed out")
-        )
-    }
-
     /// Check if Ollama is running by pinging the API.
     pub async fn is_running(&self) -> bool {
         let url = format!("{}/api/tags", self.endpoint);
