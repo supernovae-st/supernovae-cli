@@ -1,4 +1,8 @@
 //! Daemon-specific error types.
+//!
+//! TODO(v0.14): Add more granular error variants
+
+#![allow(dead_code)]
 
 use std::path::PathBuf;
 use thiserror::Error;
@@ -85,4 +89,8 @@ pub enum DaemonError {
     /// Stale socket file exists
     #[error("Stale socket file exists at {path}, removing")]
     StaleSocket { path: PathBuf },
+
+    /// Configuration error (e.g., HOME not set)
+    #[error("Configuration error: {0}")]
+    ConfigError(String),
 }

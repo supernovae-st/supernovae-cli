@@ -48,28 +48,47 @@ pub use error::DaemonError;
 pub use model_manager::ModelManager;
 pub use secrets::SecretManager;
 pub use server::{DaemonConfig, DaemonServer};
-pub use service::{ServiceError, ServiceManager, ServiceManagerType, ServiceStatus};
+pub use service::{ServiceError, ServiceManager};
+// Reserved for future service management API
+#[allow(unused_imports)]
+pub use service::{ServiceManagerType, ServiceStatus};
 
 /// Default daemon configuration paths
 pub mod paths {
+    use crate::error::{Result, SpnError};
     use std::path::PathBuf;
 
     /// Get the daemon socket path (~/.spn/daemon.sock)
-    pub fn socket() -> PathBuf {
-        spn_client::default_socket_path()
+    ///
+    /// Returns error if HOME is unavailable.
+    pub fn socket() -> Result<PathBuf> {
+        spn_client::socket_path()
+            .map_err(|e| SpnError::ConfigError(format!("Socket path error: {}", e)))
     }
 
     /// Get the PID file path (~/.spn/daemon.pid)
-    pub fn pid_file() -> PathBuf {
+    ///
+    /// Returns error if HOME is unavailable.
+    pub fn pid_file() -> Result<PathBuf> {
         dirs::home_dir()
             .map(|h| h.join(".spn").join("daemon.pid"))
-            .unwrap_or_else(|| PathBuf::from("/tmp/spn-daemon.pid"))
+            .ok_or_else(|| {
+                SpnError::ConfigError(
+                    "HOME directory not found. Set HOME environment variable.".into(),
+                )
+            })
     }
 
     /// Get the spn directory (~/.spn/)
-    pub fn spn_dir() -> PathBuf {
+    ///
+    /// Returns error if HOME is unavailable.
+    pub fn spn_dir() -> Result<PathBuf> {
         dirs::home_dir()
             .map(|h| h.join(".spn"))
-            .unwrap_or_else(|| PathBuf::from("/tmp/spn"))
+            .ok_or_else(|| {
+                SpnError::ConfigError(
+                    "HOME directory not found. Set HOME environment variable.".into(),
+                )
+            })
     }
 }

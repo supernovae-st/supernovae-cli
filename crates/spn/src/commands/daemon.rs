@@ -32,12 +32,13 @@ async fn start(foreground: bool) -> Result<()> {
     if foreground {
         // Run in foreground
         println!("{} Starting daemon in foreground...", "🚀".green());
-        println!("   Socket: {:?}", paths::socket());
-        println!("   PID file: {:?}", paths::pid_file());
+        println!("   Socket: {:?}", paths::socket()?);
+        println!("   PID file: {:?}", paths::pid_file()?);
         println!();
         println!("Press Ctrl+C to stop");
 
-        let config = DaemonConfig::default();
+        let config = DaemonConfig::new()
+            .map_err(|e| anyhow::anyhow!("Configuration error: {}", e))?;
         let mut server = DaemonServer::new(config);
 
         server
@@ -66,7 +67,9 @@ async fn start(foreground: bool) -> Result<()> {
 
                 if is_daemon_running() {
                     println!("{} Daemon started successfully", "✓".green());
-                    println!("   Socket: {:?}", paths::socket());
+                    if let Ok(socket) = paths::socket() {
+                        println!("   Socket: {:?}", socket);
+                    }
                 } else {
                     println!("{} Daemon may have failed to start", "⚠".yellow());
                     println!("   Check logs or run with --foreground for debugging");
@@ -83,7 +86,7 @@ async fn start(foreground: bool) -> Result<()> {
 
 /// Stop the daemon.
 async fn stop() -> Result<()> {
-    let pid_file = paths::pid_file();
+    let pid_file = paths::pid_file()?;
 
     if !pid_file.exists() {
         println!("{} Daemon is not running (no PID file)", "⚠".yellow());
@@ -127,9 +130,10 @@ async fn stop() -> Result<()> {
     }
 
     // Clean up socket if it exists
-    let socket = paths::socket();
-    if socket.exists() {
-        fs::remove_file(&socket).ok();
+    if let Ok(socket) = paths::socket() {
+        if socket.exists() {
+            fs::remove_file(&socket).ok();
+        }
     }
 
     Ok(())
@@ -138,15 +142,17 @@ async fn stop() -> Result<()> {
 /// Show daemon status.
 async fn status(json: bool) -> Result<()> {
     let running = is_daemon_running();
-    let socket_exists = paths::socket().exists();
+    let socket_path = paths::socket()?;
+    let pid_file_path = paths::pid_file()?;
+    let socket_exists = socket_path.exists();
     let pid = get_daemon_pid();
 
     if json {
         let status = serde_json::json!({
             "running": running,
-            "socket": paths::socket().to_string_lossy(),
+            "socket": socket_path.to_string_lossy(),
             "socket_exists": socket_exists,
-            "pid_file": paths::pid_file().to_string_lossy(),
+            "pid_file": pid_file_path.to_string_lossy(),
             "pid": pid,
         });
         println!("{}", serde_json::to_string_pretty(&status)?);
@@ -170,8 +176,8 @@ async fn status(json: bool) -> Result<()> {
         }
 
         println!();
-        println!("  Socket:  {:?}", paths::socket());
-        println!("  PID file: {:?}", paths::pid_file());
+        println!("  Socket:  {:?}", socket_path);
+        println!("  PID file: {:?}", pid_file_path);
 
         if !running && socket_exists {
             println!();
@@ -195,7 +201,9 @@ async fn restart() -> Result<()> {
 
 /// Check if the daemon is running.
 fn is_daemon_running() -> bool {
-    let pid_file = paths::pid_file();
+    let Ok(pid_file) = paths::pid_file() else {
+        return false;
+    };
 
     if !pid_file.exists() {
         return false;
@@ -214,7 +222,7 @@ fn is_daemon_running() -> bool {
 
 /// Get the daemon PID if running.
 fn get_daemon_pid() -> Option<i32> {
-    let pid_file = paths::pid_file();
+    let pid_file = paths::pid_file().ok()?;
 
     if !pid_file.exists() {
         return None;
