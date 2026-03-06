@@ -85,9 +85,9 @@ impl BinaryRunner {
             return Some(path.canonicalize().unwrap_or(path));
         }
 
-        // Check ~/.spn/bin/
-        if let Some(home) = dirs::home_dir() {
-            let spn_bin = home.join(".spn").join("bin").join(name);
+        // Check ~/.spn/bin/ (using SpnPaths as single source of truth)
+        if let Ok(paths) = spn_client::SpnPaths::new() {
+            let spn_bin = paths.binary(name);
             if spn_bin.exists() {
                 // Resolve symlinks to canonical path
                 return Some(spn_bin.canonicalize().unwrap_or(spn_bin));
