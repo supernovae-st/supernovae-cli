@@ -1,11 +1,14 @@
 //! Tarball downloader with integrity verification.
 //!
 //! Downloads package tarballs from the registry and verifies SHA256 checksums.
+//! Uses retry middleware for resilient network operations.
 
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use indicatif::{ProgressBar, ProgressStyle};
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
@@ -57,6 +60,8 @@ pub struct DownloadedPackage {
 pub struct Downloader {
     client: IndexClient,
     cache_dir: PathBuf,
+    /// HTTP client with retry middleware for resilient downloads.
+    http_client: ClientWithMiddleware,
 }
 
 impl Downloader {
@@ -68,9 +73,20 @@ impl Downloader {
     /// Create a new downloader with custom config.
     pub fn with_config(config: RegistryConfig) -> Self {
         let cache_dir = config.cache_dir.clone();
+
+        // Create retry policy: 3 retries with exponential backoff
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+        let retry_middleware = RetryTransientMiddleware::new_with_policy(retry_policy);
+
+        // Build client with retry middleware
+        let http_client = ClientBuilder::new(reqwest::Client::new())
+            .with(retry_middleware)
+            .build();
+
         Self {
             client: IndexClient::with_config(config),
             cache_dir,
+            http_client,
         }
     }
 
@@ -144,9 +160,10 @@ impl Downloader {
         Ok(())
     }
 
-    /// Fetch from HTTP with progress bar.
+    /// Fetch from HTTP with progress bar and retry support.
     async fn fetch_http(&self, url: &str, dest: &Path) -> Result<(), DownloadError> {
-        let response = reqwest::Client::new()
+        let response = self
+            .http_client
             .get(url)
             .header("User-Agent", format!("spn/{}", env!("CARGO_PKG_VERSION")))
             .send()
