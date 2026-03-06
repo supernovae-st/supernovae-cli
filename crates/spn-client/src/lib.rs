@@ -46,9 +46,11 @@
 //! ```
 
 mod error;
+mod paths;
 mod protocol;
 
 pub use error::Error;
+pub use paths::{PathError, SpnPaths};
 pub use protocol::{Request, Response};
 pub use secrecy::{ExposeSecret, SecretString};
 
@@ -101,10 +103,12 @@ pub const DEFAULT_IPC_TIMEOUT: Duration = Duration::from_secs(30);
 ///
 /// Use this function when you need to ensure a secure socket path.
 /// Returns an error instead of falling back to `/tmp`.
+///
+/// This is a convenience wrapper around `SpnPaths::new()?.socket_file()`.
 pub fn socket_path() -> Result<PathBuf, Error> {
-    dirs::home_dir()
-        .map(|h| h.join(".spn").join("daemon.sock"))
-        .ok_or_else(|| {
+    SpnPaths::new()
+        .map(|p| p.socket_file())
+        .map_err(|_| {
             Error::Configuration(
                 "HOME directory not found. Set HOME environment variable.".into(),
             )
