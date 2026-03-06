@@ -173,16 +173,29 @@ impl DaemonServer {
     }
 
     /// Bind to the Unix socket.
+    ///
+    /// Uses umask to ensure the socket is created with restrictive permissions
+    /// from the start, preventing any race condition between bind and chmod.
     async fn bind_socket(&self) -> Result<UnixListener, DaemonError> {
         let path = &self.config.socket_path;
 
-        // Bind
-        let listener = UnixListener::bind(path).map_err(|source| DaemonError::BindFailed {
+        // Set restrictive umask BEFORE bind to prevent race condition.
+        // umask(0o077) means new files get permissions & ~0o077 = 0o700 max.
+        // For sockets, this results in 0o600 (rw-------).
+        let old_umask = unsafe { libc::umask(0o077) };
+
+        // Bind (socket is created with restricted permissions immediately)
+        let bind_result = UnixListener::bind(path);
+
+        // Restore original umask regardless of bind result
+        unsafe { libc::umask(old_umask) };
+
+        let listener = bind_result.map_err(|source| DaemonError::BindFailed {
             path: path.clone(),
             source,
         })?;
 
-        // Set permissions to 0600
+        // Double-check permissions are correct (defense in depth)
         SocketUtils::set_socket_permissions(path)?;
 
         Ok(listener)
@@ -254,19 +267,52 @@ impl DaemonServer {
         Ok(())
     }
 
-    /// Drain all remaining tasks on shutdown.
+    /// Drain all remaining tasks on shutdown with timeout.
+    ///
+    /// Waits up to 5 seconds for active connections to complete gracefully.
+    /// After timeout, remaining tasks are aborted.
     async fn drain_tasks(tasks: &mut JoinSet<()>) {
-        if !tasks.is_empty() {
-            info!(
-                "Waiting for {} active connections to complete...",
-                tasks.len()
-            );
-            while let Some(result) = tasks.join_next().await {
-                if let Err(e) = result {
-                    error!("Task panicked during shutdown: {:?}", e);
+        use std::time::Duration;
+
+        if tasks.is_empty() {
+            return;
+        }
+
+        let count = tasks.len();
+        info!("Waiting for {} active connections to complete...", count);
+
+        // Give connections 5 seconds to finish gracefully
+        let drain_timeout = Duration::from_secs(5);
+        let deadline = tokio::time::Instant::now() + drain_timeout;
+
+        loop {
+            tokio::select! {
+                result = tasks.join_next() => {
+                    match result {
+                        Some(Ok(())) => {}
+                        Some(Err(e)) => {
+                            error!("Task panicked during shutdown: {:?}", e);
+                        }
+                        None => {
+                            info!("All connections completed");
+                            return;
+                        }
+                    }
+                }
+                _ = tokio::time::sleep_until(deadline) => {
+                    let remaining = tasks.len();
+                    if remaining > 0 {
+                        warn!(
+                            "Drain timeout reached, aborting {} remaining connections",
+                            remaining
+                        );
+                        tasks.abort_all();
+                        // Wait for aborted tasks to finish
+                        while tasks.join_next().await.is_some() {}
+                    }
+                    return;
                 }
             }
-            info!("All connections completed");
         }
     }
 
