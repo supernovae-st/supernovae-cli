@@ -339,7 +339,7 @@ cargo run -p spn-cli -- setup              # Interactive wizard
 cargo run -p spn-cli -- setup nika         # Install Nika
 cargo run -p spn-cli -- setup novanet      # Install NovaNet
 
-# Test (666 tests across workspace)
+# Test (700 tests across workspace)
 cargo test --workspace
 
 # Lint (warnings = errors)
@@ -351,7 +351,7 @@ cargo install --path crates/spn
 
 ## Test Stats
 
-- **666 tests passing** across workspace
+- **700 tests passing** across workspace
 - **Zero clippy errors** with `-D warnings`
 - **MSRV:** Rust 1.85+
 
@@ -359,9 +359,9 @@ cargo install --path crates/spn
 
 | Crate | Version | crates.io |
 |-------|---------|-----------|
-| spn-core | 0.1.1 | [Published](https://crates.io/crates/spn-core) |
+| spn-core | 0.1.0 | [Published](https://crates.io/crates/spn-core) |
 | spn-keyring | 0.1.1 | [Published](https://crates.io/crates/spn-keyring) |
-| spn-ollama | 0.1.1 | [Published](https://crates.io/crates/spn-ollama) |
+| spn-ollama | 0.1.0 | [Published](https://crates.io/crates/spn-ollama) |
 | spn-client | 0.2.2 | [Published](https://crates.io/crates/spn-client) |
 | spn-cli | 0.12.2 | [Published](https://crates.io/crates/spn-cli) |
 
