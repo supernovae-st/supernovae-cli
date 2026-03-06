@@ -565,10 +565,12 @@ impl OllamaClient {
             options: options.map(ChatOptionsRequest::from),
         };
 
+        // Timeout applies to initial connection only; streaming continues until done
         let response = self
             .client
             .post(&url)
             .json(&request)
+            .timeout(self.config.model_timeout)
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
