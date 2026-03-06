@@ -89,11 +89,11 @@ pub fn spinner(message: &str) -> ProgressBar {
 /// Create a spinner with a specific theme
 pub fn spinner_with_theme(message: &str, theme: SpinnerTheme) -> ProgressBar {
     let pb = ProgressBar::new_spinner();
-    let _frames = theme.frames().join(" ");
+    let frames = theme.frames().to_vec();
 
     pb.set_style(
         ProgressStyle::default_spinner()
-            .tick_strings(&theme.frames().iter().copied().collect::<Vec<_>>())
+            .tick_strings(&frames)
             .template(&format!("{{spinner:.cyan}} {}", message))
             .unwrap(),
     );

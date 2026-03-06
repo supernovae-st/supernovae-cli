@@ -845,20 +845,347 @@ fn print_nika_success() {
 }
 
 // ============================================================================
-// NovaNet Setup (placeholder)
+// NovaNet Setup
 // ============================================================================
 
 /// Install and configure NovaNet knowledge graph.
-async fn run_novanet_setup(_no_sync: bool) -> Result<()> {
+async fn run_novanet_setup(no_sync: bool) -> Result<()> {
+    print_novanet_banner();
+
+    let theme = ColorfulTheme::default();
+
+    // Step 1: Check prerequisites
+    println!("{}", "STEP 1/4: Checking Prerequisites".bold().underline());
     println!();
-    println!("{}", "NovaNet setup is not yet implemented.".yellow());
-    println!("{}", "For now, follow the manual setup at:".dimmed());
+
+    let has_cargo = Command::new("cargo").arg("--version").output().is_ok();
+    let has_brew = Command::new("brew").arg("--version").output().is_ok();
+    let has_novanet = Command::new("novanet").arg("--version").output().is_ok();
+    let has_neo4j = check_neo4j_connection();
+
+    // Show status
     println!(
-        "  {}",
-        "https://github.com/supernovae-st/novanet#readme".cyan()
+        "  {} Rust/Cargo: {}",
+        if has_cargo { "✓".green() } else { "✗".red() },
+        if has_cargo { "installed" } else { "not found" }
+    );
+    println!(
+        "  {} Homebrew: {}",
+        if has_brew { "✓".green() } else { "○".dimmed() },
+        if has_brew { "installed" } else { "not found (optional)" }
+    );
+    println!(
+        "  {} NovaNet CLI: {}",
+        if has_novanet { "✓".green() } else { "○".yellow() },
+        if has_novanet { "installed" } else { "not installed" }
+    );
+    println!(
+        "  {} Neo4j: {}",
+        if has_neo4j { "✓".green() } else { "○".yellow() },
+        if has_neo4j { "connected" } else { "not running" }
     );
     println!();
+
+    // Step 2: Install NovaNet CLI if needed
+    if !has_novanet {
+        println!("{}", "STEP 2/4: Installing NovaNet CLI".bold().underline());
+        println!();
+
+        if !has_cargo && !has_brew {
+            println!(
+                "{}",
+                "⚠️  Neither cargo nor brew found. Install one of:".yellow()
+            );
+            println!("     {}", "• cargo: https://rustup.rs".dimmed());
+            println!("     {}", "• brew: https://brew.sh".dimmed());
+            return Err(SpnError::NotFound(
+                "cargo or brew required for installation".into(),
+            ));
+        }
+
+        let methods: Vec<&str> = if has_brew && has_cargo {
+            vec!["Homebrew (recommended)", "Cargo", "Skip installation"]
+        } else if has_brew {
+            vec!["Homebrew", "Skip installation"]
+        } else {
+            vec!["Cargo", "Skip installation"]
+        };
+
+        let selection = dialoguer::Select::with_theme(&theme)
+            .with_prompt("How would you like to install NovaNet?")
+            .items(&methods)
+            .default(0)
+            .interact()
+            .map_err(dialog_err)?;
+
+        let method = methods[selection];
+
+        if method.contains("Skip") {
+            println!("{}", "Skipping installation.".dimmed());
+        } else if method.contains("Homebrew") {
+            println!(
+                "  {} brew install supernovae-st/tap/novanet",
+                "Running:".cyan()
+            );
+            match Command::new("brew")
+                .args(["install", "supernovae-st/tap/novanet"])
+                .status()
+            {
+                Ok(status) if status.success() => {
+                    println!("  {} NovaNet CLI installed", "✓".green());
+                }
+                Ok(status) => {
+                    println!(
+                        "  {} Installation failed (exit code: {:?})",
+                        "✗".red(),
+                        status.code()
+                    );
+                }
+                Err(e) => {
+                    println!("  {} Installation error: {}", "✗".red(), e);
+                }
+            }
+        } else if method.contains("Cargo") {
+            println!("  {} cargo install novanet-cli", "Running:".cyan());
+            match Command::new("cargo")
+                .args(["install", "novanet-cli"])
+                .status()
+            {
+                Ok(status) if status.success() => {
+                    println!("  {} NovaNet CLI installed", "✓".green());
+                }
+                Ok(status) => {
+                    println!(
+                        "  {} Installation failed (exit code: {:?})",
+                        "✗".red(),
+                        status.code()
+                    );
+                }
+                Err(e) => {
+                    println!("  {} Installation error: {}", "✗".red(), e);
+                }
+            }
+        }
+        println!();
+    } else {
+        println!("{}", "STEP 2/4: NovaNet CLI Already Installed".bold().underline());
+        println!();
+        // Show version
+        if let Ok(output) = Command::new("novanet").arg("--version").output() {
+            let version = String::from_utf8_lossy(&output.stdout);
+            println!("  {} {}", "Version:".dimmed(), version.trim());
+        }
+        println!();
+    }
+
+    // Step 3: Check/Setup Neo4j
+    println!("{}", "STEP 3/4: Neo4j Database".bold().underline());
+    println!();
+
+    if !has_neo4j {
+        println!(
+            "{}",
+            "╭─────────────────────────────────────────────────────────────────────────────╮"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "│  💡 NEO4J NOT RUNNING                                                       │"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "├─────────────────────────────────────────────────────────────────────────────┤"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "│  NovaNet requires Neo4j to store the knowledge graph.                       │"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "│                                                                             │"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "│  Quick start with Docker:                                                   │"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "│  docker run -d --name neo4j -p 7474:7474 -p 7687:7687 \\                     │"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "│    -e NEO4J_AUTH=neo4j/password neo4j:5                                     │"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "│                                                                             │"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "│  Or install locally:                                                        │"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "│  brew install neo4j && neo4j start                                          │"
+                .yellow()
+        );
+        println!(
+            "{}",
+            "╰─────────────────────────────────────────────────────────────────────────────╯"
+                .yellow()
+        );
+        println!();
+
+        let has_docker = Command::new("docker").arg("--version").output().is_ok();
+
+        if has_docker {
+            let start_docker = Confirm::with_theme(&theme)
+                .with_prompt("Start Neo4j with Docker now?")
+                .default(true)
+                .interact()
+                .map_err(dialog_err)?;
+
+            if start_docker {
+                println!("  {} Starting Neo4j container...", "→".cyan());
+                let docker_result = Command::new("docker")
+                    .args([
+                        "run", "-d",
+                        "--name", "novanet-neo4j",
+                        "-p", "7474:7474",
+                        "-p", "7687:7687",
+                        "-e", "NEO4J_AUTH=neo4j/password",
+                        "-e", "NEO4J_PLUGINS=[\"apoc\"]",
+                        "neo4j:5",
+                    ])
+                    .status();
+
+                match docker_result {
+                    Ok(status) if status.success() => {
+                        println!("  {} Neo4j container started", "✓".green());
+                        println!("  {} Waiting for Neo4j to be ready...", "→".cyan());
+                        // Give Neo4j a few seconds to start
+                        std::thread::sleep(std::time::Duration::from_secs(5));
+                    }
+                    Ok(_) => {
+                        println!(
+                            "  {} Docker start failed (container may already exist)",
+                            "⚠".yellow()
+                        );
+                        println!(
+                            "     {}",
+                            "Try: docker start novanet-neo4j".dimmed()
+                        );
+                    }
+                    Err(e) => {
+                        println!("  {} Docker error: {}", "✗".red(), e);
+                    }
+                }
+            }
+        }
+    } else {
+        println!("  {} Neo4j is running and accepting connections", "✓".green());
+    }
+    println!();
+
+    // Step 4: Configure editors (if not skipped)
+    if !no_sync {
+        println!("{}", "STEP 4/4: Editor Configuration".bold().underline());
+        println!();
+
+        // Detect Claude Code
+        let claude_config = dirs::config_dir()
+            .map(|d| d.join("claude-code"))
+            .filter(|d| d.exists());
+
+        if claude_config.is_some() {
+            println!("  {} Claude Code detected, syncing...", "→".cyan());
+            match Command::new("spn")
+                .args(["sync", "--enable", "claude-code"])
+                .status()
+            {
+                Ok(status) if status.success() => {
+                    println!("  {} Claude Code configured", "✓".green());
+                }
+                _ => {
+                    println!("  {} Claude Code sync skipped", "○".dimmed());
+                }
+            }
+        }
+        println!();
+    }
+
+    print_novanet_success();
     Ok(())
+}
+
+/// Check if Neo4j is running and accepting connections.
+fn check_neo4j_connection() -> bool {
+    // Try to connect to Neo4j bolt port
+    use std::net::TcpStream;
+    use std::time::Duration;
+
+    TcpStream::connect_timeout(
+        &"127.0.0.1:7687".parse().unwrap(),
+        Duration::from_millis(500),
+    )
+    .is_ok()
+}
+
+fn print_novanet_banner() {
+    println!();
+    println!(
+        "{}",
+        r#"
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║                                                               ║
+    ║   ███╗   ██╗ ██████╗ ██╗   ██╗ █████╗ ███╗   ██╗███████╗████████╗
+    ║   ████╗  ██║██╔═══██╗██║   ██║██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
+    ║   ██╔██╗ ██║██║   ██║██║   ██║███████║██╔██╗ ██║█████╗     ██║
+    ║   ██║╚██╗██║██║   ██║╚██╗ ██╔╝██╔══██║██║╚██╗██║██╔══╝     ██║
+    ║   ██║ ╚████║╚██████╔╝ ╚████╔╝ ██║  ██║██║ ╚████║███████╗   ██║
+    ║   ╚═╝  ╚═══╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
+    ║                                                               ║
+    ║   Knowledge Graph for AI Agents                               ║
+    ║   https://github.com/supernovae-st/novanet                    ║
+    ║                                                               ║
+    ╚═══════════════════════════════════════════════════════════════╝
+"#
+        .cyan()
+    );
+    println!();
+}
+
+fn print_novanet_success() {
+    println!("{}", "🎉 NOVANET SETUP COMPLETE!".bold().green());
+    println!();
+    println!("{}", "WHAT'S NEXT?".bold());
+    println!();
+    println!("  {} Launch the TUI explorer:", "1.".cyan().bold());
+    println!("     {}", "novanet tui".cyan());
+    println!();
+    println!("  {} Validate your schema:", "2.".cyan().bold());
+    println!("     {}", "spn schema validate".cyan());
+    println!();
+    println!("  {} Generate schema artifacts:", "3.".cyan().bold());
+    println!("     {}", "spn schema generate".cyan());
+    println!();
+    println!("  {} Query the graph:", "4.".cyan().bold());
+    println!("     {}", "novanet query \"MATCH (n) RETURN n LIMIT 10\"".cyan());
+    println!();
+    println!(
+        "{}",
+        "Documentation: https://github.com/supernovae-st/novanet#readme".dimmed()
+    );
+    println!();
 }
 
 // ============================================================================

@@ -23,6 +23,7 @@ mod manifest;
 mod mcp;
 mod secrets;
 mod storage;
+mod suggest;
 mod sync;
 mod ux;
 
@@ -694,24 +695,15 @@ enum ConfigCommands {
 
 #[derive(Subcommand)]
 enum SchemaCommands {
-    /// Show schema status
-    Status,
-    /// Validate schema
+    /// Show schema statistics (JSON output)
+    #[command(alias = "status")]
+    Stats,
+    /// Validate YAML ↔ Neo4j sync
     Validate,
-    /// Resolve and show merged schema
-    Resolve,
-    /// Show diff vs last resolved
-    Diff,
-    /// Exclude a node from packages
-    Exclude {
-        /// Node name to exclude
-        name: String,
-    },
-    /// Re-include an excluded node
-    Include {
-        /// Node name to include
-        name: String,
-    },
+    /// Generate all schema artifacts (TypeScript, Cypher, etc.)
+    Generate,
+    /// Validate Cypher seed files
+    CypherValidate,
 }
 
 #[derive(Subcommand)]
@@ -931,7 +923,24 @@ enum ProviderCommands {
 
 #[tokio::main]
 async fn main() {
-    let cli = Cli::parse();
+    // Try to parse CLI args, with "did you mean?" suggestions on error
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(e) => {
+            // Check if this is an unrecognized subcommand error
+            let error_str = e.to_string();
+            if error_str.contains("unrecognized subcommand") {
+                // Extract the invalid command from the error
+                if let Some(start) = error_str.find('\'') {
+                    if let Some(end) = error_str[start + 1..].find('\'') {
+                        let invalid_cmd = &error_str[start + 1..start + 1 + end];
+                        suggest::print_suggestion(invalid_cmd);
+                    }
+                }
+            }
+            e.exit();
+        }
+    };
 
     // Initialize logging
     tracing_subscriber::fmt()

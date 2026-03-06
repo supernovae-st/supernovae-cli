@@ -1,7 +1,8 @@
 # spn-cli Improvement Plan
 
 **Created:** 2026-03-06
-**Status:** Planning
+**Updated:** 2026-03-06
+**Status:** In Progress (Phase 3 Complete)
 **Target:** spn-cli v0.13.0+
 
 ---
@@ -372,11 +373,11 @@ spn add llama3.2 --type model
 ## Part 4: Implementation Checklist
 
 ### Phase 1: Bug Fixes
-- [ ] Verify novanet schema subcommands and fix `schema status` if needed
+- [x] Verify novanet schema subcommands and fix `schema status` → now `schema stats` with alias
 - [ ] Verify and fix `nv db` subcommands
 - [ ] Fix `config show` output
 - [ ] Add tests for proxy commands
-- [ ] Implement `spn setup novanet` wizard
+- [x] Implement `spn setup novanet` wizard
 
 ### Phase 2: Proxy Completeness
 - [ ] Add `spn nk trace`
@@ -392,18 +393,18 @@ spn add llama3.2 --type model
 - [ ] Add `spn nv doc`
 
 ### Phase 3: UX Improvements
-- [ ] Improve all error messages in error.rs
-- [ ] Add "did you mean" suggestion system
-- [ ] Add `spn topic models`
-- [ ] Add `spn topic providers`
-- [ ] Add `spn topic daemon`
-- [ ] Add `spn topic architecture`
+- [x] Improve all error messages in error.rs (done in v0.12.3-v0.12.5)
+- [x] Add "did you mean" suggestion system (suggest.rs)
+- [x] Add `spn topic models`
+- [x] Add `spn topic providers`
+- [x] Add `spn topic daemon`
+- [x] Add `spn topic architecture` (with `arch` alias)
 
 ### Phase 4: Documentation
 - [ ] Update README with architecture diagram
 - [ ] Add FAQ section
 - [ ] Add troubleshooting guide
-- [ ] Update CLAUDE.md
+- [x] Update CLAUDE.md
 
 ### Phase 5: Unified Model (v0.14)
 - [ ] Design RFC
@@ -501,12 +502,10 @@ spn nv knowledge                MISSING   Proxy     novanet
 spn nv stats                    MISSING   Proxy     novanet
 spn nv diff                     MISSING   Proxy     novanet
 spn nv doc                      MISSING   Proxy     novanet
-spn schema status               BUG       Proxy     novanet
+spn schema stats                FIXED     Proxy     novanet (alias: status)
 spn schema validate             OK        Proxy     novanet
-spn schema resolve              OK        Proxy     novanet
-spn schema diff                 OK        Proxy     novanet
-spn schema exclude              OK        Proxy     novanet
-spn schema include              OK        Proxy     novanet
+spn schema generate             OK        Proxy     novanet (NEW)
+spn schema cypher-validate      OK        Proxy     novanet (NEW)
 spn config show                 BUG?      Native    local
 spn config where                OK        Native    local
 spn config list                 OK        Native    local
@@ -529,7 +528,7 @@ spn status                      OK        Native    local
 spn topic                       OK        Native    local
 spn setup                       OK        Native    wizard
 spn setup nika                  OK        Native    wizard
-spn setup novanet               STUB      Native    wizard (not implemented)
+spn setup novanet               FIXED     Native    wizard (implemented)
 spn setup claude-code           OK        Native    wizard
 ```
 

@@ -2,40 +2,48 @@
 //!
 //! Manages NovaNet schemas (node classes, arc classes).
 //! This is a proxy to `novanet schema` commands.
+//!
+//! Available commands (aligned with novanet schema --help):
+//! - stats: Extract schema statistics (JSON output)
+//! - validate: Validate YAML ↔ Neo4j sync
+//! - generate: Generate all artifacts (TypeScript, Cypher, etc.)
+//! - cypher-validate: Validate Cypher seed files
 
 use crate::error::{CliError, Result};
 use crate::SchemaCommands;
+use console::style;
 
 pub async fn run(command: SchemaCommands) -> Result<()> {
     // Check if novanet is available
     let novanet_available = which::which("novanet").is_ok();
 
     if !novanet_available {
-        println!("⚠️  NovaNet CLI not found");
-        println!();
-        println!("   Schema commands require NovaNet to be installed:");
-        println!("   • brew install supernovae-st/tap/novanet (builds from source)");
-        println!("   • cargo install --git https://github.com/supernovae-st/novanet.git");
-        println!();
+        eprintln!("{} NovaNet CLI not found", style("⚠").yellow().bold());
+        eprintln!();
+        eprintln!("   Schema commands require NovaNet to be installed:");
+        eprintln!("   {} brew install supernovae-st/tap/novanet", style("•").cyan());
+        eprintln!("   {} cargo install novanet-cli", style("•").cyan());
+        eprintln!();
+        eprintln!("   Run {} to install automatically.", style("spn setup novanet").cyan());
+        eprintln!();
         return Ok(());
     }
 
     match command {
-        SchemaCommands::Status => schema_status().await,
+        SchemaCommands::Stats => schema_stats().await,
         SchemaCommands::Validate => schema_validate().await,
-        SchemaCommands::Resolve => schema_resolve().await,
-        SchemaCommands::Diff => schema_diff().await,
-        SchemaCommands::Exclude { name } => schema_exclude(&name).await,
-        SchemaCommands::Include { name } => schema_include(&name).await,
+        SchemaCommands::Generate => schema_generate().await,
+        SchemaCommands::CypherValidate => schema_cypher_validate().await,
     }
 }
 
-async fn schema_status() -> Result<()> {
-    println!("📊 Schema status:\n");
+/// Show schema statistics (JSON output).
+/// Proxies to `novanet schema stats`.
+async fn schema_stats() -> Result<()> {
+    println!("{} Schema statistics:\n", style("📊").cyan());
 
-    // Run novanet schema status
     let output = std::process::Command::new("novanet")
-        .args(["schema", "status"])
+        .args(["schema", "stats"])
         .output();
 
     match output {
@@ -48,15 +56,15 @@ async fn schema_status() -> Result<()> {
                     println!("   No schema configured in this project.");
                     println!();
                     println!("   To add a schema package:");
-                    println!("   • spn add @novanet/core-schema");
+                    println!("   {} spn add @novanet/core-schema", style("•").cyan());
                 } else {
-                    print!("{}", stderr);
+                    eprint!("{}", stderr);
                 }
             }
         }
         Err(e) => {
             return Err(CliError::CommandFailed(format!(
-                "novanet schema status: {}",
+                "novanet schema stats: {}",
                 e
             )));
         }
@@ -65,8 +73,10 @@ async fn schema_status() -> Result<()> {
     Ok(())
 }
 
+/// Validate YAML ↔ Neo4j sync.
+/// Proxies to `novanet schema validate`.
 async fn schema_validate() -> Result<()> {
-    println!("✅ Validating schema...\n");
+    println!("{} Validating schema...\n", style("✓").green());
 
     let output = std::process::Command::new("novanet")
         .args(["schema", "validate"])
@@ -76,7 +86,7 @@ async fn schema_validate() -> Result<()> {
         Ok(out) => {
             print!("{}", String::from_utf8_lossy(&out.stdout));
             if !out.status.success() {
-                print!("{}", String::from_utf8_lossy(&out.stderr));
+                eprint!("{}", String::from_utf8_lossy(&out.stderr));
             }
         }
         Err(e) => {
@@ -90,24 +100,28 @@ async fn schema_validate() -> Result<()> {
     Ok(())
 }
 
-async fn schema_resolve() -> Result<()> {
-    println!("🔗 Resolving merged schema...\n");
+/// Generate all schema artifacts (TypeScript, Cypher, etc.).
+/// Proxies to `novanet schema generate`.
+async fn schema_generate() -> Result<()> {
+    println!("{} Generating schema artifacts...\n", style("🔧").cyan());
 
     let output = std::process::Command::new("novanet")
-        .args(["schema", "resolve"])
+        .args(["schema", "generate"])
         .output();
 
     match output {
         Ok(out) => {
             if out.status.success() {
                 print!("{}", String::from_utf8_lossy(&out.stdout));
+                println!();
+                println!("   {} Schema artifacts generated successfully.", style("✓").green());
             } else {
-                print!("{}", String::from_utf8_lossy(&out.stderr));
+                eprint!("{}", String::from_utf8_lossy(&out.stderr));
             }
         }
         Err(e) => {
             return Err(CliError::CommandFailed(format!(
-                "novanet schema resolve: {}",
+                "novanet schema generate: {}",
                 e
             )));
         }
@@ -116,81 +130,28 @@ async fn schema_resolve() -> Result<()> {
     Ok(())
 }
 
-async fn schema_diff() -> Result<()> {
-    println!("📝 Schema diff:\n");
+/// Validate Cypher seed files.
+/// Proxies to `novanet schema cypher-validate`.
+async fn schema_cypher_validate() -> Result<()> {
+    println!("{} Validating Cypher seed files...\n", style("🔍").cyan());
 
     let output = std::process::Command::new("novanet")
-        .args(["schema", "diff"])
+        .args(["schema", "cypher-validate"])
         .output();
 
     match output {
         Ok(out) => {
             if out.status.success() {
-                let stdout = String::from_utf8_lossy(&out.stdout);
-                if stdout.trim().is_empty() {
-                    println!("   No changes detected.");
-                } else {
-                    print!("{}", stdout);
-                }
+                print!("{}", String::from_utf8_lossy(&out.stdout));
+                println!();
+                println!("   {} Cypher files are valid.", style("✓").green());
             } else {
-                print!("{}", String::from_utf8_lossy(&out.stderr));
+                eprint!("{}", String::from_utf8_lossy(&out.stderr));
             }
         }
         Err(e) => {
             return Err(CliError::CommandFailed(format!(
-                "novanet schema diff: {}",
-                e
-            )));
-        }
-    }
-
-    Ok(())
-}
-
-async fn schema_exclude(name: &str) -> Result<()> {
-    println!("➖ Excluding node: {}\n", name);
-
-    let output = std::process::Command::new("novanet")
-        .args(["schema", "exclude", name])
-        .output();
-
-    match output {
-        Ok(out) => {
-            if out.status.success() {
-                println!("   ✓ Node '{}' excluded from schema", name);
-            } else {
-                print!("{}", String::from_utf8_lossy(&out.stderr));
-            }
-        }
-        Err(e) => {
-            return Err(CliError::CommandFailed(format!(
-                "novanet schema exclude: {}",
-                e
-            )));
-        }
-    }
-
-    Ok(())
-}
-
-async fn schema_include(name: &str) -> Result<()> {
-    println!("➕ Including node: {}\n", name);
-
-    let output = std::process::Command::new("novanet")
-        .args(["schema", "include", name])
-        .output();
-
-    match output {
-        Ok(out) => {
-            if out.status.success() {
-                println!("   ✓ Node '{}' re-included in schema", name);
-            } else {
-                print!("{}", String::from_utf8_lossy(&out.stderr));
-            }
-        }
-        Err(e) => {
-            return Err(CliError::CommandFailed(format!(
-                "novanet schema include: {}",
+                "novanet schema cypher-validate: {}",
                 e
             )));
         }
@@ -207,7 +168,25 @@ mod tests {
     async fn test_schema_commands_handle_missing_novanet() {
         // This test verifies the command doesn't panic when novanet is missing
         // The actual behavior depends on whether novanet is installed
-        let result = run(SchemaCommands::Status).await;
+        let result = run(SchemaCommands::Stats).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_schema_validate_handles_missing_novanet() {
+        let result = run(SchemaCommands::Validate).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_schema_generate_handles_missing_novanet() {
+        let result = run(SchemaCommands::Generate).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_schema_cypher_validate_handles_missing_novanet() {
+        let result = run(SchemaCommands::CypherValidate).await;
         assert!(result.is_ok());
     }
 }
