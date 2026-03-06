@@ -1,6 +1,6 @@
 [package]
 name = "spn-cli"
-version = "0.12.4"
+version = "0.12.5"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "SuperNovae Package Manager - unified CLI for AI workflows, secrets, MCP servers, and daemon management"
@@ -41,9 +41,9 @@ docker = []
 
 [dependencies]
 # Workspace crates
-spn-client = { version = "0.2.3", path = "../spn-client" }
-spn-keyring = { version = "0.1.2", path = "../spn-keyring", default-features = false }
-spn-ollama = { version = "0.1.1", path = "../spn-ollama" }
+spn-client = { version = "0.2.4", path = "../spn-client" }
+spn-keyring = { version = "0.1.3", path = "../spn-keyring", default-features = false }
+spn-ollama = { version = "0.1.2", path = "../spn-ollama" }
 
 # CLI framework
 clap = { version = "4.5", features = ["derive", "env"] }
@@ -79,15 +79,15 @@ sha2 = "0.10"
 hex = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 url = "2.5"
-dirs = "5.0"
-which = "6.0"
+dirs = "6.0"
+which = "7.0"
 semver = "1.0"
 walkdir = "2.5"
 urlencoding = "2.1"
 indicatif = "0.17"
 console = "0.15"
 dialoguer = "0.11"
-colored = "2.1"
+colored = "3.0"
 similar = { version = "2.6", features = ["inline"] }
 
 # Security

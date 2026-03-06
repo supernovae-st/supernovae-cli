@@ -1,6 +1,6 @@
 [package]
 name = "spn-client"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "Client library for communicating with the spn daemon - secure secret management for AI applications"
@@ -31,7 +31,7 @@ secrecy = { version = "0.10", features = ["serde"] }
 thiserror = "2"
 
 # Utilities
-dirs = "5.0"
+dirs = "6.0"
 tracing = "0.1"
 
 [dev-dependencies]
