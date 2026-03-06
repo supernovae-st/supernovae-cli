@@ -12,14 +12,16 @@
 | Phase 1: SpnPaths | ✅ Complete | 6 | +419 (paths.rs) |
 | Phase 2: IDE Adapters | ✅ Complete | 2 | +280/-69 (config_loader) |
 | Phase 3: Test Coverage | ✅ Complete | 1 | +172 (10 tests now) |
-| **Total** | **✅ Complete** | **9** | **+800 net** |
+| Verification Fixes | ✅ Complete | 1 | +32/-29 |
+| **Total** | **✅ Complete** | **10** | **+800 net** |
 
 ### Key Achievements
 
 - **SpnPaths** now in spn-client (12 unit tests)
 - **config_loader** extracted (10 unit tests)
 - **downloader.rs** coverage: 4 → 10 tests
-- Zero `dirs::home_dir().join(".spn")` scattered calls
+- **100% SpnPaths compliance** — verified via deep codebase scan
+- Zero `dirs::home_dir().join(".spn")` scattered calls (except in SpnPaths impl)
 
 ---
 
