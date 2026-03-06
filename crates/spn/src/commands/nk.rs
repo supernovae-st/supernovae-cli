@@ -4,7 +4,7 @@
 
 use crate::error::Result;
 use crate::interop::binary::{BinaryRunner, BinaryType};
-use crate::{JobCommands, NikaCommands};
+use crate::{JobCommands, NikaCommands, NikaConfigCommands, TraceCommands};
 
 use colored::Colorize;
 
@@ -33,6 +33,34 @@ pub async fn run(command: NikaCommands) -> Result<()> {
             JobCommands::Start => vec!["jobs".to_string(), "start".to_string()],
             JobCommands::Status => vec!["jobs".to_string(), "status".to_string()],
             JobCommands::Stop => vec!["jobs".to_string(), "stop".to_string()],
+        },
+        NikaCommands::New { name, template } => {
+            vec![
+                "new".to_string(),
+                name.clone(),
+                "--template".to_string(),
+                template.clone(),
+            ]
+        }
+        NikaCommands::Trace { command } => match command {
+            TraceCommands::List { limit } => {
+                vec!["trace".to_string(), "list".to_string(), "--limit".to_string(), limit.to_string()]
+            }
+            TraceCommands::Show { id } => {
+                vec!["trace".to_string(), "show".to_string(), id.clone()]
+            }
+            TraceCommands::Clean { keep } => {
+                vec!["trace".to_string(), "clean".to_string(), "--keep".to_string(), keep.clone()]
+            }
+        },
+        NikaCommands::Config { command } => match command {
+            NikaConfigCommands::Show => vec!["config".to_string(), "show".to_string()],
+            NikaConfigCommands::Get { key } => {
+                vec!["config".to_string(), "get".to_string(), key.clone()]
+            }
+            NikaConfigCommands::Set { key, value } => {
+                vec!["config".to_string(), "set".to_string(), key.clone(), value.clone()]
+            }
         },
     };
 

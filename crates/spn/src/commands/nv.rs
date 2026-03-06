@@ -4,7 +4,7 @@
 
 use crate::error::Result;
 use crate::interop::binary::{BinaryRunner, BinaryType};
-use crate::{DbCommands, McpServerCommands, NovaNetCommands};
+use crate::{DbCommands, EntityCommands, KnowledgeCommands, LocaleCommands, McpServerCommands, NovaNetCommands};
 
 use colored::Colorize;
 
@@ -69,6 +69,121 @@ pub async fn run(command: NovaNetCommands) -> Result<()> {
             DbCommands::Reset => vec!["db".to_string(), "reset".to_string()],
             DbCommands::Migrate => vec!["db".to_string(), "migrate".to_string()],
         },
+        NovaNetCommands::Search { query, kind, json } => {
+            let mut args = vec!["search".to_string(), query.clone()];
+            if let Some(k) = kind {
+                args.push("--kind".to_string());
+                args.push(k.clone());
+            }
+            if *json {
+                args.push("--json".to_string());
+            }
+            args
+        }
+        NovaNetCommands::Entity { command } => match command {
+            EntityCommands::List { category, json } => {
+                let mut args = vec!["entity".to_string(), "list".to_string()];
+                if let Some(c) = category {
+                    args.push("--category".to_string());
+                    args.push(c.clone());
+                }
+                if *json {
+                    args.push("--json".to_string());
+                }
+                args
+            }
+            EntityCommands::Show { key, with_native } => {
+                let mut args = vec!["entity".to_string(), "show".to_string(), key.clone()];
+                if *with_native {
+                    args.push("--with-native".to_string());
+                }
+                args
+            }
+            EntityCommands::Generate { key, locale } => {
+                vec![
+                    "entity".to_string(),
+                    "generate".to_string(),
+                    key.clone(),
+                    "--locale".to_string(),
+                    locale.clone(),
+                ]
+            }
+        },
+        NovaNetCommands::Export { output, format, entity } => {
+            let mut args = vec![
+                "export".to_string(),
+                "--output".to_string(),
+                output.clone(),
+                "--format".to_string(),
+                format.clone(),
+            ];
+            if let Some(e) = entity {
+                args.push("--entity".to_string());
+                args.push(e.clone());
+            }
+            args
+        }
+        NovaNetCommands::Locale { command } => match command {
+            LocaleCommands::List { json } => {
+                let mut args = vec!["locale".to_string(), "list".to_string()];
+                if *json {
+                    args.push("--json".to_string());
+                }
+                args
+            }
+            LocaleCommands::Show { code } => {
+                vec!["locale".to_string(), "show".to_string(), code.clone()]
+            }
+            LocaleCommands::Coverage { locale } => {
+                vec!["locale".to_string(), "coverage".to_string(), locale.clone()]
+            }
+        },
+        NovaNetCommands::Knowledge { command } => match command {
+            KnowledgeCommands::Generate { entity, locale } => {
+                vec![
+                    "knowledge".to_string(),
+                    "generate".to_string(),
+                    entity.clone(),
+                    "--locale".to_string(),
+                    locale.clone(),
+                ]
+            }
+            KnowledgeCommands::List { locale, r#type } => {
+                let mut args = vec!["knowledge".to_string(), "list".to_string()];
+                if let Some(l) = locale {
+                    args.push("--locale".to_string());
+                    args.push(l.clone());
+                }
+                if let Some(t) = r#type {
+                    args.push("--type".to_string());
+                    args.push(t.clone());
+                }
+                args
+            }
+        },
+        NovaNetCommands::Stats { json } => {
+            let mut args = vec!["stats".to_string()];
+            if *json {
+                args.push("--json".to_string());
+            }
+            args
+        }
+        NovaNetCommands::Diff { json } => {
+            let mut args = vec!["diff".to_string()];
+            if *json {
+                args.push("--json".to_string());
+            }
+            args
+        }
+        NovaNetCommands::Doc { output, format } => {
+            vec![
+                "doc".to_string(),
+                "--output".to_string(),
+                output.clone(),
+                "--format".to_string(),
+                format.clone(),
+            ]
+        }
     };
 
     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();

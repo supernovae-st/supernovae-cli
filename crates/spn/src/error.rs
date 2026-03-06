@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use colored::Colorize;
+use console::style;
 use thiserror::Error;
 
 /// Result type alias for CLI operations.
@@ -105,25 +105,25 @@ impl SpnError {
         match self {
             SpnError::PackageNotFound(name) => Some(format!(
                 "Try: {} {} to find similar packages",
-                "spn search".cyan(),
+                style("spn search").cyan(),
                 name
             )),
 
             SpnError::ManifestNotFound => Some(format!(
                 "Run {} to create a new spn.yaml file",
-                "spn init".cyan()
+                style("spn init").cyan()
             )),
 
             SpnError::LockfileNotFound => Some(format!(
                 "Run {} to generate spn.lock from spn.yaml",
-                "spn install".cyan()
+                style("spn install").cyan()
             )),
 
-            SpnError::IndexError(_) => Some(
+            SpnError::IndexError(_) => Some(format!(
                 "Check your network connection and try again.\n   \
-                 Registry: https://github.com/supernovae-st/supernovae-registry"
-                    .to_string(),
-            ),
+                 Registry: {}",
+                style("https://github.com/supernovae-st/supernovae-registry").dim()
+            )),
 
             SpnError::NetworkError(_) => Some(
                 "Check your network connection. If behind a proxy, ensure \
@@ -134,25 +134,25 @@ impl SpnError {
             SpnError::McpServerNotFound(name) => Some(format!(
                 "Available MCP servers: {}\n   \
                  Install with: {} {}",
-                "neo4j, firecrawl, perplexity, supadata, github, slack".dimmed(),
-                "spn mcp add".cyan(),
+                style("neo4j, firecrawl, perplexity, supadata, github, slack").dim(),
+                style("spn mcp add").cyan(),
                 name
             )),
 
             SpnError::SkillNotFound(name) => Some(format!(
                 "Search for skills: {}\n   \
                  Install with: {} {}",
-                "spn skill list".cyan(),
-                "spn skill add".cyan(),
+                style("spn skill list").cyan(),
+                style("spn skill add").cyan(),
                 name
             )),
 
             SpnError::IntegrityError { package, .. } => Some(format!(
                 "The package {} may have been corrupted during download.\n   \
                  Try: {} && {}",
-                package,
-                "spn remove".cyan(),
-                "spn add".cyan()
+                style(package).bold(),
+                style("spn remove").cyan(),
+                style("spn add").cyan()
             )),
 
             SpnError::VersionConflict(msg) => Some(format!(
@@ -160,7 +160,7 @@ impl SpnError {
                  Try relaxing version constraints in spn.yaml or use:\n   \
                  {} to update to compatible versions",
                 msg,
-                "spn update".cyan()
+                style("spn update").cyan()
             )),
 
             SpnError::DependencyResolution(msg) => Some(format!(
@@ -172,61 +172,85 @@ impl SpnError {
             SpnError::CommandNotFound(cmd) => Some(format!(
                 "Command '{}' not found.\n   \
                  Run {} for available commands.",
-                cmd,
-                "spn --help".cyan()
+                style(cmd).yellow(),
+                style("spn --help").cyan()
             )),
 
             SpnError::ConfigError(_) => Some(format!(
                 "Configuration may be corrupted.\n   \
-                 Check ~/.spn/config.toml or run {} to diagnose.",
-                "spn doctor".cyan()
+                 Check {} or run {} to diagnose.",
+                style("~/.spn/config.toml").dim(),
+                style("spn doctor").cyan()
             )),
 
             SpnError::DaemonNotRunning => Some(format!(
                 "Start the daemon with: {}\n   \
                  Or install as service: {}",
-                "spn daemon start".cyan(),
-                "spn daemon install".cyan()
+                style("spn daemon start").cyan(),
+                style("spn daemon install").cyan()
             )),
 
             SpnError::DaemonAlreadyRunning => Some(format!(
                 "Stop the daemon first: {}\n   \
                  Or check status with: {}",
-                "spn daemon stop".cyan(),
-                "spn daemon status".cyan()
+                style("spn daemon stop").cyan(),
+                style("spn daemon status").cyan()
             )),
 
             SpnError::ProviderNotFound(name) => Some(format!(
                 "Provider '{}' not recognized.\n   \
-                 Available providers: {}\n   \
+                 Available: {}\n   \
                  List configured: {}",
-                name,
-                "anthropic, openai, mistral, groq, deepseek, gemini, ollama".dimmed(),
-                "spn provider list".cyan()
+                style(name).yellow(),
+                style("anthropic, openai, mistral, groq, deepseek, gemini, ollama").dim(),
+                style("spn provider list").cyan()
             )),
 
             SpnError::NoVersionsAvailable(pkg) => Some(format!(
                 "Package '{}' exists but has no available versions.\n   \
                  It may have been yanked. Check: {}",
-                pkg,
-                format!("spn info {}", pkg).cyan()
+                style(pkg).yellow(),
+                style(format!("spn info {}", pkg)).cyan()
             )),
 
-            SpnError::YamlError(_) => Some(
+            SpnError::YamlError(_) => Some(format!(
                 "Check your YAML syntax. Common issues:\n   \
-                 • Incorrect indentation (use 2 spaces)\n   \
-                 • Missing colons after keys\n   \
-                 • Unquoted special characters"
-                    .to_string(),
-            ),
+                 {} Incorrect indentation (use 2 spaces)\n   \
+                 {} Missing colons after keys\n   \
+                 {} Unquoted special characters",
+                style("•").dim(),
+                style("•").dim(),
+                style("•").dim()
+            )),
 
-            SpnError::TomlError(_) => Some(
+            SpnError::TomlError(_) => Some(format!(
                 "Check your TOML syntax. Common issues:\n   \
-                 • Missing quotes around strings\n   \
-                 • Incorrect table headers [section]\n   \
-                 • Duplicate keys"
-                    .to_string(),
-            ),
+                 {} Missing quotes around strings\n   \
+                 {} Incorrect table headers [section]\n   \
+                 {} Duplicate keys",
+                style("•").dim(),
+                style("•").dim(),
+                style("•").dim()
+            )),
+
+            SpnError::IoError(e) => {
+                match e.kind() {
+                    std::io::ErrorKind::NotFound => Some(
+                        "File or directory not found.\n   \
+                         Check the path exists and you have access permissions."
+                            .to_string()
+                    ),
+                    std::io::ErrorKind::PermissionDenied => Some(format!(
+                        "Permission denied.\n   \
+                         Try running with {} or check file permissions.",
+                        style("sudo").cyan()
+                    )),
+                    std::io::ErrorKind::AlreadyExists => Some(
+                        "File or directory already exists.".to_string()
+                    ),
+                    _ => None,
+                }
+            }
 
             _ => None,
         }
@@ -234,11 +258,18 @@ impl SpnError {
 
     /// Print the error with optional help message to stderr.
     pub fn print(&self) {
-        eprintln!("{} {}", "error:".red().bold(), self);
+        eprintln!();
+        eprintln!(
+            "  {} {}",
+            style("✗").red().bold(),
+            style(self).red()
+        );
+
         if let Some(help) = self.help() {
             eprintln!();
-            eprintln!("   {} {}", "help:".yellow().bold(), help);
+            eprintln!("  {} {}", style("→").cyan(), style(help).dim());
         }
+        eprintln!();
     }
 }
 
@@ -301,12 +332,28 @@ mod tests {
     }
 
     #[test]
-    fn test_io_error_no_help() {
-        // IO errors are too generic for specific help
+    fn test_io_error_not_found_has_help() {
         let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let err = SpnError::IoError(io_err);
-        // IoError doesn't have specific help in current implementation
-        // It falls through to None in the match
+        let help = err.help();
+        assert!(help.is_some());
+        assert!(help.unwrap().contains("not found"));
+    }
+
+    #[test]
+    fn test_io_error_permission_denied_has_help() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "access denied");
+        let err = SpnError::IoError(io_err);
+        let help = err.help();
+        assert!(help.is_some());
+        assert!(help.unwrap().contains("Permission denied"));
+    }
+
+    #[test]
+    fn test_io_error_generic_no_help() {
+        // Generic IO errors still don't have specific help
+        let io_err = std::io::Error::new(std::io::ErrorKind::Other, "something went wrong");
+        let err = SpnError::IoError(io_err);
         assert!(err.help().is_none());
     }
 }

@@ -1,459 +1,512 @@
 //! Doctor command implementation.
 //!
 //! System health check for SuperNovae ecosystem.
+//! Provides clear, actionable diagnostics.
 
 #![allow(dead_code)]
 
 use crate::error::Result;
 use crate::interop::binary::{BinaryRunner, BinaryType};
 use crate::interop::npm::NpmClient;
+use crate::ux;
 
-use colored::Colorize;
+use console::style;
 use std::path::PathBuf;
+use std::time::Instant;
 
 /// Check result for a single item.
-struct CheckResult {
+struct Check {
     name: String,
-    status: CheckStatus,
-    details: Option<String>,
+    status: Status,
+    detail: Option<String>,
+    hint: Option<String>,
 }
 
-enum CheckStatus {
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Status {
     Ok,
     Warning,
     Error,
 }
 
-impl CheckResult {
+impl Check {
     fn ok(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            status: CheckStatus::Ok,
-            details: None,
+            status: Status::Ok,
+            detail: None,
+            hint: None,
         }
     }
 
-    fn ok_with(name: &str, details: &str) -> Self {
+    fn ok_with(name: &str, detail: &str) -> Self {
         Self {
             name: name.to_string(),
-            status: CheckStatus::Ok,
-            details: Some(details.to_string()),
+            status: Status::Ok,
+            detail: Some(detail.to_string()),
+            hint: None,
         }
     }
 
-    fn warning(name: &str, details: &str) -> Self {
+    fn warn(name: &str, detail: &str) -> Self {
         Self {
             name: name.to_string(),
-            status: CheckStatus::Warning,
-            details: Some(details.to_string()),
+            status: Status::Warning,
+            detail: Some(detail.to_string()),
+            hint: None,
         }
     }
 
-    fn error(name: &str, details: &str) -> Self {
+    fn warn_with_hint(name: &str, detail: &str, hint: &str) -> Self {
         Self {
             name: name.to_string(),
-            status: CheckStatus::Error,
-            details: Some(details.to_string()),
+            status: Status::Warning,
+            detail: Some(detail.to_string()),
+            hint: Some(hint.to_string()),
+        }
+    }
+
+    fn error(name: &str, detail: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            status: Status::Error,
+            detail: Some(detail.to_string()),
+            hint: None,
+        }
+    }
+
+    fn error_with_hint(name: &str, detail: &str, hint: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            status: Status::Error,
+            detail: Some(detail.to_string()),
+            hint: Some(hint.to_string()),
         }
     }
 
     fn print(&self) {
-        let icon = match self.status {
-            CheckStatus::Ok => "✓".green(),
-            CheckStatus::Warning => "!".yellow(),
-            CheckStatus::Error => "✗".red(),
+        let (icon, name_style) = match self.status {
+            Status::Ok => (style("✓").green().bold(), style(&self.name).green()),
+            Status::Warning => (style("!").yellow().bold(), style(&self.name).yellow()),
+            Status::Error => (style("✗").red().bold(), style(&self.name).red()),
         };
 
-        let name_colored = match self.status {
-            CheckStatus::Ok => self.name.normal(),
-            CheckStatus::Warning => self.name.yellow(),
-            CheckStatus::Error => self.name.red(),
-        };
-
-        if let Some(details) = &self.details {
-            println!("  {} {} ({})", icon, name_colored, details.dimmed());
+        if let Some(detail) = &self.detail {
+            println!("  {} {} {}", icon, name_style, style(detail).dim());
         } else {
-            println!("  {} {}", icon, name_colored);
+            println!("  {} {}", icon, name_style);
+        }
+
+        if let Some(hint) = &self.hint {
+            println!("    {} {}", style("→").cyan(), style(hint).cyan());
         }
     }
 }
 
 /// Run system health checks.
 pub async fn run() -> Result<()> {
-    println!("{}", "SuperNovae Doctor".cyan().bold());
-    println!("{}", "=================".cyan());
+    let start = Instant::now();
+
+    // Header
+    println!();
+    println!(
+        "  {}{}{}",
+        style("spn doctor").cyan().bold(),
+        style(" · ").dim(),
+        style("System Health Check").dim()
+    );
     println!();
 
-    let mut all_ok = true;
-    let mut warning_count = 0;
-    let mut error_count = 0;
+    let mut errors = 0;
+    let mut warnings = 0;
+    let mut ok_count = 0;
 
-    // Check binaries
-    println!("{}", "Binaries:".bold());
-    let binary_checks = check_binaries();
-    for check in &binary_checks {
+    // ─── TOOLS ───────────────────────────────────────────────────────────────
+    println!("{}", style("  Tools").bold());
+    println!("  {}", style("─".repeat(50)).dim());
+
+    let tool_checks = check_tools();
+    for check in &tool_checks {
         check.print();
         match check.status {
-            CheckStatus::Warning => warning_count += 1,
-            CheckStatus::Error => {
-                error_count += 1;
-                all_ok = false;
-            }
-            _ => {}
+            Status::Ok => ok_count += 1,
+            Status::Warning => warnings += 1,
+            Status::Error => errors += 1,
         }
     }
     println!();
 
-    // Check directories
-    println!("{}", "Directories:".bold());
-    let dir_checks = check_directories();
-    for check in &dir_checks {
+    // ─── ECOSYSTEM ───────────────────────────────────────────────────────────
+    println!("{}", style("  Ecosystem").bold());
+    println!("  {}", style("─".repeat(50)).dim());
+
+    let ecosystem_checks = check_ecosystem();
+    for check in &ecosystem_checks {
         check.print();
         match check.status {
-            CheckStatus::Warning => warning_count += 1,
-            CheckStatus::Error => {
-                error_count += 1;
-                all_ok = false;
-            }
-            _ => {}
+            Status::Ok => ok_count += 1,
+            Status::Warning => warnings += 1,
+            Status::Error => errors += 1,
         }
     }
     println!();
 
-    // Check configuration
-    println!("{}", "Configuration:".bold());
-    let config_checks = check_configuration();
-    for check in &config_checks {
+    // ─── STORAGE ─────────────────────────────────────────────────────────────
+    println!("{}", style("  Storage").bold());
+    println!("  {}", style("─".repeat(50)).dim());
+
+    let storage_checks = check_storage();
+    for check in &storage_checks {
         check.print();
         match check.status {
-            CheckStatus::Warning => warning_count += 1,
-            CheckStatus::Error => {
-                error_count += 1;
-                all_ok = false;
-            }
-            _ => {}
+            Status::Ok => ok_count += 1,
+            Status::Warning => warnings += 1,
+            Status::Error => errors += 1,
         }
     }
     println!();
 
-    // Check plugins
-    println!("{}", "Plugins:".bold());
-    let plugin_checks = check_plugins();
-    for check in &plugin_checks {
+    // ─── PROJECT ─────────────────────────────────────────────────────────────
+    println!("{}", style("  Project").bold());
+    println!("  {}", style("─".repeat(50)).dim());
+
+    let project_checks = check_project();
+    for check in &project_checks {
         check.print();
         match check.status {
-            CheckStatus::Warning => warning_count += 1,
-            CheckStatus::Error => {
-                error_count += 1;
-                all_ok = false;
-            }
-            _ => {}
+            Status::Ok => ok_count += 1,
+            Status::Warning => warnings += 1,
+            Status::Error => errors += 1,
         }
     }
     println!();
 
-    // Summary
-    println!("{}", "Summary:".bold());
-    if all_ok && warning_count == 0 {
-        println!("  {} {}", "✓".green(), "All checks passed!".green().bold());
-    } else if all_ok {
+    // ─── SUMMARY ─────────────────────────────────────────────────────────────
+    let elapsed = start.elapsed();
+    let total = ok_count + warnings + errors;
+
+    println!("  {}", style("─".repeat(50)).dim());
+
+    if errors == 0 && warnings == 0 {
         println!(
-            "  {} {} ({} warning(s))",
-            "!".yellow(),
-            "System functional with warnings".yellow(),
-            warning_count
+            "  {} {} {} {}",
+            style("✓").green().bold(),
+            style("All systems operational").green().bold(),
+            style(format!("({} checks in {:?})", total, elapsed)).dim(),
+            style("✦").cyan()
+        );
+    } else if errors == 0 {
+        println!(
+            "  {} {} {}",
+            style("!").yellow().bold(),
+            style(format!("System ready with {} warning(s)", warnings)).yellow(),
+            style(format!("({} checks in {:?})", total, elapsed)).dim()
         );
     } else {
         println!(
-            "  {} {} ({} error(s), {} warning(s))",
-            "✗".red(),
-            "Issues found".red().bold(),
-            error_count,
-            warning_count
+            "  {} {} {}",
+            style("✗").red().bold(),
+            style(format!(
+                "{} error(s), {} warning(s) found",
+                errors, warnings
+            ))
+            .red()
+            .bold(),
+            style(format!("({} checks in {:?})", total, elapsed)).dim()
         );
+    }
+
+    println!();
+
+    // Show next steps if there are issues
+    if errors > 0 || warnings > 0 {
+        ux::next_steps(&[
+            ("spn setup", "Interactive setup wizard"),
+            ("spn topic", "Browse help topics"),
+        ]);
+    }
+
+    // Exit with error code for CI
+    if errors > 0 {
+        std::process::exit(1);
     }
 
     Ok(())
 }
 
-/// Check required binaries.
-fn check_binaries() -> Vec<CheckResult> {
-    let mut results = Vec::new();
+/// Check required tools.
+fn check_tools() -> Vec<Check> {
+    let mut checks = Vec::new();
 
     // Check nika
-    let nika_runner = BinaryRunner::new(BinaryType::Nika);
-    if nika_runner.is_available() {
-        results.push(CheckResult::ok_with("nika", "found in PATH"));
+    let nika = BinaryRunner::new(BinaryType::Nika);
+    if nika.is_available() {
+        // Try to get version
+        if let Ok(output) = std::process::Command::new("nika")
+            .arg("--version")
+            .output()
+        {
+            let version = String::from_utf8_lossy(&output.stdout);
+            let version = version.split_whitespace().last().unwrap_or("?");
+            checks.push(Check::ok_with("nika", &format!("v{}", version)));
+        } else {
+            checks.push(Check::ok_with("nika", "installed"));
+        }
     } else {
-        results.push(CheckResult::warning(
+        checks.push(Check::warn_with_hint(
             "nika",
-            "not found - install with: brew install supernovae-st/tap/nika",
+            "not found",
+            "brew install supernovae-st/tap/nika",
         ));
     }
 
     // Check novanet
-    let novanet_runner = BinaryRunner::new(BinaryType::NovaNet);
-    if novanet_runner.is_available() {
-        results.push(CheckResult::ok_with("novanet", "found in PATH"));
+    let novanet = BinaryRunner::new(BinaryType::NovaNet);
+    if novanet.is_available() {
+        if let Ok(output) = std::process::Command::new("novanet")
+            .arg("--version")
+            .output()
+        {
+            let version = String::from_utf8_lossy(&output.stdout);
+            let version = version.split_whitespace().last().unwrap_or("?");
+            checks.push(Check::ok_with("novanet", &format!("v{}", version)));
+        } else {
+            checks.push(Check::ok_with("novanet", "installed"));
+        }
     } else {
-        results.push(CheckResult::warning(
+        checks.push(Check::warn_with_hint(
             "novanet",
-            "not found - install with: brew install supernovae-st/tap/novanet",
+            "not found (optional)",
+            "brew install supernovae-st/tap/novanet",
         ));
     }
 
     // Check npm
-    let npm_client = NpmClient::new();
-    if npm_client.is_available() {
-        results.push(CheckResult::ok_with("npm", "found in PATH"));
+    let npm = NpmClient::new();
+    if npm.is_available() {
+        if let Ok(output) = std::process::Command::new("npm")
+            .arg("--version")
+            .output()
+        {
+            let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            checks.push(Check::ok_with("npm", &format!("v{}", version)));
+        } else {
+            checks.push(Check::ok_with("npm", "installed"));
+        }
     } else {
-        results.push(CheckResult::warning(
+        checks.push(Check::warn_with_hint(
             "npm",
-            "not found - install Node.js from https://nodejs.org",
+            "not found",
+            "https://nodejs.org",
         ));
     }
 
     // Check git
     if which::which("git").is_ok() {
-        results.push(CheckResult::ok_with("git", "found in PATH"));
+        if let Ok(output) = std::process::Command::new("git")
+            .arg("--version")
+            .output()
+        {
+            let version = String::from_utf8_lossy(&output.stdout);
+            let version = version
+                .trim()
+                .strip_prefix("git version ")
+                .unwrap_or("?");
+            checks.push(Check::ok_with("git", &format!("v{}", version)));
+        } else {
+            checks.push(Check::ok_with("git", "installed"));
+        }
     } else {
-        results.push(CheckResult::error(
+        checks.push(Check::error_with_hint(
             "git",
-            "not found - required for publishing",
+            "required for publishing",
+            "https://git-scm.com",
         ));
     }
 
-    // Check curl
-    if which::which("curl").is_ok() {
-        results.push(CheckResult::ok_with("curl", "found in PATH"));
-    } else {
-        results.push(CheckResult::warning(
-            "curl",
-            "not found - required for skills.sh",
-        ));
+    // Check ollama (optional)
+    if which::which("ollama").is_ok() {
+        if let Ok(output) = std::process::Command::new("ollama")
+            .arg("--version")
+            .output()
+        {
+            let version = String::from_utf8_lossy(&output.stdout);
+            let version = version.split_whitespace().last().unwrap_or("?");
+            checks.push(Check::ok_with("ollama", &format!("v{}", version)));
+        } else {
+            checks.push(Check::ok_with("ollama", "installed"));
+        }
     }
 
-    results
+    checks
 }
 
-/// Check required directories.
-fn check_directories() -> Vec<CheckResult> {
-    let mut results = Vec::new();
+/// Check ecosystem components.
+fn check_ecosystem() -> Vec<Check> {
+    let mut checks = Vec::new();
 
-    // Check ~/.spn/
-    match spn_client::SpnPaths::new() {
-        Ok(paths) => {
-            if paths.root().exists() {
-                let packages_dir = paths.packages_dir();
-                let package_count = if packages_dir.exists() {
-                    std::fs::read_dir(&packages_dir)
-                        .map(|entries| entries.count())
-                        .unwrap_or(0)
-                } else {
-                    0
-                };
-                results.push(CheckResult::ok_with(
-                    "~/.spn/",
-                    &format!("{} package(s) installed", package_count),
-                ));
-            } else {
-                results.push(CheckResult::ok_with(
-                    "~/.spn/",
-                    "will be created on first install",
-                ));
+    // Check Claude Code
+    if which::which("claude").is_ok() {
+        if let Ok(output) = std::process::Command::new("claude")
+            .arg("--version")
+            .output()
+        {
+            let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            checks.push(Check::ok_with("claude", &format!("v{}", version)));
+        } else {
+            checks.push(Check::ok_with("claude", "installed"));
+        }
+
+        // Check SuperNovae plugin
+        if let Some(home) = dirs::home_dir() {
+            let plugins_file = home.join(".claude/plugins/installed_plugins.json");
+            if plugins_file.exists() {
+                if let Ok(content) = std::fs::read_to_string(&plugins_file) {
+                    if content.contains("supernovae") {
+                        // Count assets
+                        let cache = home.join(".claude/plugins/cache/claude-code-supernovae/supernovae");
+                        if cache.exists() {
+                            let version_dir = std::fs::read_dir(&cache)
+                                .ok()
+                                .and_then(|mut e| e.next())
+                                .and_then(|e| e.ok())
+                                .map(|e| e.path());
+
+                            if let Some(path) = version_dir {
+                                let skills = count_in_dir(&path, "skills", ".md");
+                                let agents = count_in_dir(&path, "agents", ".md");
+                                let cmds = count_in_dir(&path, "commands", ".md");
+                                checks.push(Check::ok_with(
+                                    "spn-plugin",
+                                    &format!("{} skills, {} agents, {} commands", skills, agents, cmds),
+                                ));
+                            } else {
+                                checks.push(Check::ok_with("spn-plugin", "active"));
+                            }
+                        } else {
+                            checks.push(Check::ok_with("spn-plugin", "active"));
+                        }
+                    } else {
+                        checks.push(Check::warn_with_hint(
+                            "spn-plugin",
+                            "not installed",
+                            "spn setup claude-code",
+                        ));
+                    }
+                }
             }
         }
-        Err(_) => {
-            results.push(CheckResult::error("home directory", "could not determine"));
-        }
+    } else {
+        checks.push(Check::warn_with_hint(
+            "claude",
+            "not installed",
+            "https://claude.ai/code",
+        ));
     }
 
-    // Check ~/.claude/
+    checks
+}
+
+/// Check storage directories.
+fn check_storage() -> Vec<Check> {
+    let mut checks = Vec::new();
+
+    // ~/.spn/
+    if let Ok(paths) = spn_client::SpnPaths::new() {
+        if paths.root().exists() {
+            let pkg_count = paths
+                .packages_dir()
+                .read_dir()
+                .map(|d| d.count())
+                .unwrap_or(0);
+            checks.push(Check::ok_with(
+                "~/.spn/",
+                &format!("{} packages", pkg_count),
+            ));
+        } else {
+            checks.push(Check::ok_with("~/.spn/", "ready (will create on install)"));
+        }
+    } else {
+        checks.push(Check::error("~/.spn/", "cannot determine home directory"));
+    }
+
+    // ~/.claude/
     if let Some(home) = dirs::home_dir() {
         let claude_dir = home.join(".claude");
         if claude_dir.exists() {
             let skills_dir = claude_dir.join("skills");
-            let skill_count = if skills_dir.exists() {
-                std::fs::read_dir(&skills_dir)
-                    .map(|entries| entries.filter(|e| e.is_ok()).count())
-                    .unwrap_or(0)
-            } else {
-                0
-            };
-            results.push(CheckResult::ok_with(
+            let skill_count = skills_dir
+                .read_dir()
+                .map(|d| d.filter_map(|e| e.ok()).count())
+                .unwrap_or(0);
+            checks.push(Check::ok_with(
                 "~/.claude/",
-                &format!("{} skill(s) installed", skill_count),
+                &format!("{} skills", skill_count),
             ));
         } else {
-            results.push(CheckResult::warning(
-                "~/.claude/",
-                "not found - create with Claude Code",
-            ));
+            checks.push(Check::ok_with("~/.claude/", "not created yet"));
         }
     }
 
-    // Check current project
-    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let spn_yaml = cwd.join("spn.yaml");
-    let spn_dir_yaml = cwd.join(".spn").join("spn.yaml");
-
-    if spn_yaml.exists() {
-        results.push(CheckResult::ok_with("project manifest", "spn.yaml found"));
-    } else if spn_dir_yaml.exists() {
-        results.push(CheckResult::ok_with(
-            "project manifest",
-            ".spn/spn.yaml found",
-        ));
-    } else {
-        results.push(CheckResult::ok_with(
-            "project manifest",
-            "none (run spn init to create)",
-        ));
-    }
-
-    results
+    checks
 }
 
-/// Check configuration.
-fn check_configuration() -> Vec<CheckResult> {
-    let mut results = Vec::new();
-
-    // Check for IDE configs
+/// Check current project.
+fn check_project() -> Vec<Check> {
+    let mut checks = Vec::new();
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 
-    let ides = [
-        (".claude", "Claude Code"),
+    // Check manifest
+    let manifest = cwd.join("spn.yaml");
+    let manifest_alt = cwd.join(".spn").join("spn.yaml");
+
+    if manifest.exists() {
+        checks.push(Check::ok_with("manifest", "spn.yaml"));
+    } else if manifest_alt.exists() {
+        checks.push(Check::ok_with("manifest", ".spn/spn.yaml"));
+    } else {
+        checks.push(Check::ok_with("manifest", "none (spn init to create)"));
+    }
+
+    // Check IDE configs
+    let ides: Vec<(&str, &str)> = vec![
+        (".claude", "Claude"),
         (".cursor", "Cursor"),
         (".vscode", "VS Code"),
         (".windsurf", "Windsurf"),
     ];
 
-    let mut found_ides = Vec::new();
-    for (dir, name) in &ides {
-        if cwd.join(dir).exists() {
-            found_ides.push(*name);
-        }
-    }
+    let found: Vec<&str> = ides
+        .iter()
+        .filter(|(dir, _)| cwd.join(dir).exists())
+        .map(|(_, name)| *name)
+        .collect();
 
-    if found_ides.is_empty() {
-        results.push(CheckResult::ok_with("IDE configs", "none detected"));
+    if found.is_empty() {
+        checks.push(Check::ok_with("IDE", "none detected"));
     } else {
-        results.push(CheckResult::ok_with("IDE configs", &found_ides.join(", ")));
+        checks.push(Check::ok_with("IDE", &found.join(", ")));
     }
 
-    // Check sync config
-    if let Ok(paths) = spn_client::SpnPaths::new() {
-        let sync_config = paths.root().join("sync.json");
-        if sync_config.exists() {
-            results.push(CheckResult::ok_with("sync config", "~/.spn/sync.json"));
-        } else {
-            results.push(CheckResult::ok_with(
-                "sync config",
-                "default (run spn sync --enable <editor>)",
-            ));
-        }
+    // Check git
+    if cwd.join(".git").exists() {
+        checks.push(Check::ok_with("git", "repository"));
     }
 
-    // Check registry connectivity
-    results.push(CheckResult::ok_with(
-        "registry",
-        "github.com/supernovae-st/supernovae-registry",
-    ));
-
-    results
+    checks
 }
 
-/// Check Claude Code plugins.
-fn check_plugins() -> Vec<CheckResult> {
-    let mut results = Vec::new();
-
-    // Check if Claude Code CLI is available
-    let claude_available = which::which("claude").is_ok();
-
-    if !claude_available {
-        results.push(CheckResult::warning(
-            "claude-code",
-            "not installed - get it at https://claude.ai/code",
-        ));
-        return results;
-    }
-
-    results.push(CheckResult::ok_with("claude-code", "found in PATH"));
-
-    // Check SuperNovae plugin installation
-    if let Some(home) = dirs::home_dir() {
-        let plugins_file = home.join(".claude/plugins/installed_plugins.json");
-
-        if plugins_file.exists() {
-            if let Ok(content) = std::fs::read_to_string(&plugins_file) {
-                // Plugin is named "supernovae@claude-code-supernovae"
-                if content.contains("supernovae@claude-code-supernovae") {
-                    // Try to get more details about the plugin
-                    // Cache path: ~/.claude/plugins/cache/claude-code-supernovae/supernovae/<version>/
-                    let plugin_cache =
-                        home.join(".claude/plugins/cache/claude-code-supernovae/supernovae");
-                    if plugin_cache.exists() {
-                        // Find the version directory (e.g., 1.0.0)
-                        let version_dir = std::fs::read_dir(&plugin_cache)
-                            .ok()
-                            .and_then(|mut entries| entries.next())
-                            .and_then(|e| e.ok())
-                            .map(|e| e.path());
-
-                        if let Some(version_path) = version_dir {
-                            // Count skills, agents, commands
-                            let skills_count =
-                                count_files_in_dir(&version_path, "skills", "SKILL.md");
-                            let agents_count = count_files_in_dir(&version_path, "agents", ".md");
-                            let commands_count =
-                                count_files_in_dir(&version_path, "commands", ".md");
-
-                            let details = format!(
-                                "{} skills, {} agents, {} commands",
-                                skills_count, agents_count, commands_count
-                            );
-                            results.push(CheckResult::ok_with("supernovae-plugin", &details));
-                        } else {
-                            results.push(CheckResult::ok_with("supernovae-plugin", "installed"));
-                        }
-                    } else {
-                        results.push(CheckResult::ok_with("supernovae-plugin", "installed"));
-                    }
-                } else {
-                    results.push(CheckResult::warning(
-                        "supernovae-plugin",
-                        "not installed - run: spn setup claude-code",
-                    ));
-                }
-            } else {
-                results.push(CheckResult::warning(
-                    "supernovae-plugin",
-                    "not installed - run: spn setup claude-code",
-                ));
-            }
-        } else {
-            results.push(CheckResult::warning(
-                "supernovae-plugin",
-                "no plugins installed - run: spn setup claude-code",
-            ));
-        }
-    }
-
-    results
-}
-
-/// Count files matching a pattern in a subdirectory.
-fn count_files_in_dir(base: &std::path::Path, subdir: &str, pattern: &str) -> usize {
+/// Count files in a subdirectory matching a pattern.
+fn count_in_dir(base: &std::path::Path, subdir: &str, ext: &str) -> usize {
     let dir = base.join(subdir);
     if !dir.exists() {
         return 0;
     }
-
     walkdir::WalkDir::new(&dir)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
-        .filter(|e| e.path().to_string_lossy().ends_with(pattern))
+        .filter(|e| e.path().to_string_lossy().ends_with(ext))
         .count()
 }
 
@@ -462,48 +515,38 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_check_result_ok() {
-        let result = CheckResult::ok("test");
-        assert!(matches!(result.status, CheckStatus::Ok));
+    fn test_check_ok() {
+        let c = Check::ok("test");
+        assert_eq!(c.status, Status::Ok);
     }
 
     #[test]
-    fn test_check_result_warning() {
-        let result = CheckResult::warning("test", "details");
-        assert!(matches!(result.status, CheckStatus::Warning));
+    fn test_check_warn() {
+        let c = Check::warn("test", "detail");
+        assert_eq!(c.status, Status::Warning);
     }
 
     #[test]
-    fn test_check_result_error() {
-        let result = CheckResult::error("test", "details");
-        assert!(matches!(result.status, CheckStatus::Error));
+    fn test_check_error() {
+        let c = Check::error("test", "detail");
+        assert_eq!(c.status, Status::Error);
     }
 
     #[test]
-    fn test_check_binaries() {
-        let results = check_binaries();
-        // Should have at least 5 checks (nika, novanet, npm, git, curl)
-        assert!(results.len() >= 5);
+    fn test_check_tools() {
+        let checks = check_tools();
+        assert!(!checks.is_empty());
     }
 
     #[test]
-    fn test_check_directories() {
-        let results = check_directories();
-        // Should have at least 3 checks
-        assert!(results.len() >= 2);
+    fn test_check_storage() {
+        let checks = check_storage();
+        assert!(!checks.is_empty());
     }
 
     #[test]
-    fn test_check_configuration() {
-        let results = check_configuration();
-        // Should have at least 2 checks
-        assert!(results.len() >= 2);
-    }
-
-    #[test]
-    fn test_check_plugins() {
-        let results = check_plugins();
-        // Should have at least 1 check (claude-code availability)
-        assert!(results.len() >= 1);
+    fn test_check_project() {
+        let checks = check_project();
+        assert!(!checks.is_empty());
     }
 }

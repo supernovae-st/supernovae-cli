@@ -24,6 +24,7 @@ mod mcp;
 mod secrets;
 mod storage;
 mod sync;
+mod ux;
 
 /// SuperNovae CLI - AI Development Toolkit
 #[derive(Parser)]
@@ -364,6 +365,24 @@ enum NikaCommands {
         #[command(subcommand)]
         command: JobCommands,
     },
+    /// Create a new workflow from template
+    New {
+        /// Workflow name
+        name: String,
+        /// Template to use (default: minimal)
+        #[arg(long, short, default_value = "minimal")]
+        template: String,
+    },
+    /// Manage execution traces
+    Trace {
+        #[command(subcommand)]
+        command: TraceCommands,
+    },
+    /// Nika configuration
+    Config {
+        #[command(subcommand)]
+        command: NikaConfigCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -374,6 +393,45 @@ enum JobCommands {
     Status,
     /// Stop the jobs daemon
     Stop,
+}
+
+#[derive(Subcommand)]
+enum TraceCommands {
+    /// List recent traces
+    List {
+        /// Number of traces to show
+        #[arg(short, long, default_value = "10")]
+        limit: usize,
+    },
+    /// Show trace details
+    Show {
+        /// Trace ID
+        id: String,
+    },
+    /// Clean old traces
+    Clean {
+        /// Keep traces newer than this (e.g., "7d", "24h")
+        #[arg(long, default_value = "7d")]
+        keep: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum NikaConfigCommands {
+    /// Show configuration
+    Show,
+    /// Get a config value
+    Get {
+        /// Config key
+        key: String,
+    },
+    /// Set a config value
+    Set {
+        /// Config key
+        key: String,
+        /// Config value
+        value: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -425,6 +483,65 @@ enum NovaNetCommands {
         #[command(subcommand)]
         command: DbCommands,
     },
+    /// Search nodes in the knowledge graph
+    Search {
+        /// Search query
+        query: String,
+        /// Filter by node kind
+        #[arg(long, short)]
+        kind: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Entity operations
+    Entity {
+        #[command(subcommand)]
+        command: EntityCommands,
+    },
+    /// Export subgraph to file
+    Export {
+        /// Output file path
+        #[arg(short, long)]
+        output: String,
+        /// Export format (cypher, json, yaml)
+        #[arg(long, default_value = "cypher")]
+        format: String,
+        /// Entity key to export from
+        #[arg(long)]
+        entity: Option<String>,
+    },
+    /// Locale operations
+    Locale {
+        #[command(subcommand)]
+        command: LocaleCommands,
+    },
+    /// Knowledge generation commands
+    Knowledge {
+        #[command(subcommand)]
+        command: KnowledgeCommands,
+    },
+    /// Show graph statistics
+    Stats {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show schema vs database drift
+    Diff {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Generate documentation
+    Doc {
+        /// Output directory
+        #[arg(short, long, default_value = "docs/generated")]
+        output: String,
+        /// Documentation format (markdown, html)
+        #[arg(long, default_value = "markdown")]
+        format: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -445,6 +562,76 @@ enum DbCommands {
     Reset,
     /// Run migrations
     Migrate,
+}
+
+#[derive(Subcommand)]
+enum EntityCommands {
+    /// List entities
+    List {
+        /// Filter by category
+        #[arg(long, short)]
+        category: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show entity details
+    Show {
+        /// Entity key
+        key: String,
+        /// Include native content
+        #[arg(long)]
+        with_native: bool,
+    },
+    /// Generate entity content for a locale
+    Generate {
+        /// Entity key
+        key: String,
+        /// Target locale
+        #[arg(long)]
+        locale: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum LocaleCommands {
+    /// List available locales
+    List {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show locale details
+    Show {
+        /// Locale code (e.g., fr-FR)
+        code: String,
+    },
+    /// Show locale coverage
+    Coverage {
+        /// Locale code
+        locale: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum KnowledgeCommands {
+    /// Generate knowledge atoms
+    Generate {
+        /// Entity key
+        entity: String,
+        /// Target locale
+        #[arg(long)]
+        locale: String,
+    },
+    /// List knowledge atoms
+    List {
+        /// Filter by locale
+        #[arg(long)]
+        locale: Option<String>,
+        /// Filter by type (term, expression, pattern)
+        #[arg(long, short)]
+        r#type: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
