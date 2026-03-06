@@ -37,7 +37,7 @@ pub async fn run(package: &str, json: bool) -> Result<()> {
     let entries = client
         .fetch_package(package)
         .await
-        .map_err(|e| SpnError::PackageNotFound(format!("{}: {}", package, e)))?;
+        .map_err(|_| SpnError::PackageNotFound(package.to_string()))?;
 
     if entries.is_empty() {
         return Err(SpnError::PackageNotFound(package.to_string()));

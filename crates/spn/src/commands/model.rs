@@ -454,10 +454,56 @@ async fn search(query: &str, category: Option<&str>) -> Result<()> {
 }
 
 // ============================================================================
-// Model Info (from registry)
+// Model Info (local first, then registry)
 // ============================================================================
 
 async fn info(name: &str, json_output: bool) -> Result<()> {
+    // First, check if model is installed locally
+    if let Ok(mut client) = SpnClient::connect().await {
+        if let Ok(Response::Models { models }) = client.send_request(Request::ModelList).await {
+            // Find matching model (handle tag variations like "llama3.2:1b" vs "llama3.2")
+            let local_model = models.iter().find(|m| {
+                m.name == name
+                    || m.name.starts_with(&format!("{}:", name))
+                    || name.starts_with(&format!("{}:", m.name.split(':').next().unwrap_or("")))
+            });
+
+            if let Some(model) = local_model {
+                if json_output {
+                    println!("{}", serde_json::to_string_pretty(&model)?);
+                    return Ok(());
+                }
+
+                println!("{}", "Local Model Information".bold());
+                println!();
+                println!("  {} {}", "Name:".dimmed(), model.name.bold().cyan());
+                println!("  {} {}", "Size:".dimmed(), format_size(model.size));
+
+                if let Some(ref quant) = model.quantization {
+                    println!("  {} {}", "Quantization:".dimmed(), quant);
+                }
+
+                if let Some(ref params) = model.parameters {
+                    println!("  {} {}", "Parameters:".dimmed(), params);
+                }
+
+                if let Some(ref digest) = model.digest {
+                    println!("  {} {}...", "Digest:".dimmed(), &digest[..12.min(digest.len())]);
+                }
+
+                println!();
+                println!(
+                    "  Load model: {} spn model load {}",
+                    "->".cyan(),
+                    model.name
+                );
+
+                return Ok(());
+            }
+        }
+    }
+
+    // Fallback to registry lookup
     let registry = ModelRegistry::new();
 
     let model = registry.get(name).await;
