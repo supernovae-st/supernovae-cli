@@ -2,6 +2,8 @@
 //!
 //! System health check for SuperNovae ecosystem.
 
+#![allow(dead_code)]
+
 use crate::error::Result;
 use crate::interop::binary::{BinaryRunner, BinaryType};
 use crate::interop::npm::NpmClient;
@@ -122,6 +124,22 @@ pub async fn run() -> Result<()> {
     println!("{}", "Configuration:".bold());
     let config_checks = check_configuration();
     for check in &config_checks {
+        check.print();
+        match check.status {
+            CheckStatus::Warning => warning_count += 1,
+            CheckStatus::Error => {
+                error_count += 1;
+                all_ok = false;
+            }
+            _ => {}
+        }
+    }
+    println!();
+
+    // Check plugins
+    println!("{}", "Plugins:".bold());
+    let plugin_checks = check_plugins();
+    for check in &plugin_checks {
         check.print();
         match check.status {
             CheckStatus::Warning => warning_count += 1,
@@ -341,6 +359,97 @@ fn check_configuration() -> Vec<CheckResult> {
     results
 }
 
+/// Check Claude Code plugins.
+fn check_plugins() -> Vec<CheckResult> {
+    let mut results = Vec::new();
+
+    // Check if Claude Code CLI is available
+    let claude_available = which::which("claude").is_ok();
+
+    if !claude_available {
+        results.push(CheckResult::warning(
+            "claude-code",
+            "not installed - get it at https://claude.ai/code",
+        ));
+        return results;
+    }
+
+    results.push(CheckResult::ok_with("claude-code", "found in PATH"));
+
+    // Check SuperNovae plugin installation
+    if let Some(home) = dirs::home_dir() {
+        let plugins_file = home.join(".claude/plugins/installed_plugins.json");
+
+        if plugins_file.exists() {
+            if let Ok(content) = std::fs::read_to_string(&plugins_file) {
+                // Plugin is named "supernovae@claude-code-supernovae"
+                if content.contains("supernovae@claude-code-supernovae") {
+                    // Try to get more details about the plugin
+                    // Cache path: ~/.claude/plugins/cache/claude-code-supernovae/supernovae/<version>/
+                    let plugin_cache = home.join(".claude/plugins/cache/claude-code-supernovae/supernovae");
+                    if plugin_cache.exists() {
+                        // Find the version directory (e.g., 1.0.0)
+                        let version_dir = std::fs::read_dir(&plugin_cache)
+                            .ok()
+                            .and_then(|mut entries| entries.next())
+                            .and_then(|e| e.ok())
+                            .map(|e| e.path());
+
+                        if let Some(version_path) = version_dir {
+                            // Count skills, agents, commands
+                            let skills_count = count_files_in_dir(&version_path, "skills", "SKILL.md");
+                            let agents_count = count_files_in_dir(&version_path, "agents", ".md");
+                            let commands_count = count_files_in_dir(&version_path, "commands", ".md");
+
+                            let details = format!(
+                                "{} skills, {} agents, {} commands",
+                                skills_count, agents_count, commands_count
+                            );
+                            results.push(CheckResult::ok_with("supernovae-plugin", &details));
+                        } else {
+                            results.push(CheckResult::ok_with("supernovae-plugin", "installed"));
+                        }
+                    } else {
+                        results.push(CheckResult::ok_with("supernovae-plugin", "installed"));
+                    }
+                } else {
+                    results.push(CheckResult::warning(
+                        "supernovae-plugin",
+                        "not installed - run: spn setup claude-code",
+                    ));
+                }
+            } else {
+                results.push(CheckResult::warning(
+                    "supernovae-plugin",
+                    "not installed - run: spn setup claude-code",
+                ));
+            }
+        } else {
+            results.push(CheckResult::warning(
+                "supernovae-plugin",
+                "no plugins installed - run: spn setup claude-code",
+            ));
+        }
+    }
+
+    results
+}
+
+/// Count files matching a pattern in a subdirectory.
+fn count_files_in_dir(base: &std::path::Path, subdir: &str, pattern: &str) -> usize {
+    let dir = base.join(subdir);
+    if !dir.exists() {
+        return 0;
+    }
+
+    walkdir::WalkDir::new(&dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .filter(|e| e.path().to_string_lossy().ends_with(pattern))
+        .count()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -382,5 +491,12 @@ mod tests {
         let results = check_configuration();
         // Should have at least 2 checks
         assert!(results.len() >= 2);
+    }
+
+    #[test]
+    fn test_check_plugins() {
+        let results = check_plugins();
+        // Should have at least 1 check (claude-code availability)
+        assert!(results.len() >= 1);
     }
 }

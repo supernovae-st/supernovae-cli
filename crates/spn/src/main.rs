@@ -10,9 +10,6 @@
 //! spn doctor                       # System diagnostic
 //! ```
 
-// Allow dead code during early development - scaffolded API surface for future use
-#![allow(dead_code)]
-
 use clap::{Parser, Subcommand};
 
 mod commands;
@@ -684,6 +681,14 @@ pub enum SetupCommands {
         /// Skip configuration sync
         #[arg(long)]
         no_sync: bool,
+    },
+
+    /// Install SuperNovae Claude Code plugin
+    #[command(name = "claude-code")]
+    ClaudeCode {
+        /// Force reinstall even if plugin is already installed
+        #[arg(long)]
+        force: bool,
     },
 }
 

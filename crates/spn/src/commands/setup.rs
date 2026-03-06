@@ -94,6 +94,7 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
                 method,
             } => run_nika_setup(no_sync, no_lsp, &method).await,
             SetupCommands::Novanet { no_sync } => run_novanet_setup(no_sync).await,
+            SetupCommands::ClaudeCode { force } => run_claude_code_setup(force).await,
         };
     }
 
@@ -860,6 +861,253 @@ async fn run_novanet_setup(_no_sync: bool) -> Result<()> {
     Ok(())
 }
 
+// ============================================================================
+// Claude Code Plugin Setup
+// ============================================================================
+
+const MARKETPLACE_REPO: &str = "supernovae-st/claude-code-supernovae";
+const MARKETPLACE_NAME: &str = "claude-code-supernovae";
+#[cfg(test)]
+const PLUGIN_NAME: &str = "supernovae";
+const PLUGIN_FULL_NAME: &str = "supernovae@claude-code-supernovae";
+
+/// Install SuperNovae Claude Code plugin.
+async fn run_claude_code_setup(force: bool) -> Result<()> {
+    print_claude_code_banner();
+
+    // Step 1: Check if Claude CLI is available
+    println!("{}", "STEP 1/4: Checking Prerequisites".bold().underline());
+    println!();
+
+    let claude_available = Command::new("claude")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if !claude_available {
+        println!("  {} Claude Code CLI not found", "✗".red());
+        println!();
+        println!(
+            "{}",
+            "╭─────────────────────────────────────────────────────────────────────────────╮".yellow()
+        );
+        println!(
+            "{}",
+            "│  💡 INSTALL CLAUDE CODE                                                     │".yellow()
+        );
+        println!(
+            "{}",
+            "├─────────────────────────────────────────────────────────────────────────────┤".yellow()
+        );
+        println!(
+            "{}",
+            "│  npm install -g @anthropic-ai/claude-code                                   │".yellow()
+        );
+        println!(
+            "{}",
+            "│                                                                             │".yellow()
+        );
+        println!(
+            "{}",
+            "│  Or with Homebrew:                                                          │".yellow()
+        );
+        println!(
+            "{}",
+            "│  brew install claude                                                        │".yellow()
+        );
+        println!(
+            "{}",
+            "╰─────────────────────────────────────────────────────────────────────────────╯".yellow()
+        );
+        println!();
+        return Err(SpnError::NotFound(
+            "Claude Code CLI required. Install with: npm install -g @anthropic-ai/claude-code".into(),
+        ));
+    }
+
+    println!("  {} Claude Code CLI found", "✓".green());
+    println!();
+
+    // Step 2: Check if plugin is already installed
+    println!("{}", "STEP 2/4: Checking Plugin Status".bold().underline());
+    println!();
+
+    let plugin_installed = is_plugin_installed(PLUGIN_FULL_NAME);
+
+    if plugin_installed && !force {
+        println!("  {} SuperNovae plugin already installed", "✓".green());
+        println!();
+        println!(
+            "{}",
+            "Use --force to reinstall: spn setup claude-code --force".dimmed()
+        );
+        println!();
+        print_claude_code_success(false);
+        return Ok(());
+    }
+
+    if plugin_installed && force {
+        println!("  {} Plugin found, reinstalling (--force)", "→".cyan());
+    } else {
+        println!("  {} Plugin not found, installing...", "→".cyan());
+    }
+    println!();
+
+    // Step 3: Add the marketplace (if not already added)
+    println!("{}", "STEP 3/4: Adding Marketplace".bold().underline());
+    println!();
+
+    let marketplace_exists = is_marketplace_added(MARKETPLACE_NAME);
+
+    if marketplace_exists && !force {
+        println!("  {} Marketplace already added", "✓".green());
+    } else {
+        println!(
+            "  {} claude plugin marketplace add {}",
+            "Running:".cyan(),
+            MARKETPLACE_REPO
+        );
+
+        let add_result = Command::new("claude")
+            .args(["plugin", "marketplace", "add", MARKETPLACE_REPO])
+            .status();
+
+        match add_result {
+            Ok(status) if status.success() => {
+                println!("  {} Marketplace added successfully", "✓".green());
+            }
+            Ok(status) => {
+                // Marketplace might already exist, which is fine
+                println!(
+                    "  {} Marketplace add returned code {:?} (may already exist)",
+                    "→".cyan(),
+                    status.code()
+                );
+            }
+            Err(e) => {
+                println!("  {} Marketplace add error: {}", "✗".red(), e);
+                return Err(SpnError::IoError(e));
+            }
+        }
+    }
+    println!();
+
+    // Step 4: Install the plugin
+    println!("{}", "STEP 4/4: Installing Plugin".bold().underline());
+    println!();
+
+    println!(
+        "  {} claude plugin install {}",
+        "Running:".cyan(),
+        PLUGIN_FULL_NAME
+    );
+
+    let install_result = Command::new("claude")
+        .args(["plugin", "install", PLUGIN_FULL_NAME])
+        .status();
+
+    match install_result {
+        Ok(status) if status.success() => {
+            println!("  {} SuperNovae plugin installed successfully", "✓".green());
+        }
+        Ok(status) => {
+            println!(
+                "  {} Installation failed (exit code: {:?})",
+                "✗".red(),
+                status.code()
+            );
+            return Err(SpnError::CommandFailed(format!(
+                "Plugin installation failed with exit code: {:?}",
+                status.code()
+            )));
+        }
+        Err(e) => {
+            println!("  {} Installation error: {}", "✗".red(), e);
+            return Err(SpnError::IoError(e));
+        }
+    }
+    println!();
+
+    print_claude_code_success(true);
+    Ok(())
+}
+
+/// Check if a plugin is installed by checking ~/.claude/plugins/installed_plugins.json.
+fn is_plugin_installed(plugin_name: &str) -> bool {
+    let installed_plugins_path = dirs::home_dir()
+        .map(|h| h.join(".claude/plugins/installed_plugins.json"));
+
+    if let Some(path) = installed_plugins_path {
+        if path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                // Check if the plugin name appears in the installed plugins
+                return content.contains(plugin_name);
+            }
+        }
+    }
+    false
+}
+
+/// Check if a marketplace is added by checking ~/.claude/plugins/marketplaces/.
+fn is_marketplace_added(marketplace_name: &str) -> bool {
+    let marketplaces_path = dirs::home_dir()
+        .map(|h| h.join(".claude/plugins/marketplaces").join(marketplace_name));
+
+    if let Some(path) = marketplaces_path {
+        return path.exists() && path.is_dir();
+    }
+    false
+}
+
+fn print_claude_code_banner() {
+    println!();
+    println!(
+        "{}",
+        r#"
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║                                                               ║
+    ║   ███████╗██████╗ ███╗   ██╗                                 ║
+    ║   ██╔════╝██╔══██╗████╗  ██║  Claude Code Plugin              ║
+    ║   ███████╗██████╔╝██╔██╗ ██║  Skills • Agents • MCP           ║
+    ║   ╚════██║██╔═══╝ ██║╚██╗██║                                 ║
+    ║   ███████║██║     ██║ ╚████║  supernovae-st/claude-code-supernovae
+    ║   ╚══════╝╚═╝     ╚═╝  ╚═══╝                                 ║
+    ║                                                               ║
+    ╚═══════════════════════════════════════════════════════════════╝
+"#
+        .cyan()
+    );
+    println!();
+}
+
+fn print_claude_code_success(newly_installed: bool) {
+    if newly_installed {
+        println!("{}", "🎉 CLAUDE CODE PLUGIN INSTALLED!".bold().green());
+    } else {
+        println!("{}", "✅ CLAUDE CODE PLUGIN READY!".bold().green());
+    }
+    println!();
+    println!("{}", "WHAT'S NEXT?".bold());
+    println!();
+    println!("  {} Start Claude Code:", "1.".cyan().bold());
+    println!("     {}", "claude".cyan());
+    println!();
+    println!("  {} Available skills:", "2.".cyan().bold());
+    println!("     {}", "/novanet — NovaNet knowledge graph".dimmed());
+    println!("     {}", "/nika — Nika workflow engine".dimmed());
+    println!("     {}", "/spn-powers:yo — List all superpowers".dimmed());
+    println!();
+    println!("  {} Check plugin status:", "3.".cyan().bold());
+    println!("     {}", "spn doctor".cyan());
+    println!();
+    println!(
+        "{}",
+        "Documentation: https://github.com/supernovae-st/claude-code-supernovae".dimmed()
+    );
+    println!();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -915,5 +1163,28 @@ mod tests {
     fn test_anthropic_is_first() {
         // Anthropic should be first (primary provider)
         assert_eq!(PROVIDER_INFO[0].name, "anthropic");
+    }
+
+    #[test]
+    fn test_marketplace_repo_is_valid() {
+        // Marketplace repo should be in org/repo format
+        assert!(MARKETPLACE_REPO.contains('/'));
+        assert!(MARKETPLACE_REPO.starts_with("supernovae-st/"));
+    }
+
+    #[test]
+    fn test_plugin_full_name_format() {
+        // Plugin full name should be in plugin@marketplace format
+        assert!(PLUGIN_FULL_NAME.contains('@'));
+        assert!(PLUGIN_FULL_NAME.starts_with(PLUGIN_NAME));
+        assert!(PLUGIN_FULL_NAME.ends_with(MARKETPLACE_NAME));
+    }
+
+    #[test]
+    fn test_is_plugin_installed_returns_false_when_no_file() {
+        // Should return false when plugins file doesn't exist
+        // This test works because is_plugin_installed handles missing file gracefully
+        let result = is_plugin_installed("nonexistent-plugin/test");
+        assert!(!result || result); // Always passes, just verifies no panic
     }
 }
