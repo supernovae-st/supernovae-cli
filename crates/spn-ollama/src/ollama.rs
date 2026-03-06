@@ -51,6 +51,29 @@ impl OllamaBackend {
         }
     }
 
+    /// Create a new Ollama backend with custom endpoint and configuration.
+    ///
+    /// This allows configuring timeouts and other client options.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use spn_ollama::{OllamaBackend, ClientConfig};
+    /// use std::time::Duration;
+    ///
+    /// let config = ClientConfig::new()
+    ///     .with_model_timeout(Duration::from_secs(600))
+    ///     .with_connect_timeout(Duration::from_secs(10));
+    ///
+    /// let backend = OllamaBackend::with_config("http://localhost:11434", config);
+    /// ```
+    #[must_use]
+    pub fn with_config(endpoint: impl Into<String>, config: crate::ClientConfig) -> Self {
+        Self {
+            client: OllamaClient::with_config(endpoint, config),
+        }
+    }
+
     /// Get the underlying client.
     #[must_use]
     pub const fn client(&self) -> &OllamaClient {
