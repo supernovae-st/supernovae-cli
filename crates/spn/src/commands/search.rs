@@ -51,7 +51,7 @@ pub async fn run(query: &str, json: bool) -> Result<()> {
     let http_client = reqwest::Client::new();
     let response = http_client
         .get(registry_url)
-        .header("User-Agent", "spn/0.6")
+        .header("User-Agent", format!("spn/{}", env!("CARGO_PKG_VERSION")))
         .send()
         .await?;
 

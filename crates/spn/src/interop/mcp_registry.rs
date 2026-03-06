@@ -259,7 +259,7 @@ impl McpRegistry {
         let response = self
             .http_client
             .get(&self.config.registry_url)
-            .header("User-Agent", "spn/0.1")
+            .header("User-Agent", format!("spn/{}", env!("CARGO_PKG_VERSION")))
             .send()
             .await
             .map_err(|e| McpRegistryError::FetchError(e.to_string()))?;

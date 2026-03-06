@@ -148,7 +148,7 @@ impl Downloader {
     async fn fetch_http(&self, url: &str, dest: &Path) -> Result<(), DownloadError> {
         let response = reqwest::Client::new()
             .get(url)
-            .header("User-Agent", "spn/0.6")
+            .header("User-Agent", format!("spn/{}", env!("CARGO_PKG_VERSION")))
             .send()
             .await
             .map_err(|e| DownloadError::Http(e.to_string()))?;

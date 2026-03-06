@@ -270,7 +270,7 @@ impl IndexClient {
 
         let response = client
             .get(&url)
-            .header("User-Agent", "spn/0.1")
+            .header("User-Agent", format!("spn/{}", env!("CARGO_PKG_VERSION")))
             .send()
             .await
             .map_err(|e| IndexError::HttpError(e.to_string()))?;
