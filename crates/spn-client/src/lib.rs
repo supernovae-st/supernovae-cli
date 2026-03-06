@@ -85,6 +85,7 @@ pub use spn_core::{
 };
 
 use std::path::PathBuf;
+use std::time::Duration;
 #[cfg(unix)]
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 #[cfg(unix)]
@@ -93,16 +94,45 @@ use tracing::debug;
 #[cfg(unix)]
 use tracing::warn;
 
-/// Default socket path for the spn daemon.
-pub fn default_socket_path() -> PathBuf {
+/// Default timeout for IPC operations (30 seconds).
+pub const DEFAULT_IPC_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Get socket path for the spn daemon, returning an error if HOME is unavailable.
+///
+/// Use this function when you need to ensure a secure socket path.
+/// Returns an error instead of falling back to `/tmp`.
+pub fn socket_path() -> Result<PathBuf, Error> {
     dirs::home_dir()
         .map(|h| h.join(".spn").join("daemon.sock"))
-        .unwrap_or_else(|| PathBuf::from("/tmp/spn-daemon.sock"))
+        .ok_or_else(|| {
+            Error::Configuration(
+                "HOME directory not found. Set HOME environment variable.".into(),
+            )
+        })
+}
+
+/// Default socket path for the spn daemon.
+///
+/// **Security Note:** This function falls back to `/tmp/spn-daemon.sock` if HOME
+/// is unavailable, which is insecure. Prefer `socket_path()` for secure code.
+#[deprecated(since = "0.3.0", note = "Use socket_path() which returns a Result")]
+pub fn default_socket_path() -> PathBuf {
+    match socket_path() {
+        Ok(path) => path,
+        Err(_) => {
+            // Log warning at runtime - /tmp is insecure
+            #[cfg(unix)]
+            warn!("HOME unavailable, using insecure /tmp path for daemon socket");
+            PathBuf::from("/tmp/spn-daemon.sock")
+        }
+    }
 }
 
 /// Check if the daemon socket exists.
+///
+/// Returns `false` if HOME directory is unavailable.
 pub fn daemon_socket_exists() -> bool {
-    default_socket_path().exists()
+    socket_path().map(|p| p.exists()).unwrap_or(false)
 }
 
 /// Client for communicating with the spn daemon.
@@ -117,6 +147,8 @@ pub struct SpnClient {
     #[cfg(unix)]
     stream: Option<UnixStream>,
     fallback_mode: bool,
+    /// Timeout for IPC operations.
+    timeout: Duration,
 }
 
 impl SpnClient {
@@ -127,7 +159,8 @@ impl SpnClient {
     /// This method is only available on Unix platforms.
     #[cfg(unix)]
     pub async fn connect() -> Result<Self, Error> {
-        Self::connect_to(&default_socket_path()).await
+        let path = socket_path()?;
+        Self::connect_to(&path).await
     }
 
     /// Connect to the daemon at a specific socket path.
@@ -149,12 +182,25 @@ impl SpnClient {
         let mut client = Self {
             stream: Some(stream),
             fallback_mode: false,
+            timeout: DEFAULT_IPC_TIMEOUT,
         };
 
         client.ping().await?;
         debug!("Connected to spn daemon");
 
         Ok(client)
+    }
+
+    /// Set the timeout for IPC operations.
+    ///
+    /// The default timeout is 30 seconds.
+    pub fn set_timeout(&mut self, timeout: Duration) {
+        self.timeout = timeout;
+    }
+
+    /// Get the current timeout for IPC operations.
+    pub fn timeout(&self) -> Duration {
+        self.timeout
     }
 
     /// Connect to the daemon, falling back to env vars if daemon is unavailable.
@@ -172,6 +218,7 @@ impl SpnClient {
                 Ok(Self {
                     stream: None,
                     fallback_mode: true,
+                    timeout: DEFAULT_IPC_TIMEOUT,
                 })
             }
         }
@@ -186,6 +233,7 @@ impl SpnClient {
         debug!("Non-Unix platform: using env var fallback mode");
         Ok(Self {
             fallback_mode: true,
+            timeout: DEFAULT_IPC_TIMEOUT,
         })
     }
 
@@ -297,8 +345,22 @@ impl SpnClient {
     ///
     /// This is a low-level method for sending arbitrary requests.
     /// For common operations, use the convenience methods like `get_secret()`.
+    ///
+    /// The request will time out after the configured timeout (default 30 seconds).
     #[cfg(unix)]
     pub async fn send_request(&mut self, request: Request) -> Result<Response, Error> {
+        let timeout_duration = self.timeout;
+        let timeout_secs = timeout_duration.as_secs();
+
+        // Wrap the entire operation in a timeout
+        tokio::time::timeout(timeout_duration, self.send_request_inner(request))
+            .await
+            .map_err(|_| Error::Timeout(timeout_secs))?
+    }
+
+    /// Inner implementation of send_request without timeout.
+    #[cfg(unix)]
+    async fn send_request_inner(&mut self, request: Request) -> Result<Response, Error> {
         let stream = self.stream.as_mut().ok_or(Error::NotConnected)?;
 
         // Serialize request

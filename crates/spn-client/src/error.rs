@@ -45,4 +45,12 @@ pub enum Error {
     /// Failed to deserialize response.
     #[error("Failed to deserialize response: {0}")]
     DeserializationError(#[source] serde_json::Error),
+
+    /// Configuration error (e.g., HOME not set).
+    #[error("Configuration error: {0}")]
+    Configuration(String),
+
+    /// Request timed out.
+    #[error("Request timed out after {0} seconds")]
+    Timeout(u64),
 }
