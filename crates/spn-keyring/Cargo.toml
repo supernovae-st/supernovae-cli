@@ -1,6 +1,6 @@
 [package]
 name = "spn-keyring"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "OS keychain wrapper for SuperNovae CLI"
 license = "MIT OR Apache-2.0"
@@ -16,7 +16,7 @@ default = ["os-keychain"]
 os-keychain = ["dep:keyring"]
 
 [dependencies]
-spn-core = "0.1"
+spn-core = "0.1.1"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"], optional = true }
 secrecy = "0.10"
 zeroize = { version = "1", features = ["derive"] }

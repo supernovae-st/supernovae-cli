@@ -42,8 +42,8 @@ docker = []
 [dependencies]
 # Workspace crates
 spn-client = { version = "0.2.3", path = "../spn-client" }
-spn-keyring = { version = "0.1", path = "../spn-keyring" }
-spn-ollama = { version = "0.1", path = "../spn-ollama" }
+spn-keyring = { version = "0.1.2", path = "../spn-keyring" }
+spn-ollama = { version = "0.1.1", path = "../spn-ollama" }
 
 # CLI framework
 clap = { version = "4.5", features = ["derive", "env"] }
