@@ -15,5 +15,6 @@
 
 pub mod adapters;
 pub mod config;
+pub mod config_loader;
 pub mod mcp_sync;
 pub mod types;
