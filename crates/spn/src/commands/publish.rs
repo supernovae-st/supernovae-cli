@@ -641,10 +641,9 @@ fn detect_package_type(name: &str) -> &'static str {
         "job"
     } else if name.starts_with("@schemas/") || name.starts_with("@novanet/") {
         "schema"
-    } else if name.starts_with("@nika/") {
-        "workflow" // Default for @nika scope
     } else {
-        "workflow" // Default fallback
+        // Default for @nika/ scope and other unrecognized patterns
+        "workflow"
     }
 }
 

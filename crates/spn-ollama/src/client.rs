@@ -156,6 +156,7 @@ impl OllamaClient {
     /// Execute a request with automatic retry on transient failures.
     ///
     /// Uses exponential backoff: delay * 2^attempt
+    #[allow(dead_code)] // Infrastructure for future use
     async fn with_retry<F, Fut, T>(&self, operation: F) -> Result<T, BackendError>
     where
         F: Fn() -> Fut,
@@ -192,6 +193,7 @@ impl OllamaClient {
     }
 
     /// Check if an error is retryable (transient network issue).
+    #[allow(dead_code)] // Used by with_retry
     fn is_retryable(error: &BackendError) -> bool {
         matches!(error, BackendError::NetworkError(msg) if
             msg.contains("timeout") ||
