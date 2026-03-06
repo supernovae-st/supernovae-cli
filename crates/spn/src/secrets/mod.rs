@@ -80,8 +80,8 @@ mod wizard;
 
 // Core keyring exports (from spn_keyring via keyring.rs)
 pub use keyring::{
-    mask_api_key, migrate_env_to_keyring, resolve_api_key, security_audit,
-    validate_key_format, SpnKeyring,
+    mask_api_key, migrate_env_to_keyring, resolve_api_key, security_audit, validate_key_format,
+    SpnKeyring,
 };
 // Reserved for advanced keyring API
 #[allow(unused_imports)]
@@ -92,9 +92,7 @@ pub use env_storage::{is_gitignored, store_in_dotenv, store_in_global};
 pub use storage::{global_secrets_path, project_env_path, StorageBackend};
 
 // Type exports (extended SecretSource with Inline variant, backward-compatible constants)
-pub use types::{
-    provider_env_var, SecretSource, MCP_SECRET_TYPES, SUPPORTED_PROVIDERS,
-};
+pub use types::{provider_env_var, SecretSource, MCP_SECRET_TYPES, SUPPORTED_PROVIDERS};
 
 // Memory protection exports
 pub use memory::{mlock_available, mlock_limit};

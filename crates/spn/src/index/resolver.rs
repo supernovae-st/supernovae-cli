@@ -43,7 +43,10 @@ pub enum ResolverError {
 
     /// No version satisfies the requirement.
     #[error("No version of {package} satisfies requirement {requirement}")]
-    NoSatisfyingVersion { package: String, requirement: String },
+    NoSatisfyingVersion {
+        package: String,
+        requirement: String,
+    },
 
     /// Cyclic dependency detected.
     #[error("Cyclic dependency detected: {cycle}")]
@@ -143,57 +146,59 @@ impl DependencyResolver {
         name: &'a str,
         version_req: Option<&'a str>,
         is_direct: bool,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<NodeIndex, ResolverError>> + Send + 'a>> {
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<NodeIndex, ResolverError>> + Send + 'a>,
+    > {
         Box::pin(async move {
-        // Check if already resolved
-        if let Some(&idx) = self.resolved.get(name) {
-            // Verify version compatibility
-            let resolved = &self.graph[idx];
-            if let Some(req) = version_req {
-                if !version_matches(&resolved.version, req)? {
-                    return Err(ResolverError::VersionConflict {
-                        package: name.to_string(),
-                        v1: resolved.version.clone(),
-                        v2: req.to_string(),
-                    });
+            // Check if already resolved
+            if let Some(&idx) = self.resolved.get(name) {
+                // Verify version compatibility
+                let resolved = &self.graph[idx];
+                if let Some(req) = version_req {
+                    if !version_matches(&resolved.version, req)? {
+                        return Err(ResolverError::VersionConflict {
+                            package: name.to_string(),
+                            v1: resolved.version.clone(),
+                            v2: req.to_string(),
+                        });
+                    }
                 }
-            }
-            return Ok(idx);
-        }
-
-        // Fetch package from index
-        let entry = self.fetch_best_version(name, version_req).await?;
-
-        // Create resolved package
-        let resolved_pkg = ResolvedPackage {
-            name: name.to_string(),
-            version: entry.version.clone(),
-            entry: entry.clone(),
-            is_direct,
-        };
-
-        // Add to graph
-        let idx = self.graph.add_node(resolved_pkg);
-        self.resolved.insert(name.to_string(), idx);
-
-        // Resolve dependencies
-        for dep in &entry.deps {
-            // Skip optional and dev dependencies
-            if dep.optional || dep.dev {
-                continue;
+                return Ok(idx);
             }
 
-            // Resolve dependency recursively
-            let dep_idx = self
-                .resolve_recursive(&dep.name, Some(&dep.req), false)
-                .await?;
+            // Fetch package from index
+            let entry = self.fetch_best_version(name, version_req).await?;
 
-            // Add edge: dependency -> dependent
-            // This ensures deps come before dependents in topo sort
-            self.graph.add_edge(dep_idx, idx, ());
-        }
+            // Create resolved package
+            let resolved_pkg = ResolvedPackage {
+                name: name.to_string(),
+                version: entry.version.clone(),
+                entry: entry.clone(),
+                is_direct,
+            };
 
-        Ok(idx)
+            // Add to graph
+            let idx = self.graph.add_node(resolved_pkg);
+            self.resolved.insert(name.to_string(), idx);
+
+            // Resolve dependencies
+            for dep in &entry.deps {
+                // Skip optional and dev dependencies
+                if dep.optional || dep.dev {
+                    continue;
+                }
+
+                // Resolve dependency recursively
+                let dep_idx = self
+                    .resolve_recursive(&dep.name, Some(&dep.req), false)
+                    .await?;
+
+                // Add edge: dependency -> dependent
+                // This ensures deps come before dependents in topo sort
+                self.graph.add_edge(dep_idx, idx, ());
+            }
+
+            Ok(idx)
         })
     }
 
@@ -210,12 +215,12 @@ impl DependencyResolver {
             .map_err(|_| ResolverError::PackageNotFound(name.to_string()))?;
 
         match version_req {
-            Some(req) => find_best_match(req, &entries).ok_or_else(|| {
-                ResolverError::NoSatisfyingVersion {
+            Some(req) => {
+                find_best_match(req, &entries).ok_or_else(|| ResolverError::NoSatisfyingVersion {
                     package: name.to_string(),
                     requirement: req.to_string(),
-                }
-            }),
+                })
+            }
             None => {
                 // Get latest non-yanked version
                 entries
@@ -289,8 +294,8 @@ pub fn find_best_match(requirement: &str, available: &[IndexEntry]) -> Option<In
 
 /// Check if a version matches a requirement.
 fn version_matches(version: &str, requirement: &str) -> Result<bool, ResolverError> {
-    let v = Version::parse(version)
-        .map_err(|_| ResolverError::InvalidVersion(version.to_string()))?;
+    let v =
+        Version::parse(version).map_err(|_| ResolverError::InvalidVersion(version.to_string()))?;
 
     // Try exact match first
     if let Ok(exact) = Version::parse(requirement) {
@@ -367,10 +372,7 @@ mod tests {
 
     #[test]
     fn test_find_best_match_skips_yanked() {
-        let mut entries = vec![
-            make_entry("pkg", "1.0.0"),
-            make_entry("pkg", "1.1.0"),
-        ];
+        let mut entries = vec![make_entry("pkg", "1.0.0"), make_entry("pkg", "1.1.0")];
         entries[1].yanked = true;
 
         let best = find_best_match("^1.0", &entries).unwrap();
@@ -379,10 +381,7 @@ mod tests {
 
     #[test]
     fn test_find_best_match_no_match() {
-        let entries = vec![
-            make_entry("pkg", "1.0.0"),
-            make_entry("pkg", "1.1.0"),
-        ];
+        let entries = vec![make_entry("pkg", "1.0.0"), make_entry("pkg", "1.1.0")];
 
         let best = find_best_match("^2.0", &entries);
         assert!(best.is_none());
@@ -499,10 +498,7 @@ mod tests {
 
     #[test]
     fn test_find_best_match_all_yanked() {
-        let mut entries = vec![
-            make_entry("pkg", "1.0.0"),
-            make_entry("pkg", "1.1.0"),
-        ];
+        let mut entries = vec![make_entry("pkg", "1.0.0"), make_entry("pkg", "1.1.0")];
         entries[0].yanked = true;
         entries[1].yanked = true;
 

@@ -110,7 +110,9 @@ async fn list(json: bool, running_only: bool) -> Result<()> {
         }
 
         _ => {
-            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
+            return Err(SpnError::CommandFailed(
+                "Unexpected response from daemon".to_string(),
+            ));
         }
     }
 
@@ -145,7 +147,9 @@ async fn pull(name: &str) -> Result<()> {
             return Err(SpnError::CommandFailed(message));
         }
         _ => {
-            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
+            return Err(SpnError::CommandFailed(
+                "Unexpected response from daemon".to_string(),
+            ));
         }
     }
 
@@ -191,7 +195,9 @@ async fn load(name: &str, keep_alive: bool) -> Result<()> {
             return Err(SpnError::CommandFailed(message));
         }
         _ => {
-            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
+            return Err(SpnError::CommandFailed(
+                "Unexpected response from daemon".to_string(),
+            ));
         }
     }
 
@@ -222,7 +228,9 @@ async fn unload(name: &str) -> Result<()> {
             return Err(SpnError::CommandFailed(message));
         }
         _ => {
-            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
+            return Err(SpnError::CommandFailed(
+                "Unexpected response from daemon".to_string(),
+            ));
         }
     }
 
@@ -266,7 +274,9 @@ async fn delete(name: &str, skip_confirm: bool) -> Result<()> {
             return Err(SpnError::CommandFailed(message));
         }
         _ => {
-            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
+            return Err(SpnError::CommandFailed(
+                "Unexpected response from daemon".to_string(),
+            ));
         }
     }
 
@@ -337,7 +347,9 @@ async fn status(json: bool) -> Result<()> {
         }
 
         _ => {
-            return Err(SpnError::CommandFailed("Unexpected response from daemon".to_string()));
+            return Err(SpnError::CommandFailed(
+                "Unexpected response from daemon".to_string(),
+            ));
         }
     }
 
@@ -447,7 +459,10 @@ async fn search(query: &str, category: Option<&str>) -> Result<()> {
     println!(
         "  Pull a model: {} spn model pull {}",
         "->".cyan(),
-        results.first().map(|m| m.ollama_model.as_str()).unwrap_or("llama3.2")
+        results
+            .first()
+            .map(|m| m.ollama_model.as_str())
+            .unwrap_or("llama3.2")
     );
 
     Ok(())
@@ -488,7 +503,11 @@ async fn info(name: &str, json_output: bool) -> Result<()> {
                 }
 
                 if let Some(ref digest) = model.digest {
-                    println!("  {} {}...", "Digest:".dimmed(), &digest[..12.min(digest.len())]);
+                    println!(
+                        "  {} {}...",
+                        "Digest:".dimmed(),
+                        &digest[..12.min(digest.len())]
+                    );
                 }
 
                 println!();
@@ -650,14 +669,8 @@ async fn recommend(use_case: Option<&str>) -> Result<()> {
         println!();
     }
 
-    println!(
-        "  Pull a model: {} spn model pull <model>",
-        "->".cyan()
-    );
-    println!(
-        "  More info: {} spn model info <model>",
-        "->".cyan()
-    );
+    println!("  Pull a model: {} spn model pull <model>", "->".cyan());
+    println!("  More info: {} spn model info <model>", "->".cyan());
 
     Ok(())
 }

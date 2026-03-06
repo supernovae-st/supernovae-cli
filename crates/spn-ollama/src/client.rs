@@ -446,7 +446,10 @@ impl OllamaClient {
 
         let request = ChatRequest {
             model: model.to_string(),
-            messages: messages.iter().map(|m| ChatMessageRequest::from(m.clone())).collect(),
+            messages: messages
+                .iter()
+                .map(|m| ChatMessageRequest::from(m.clone()))
+                .collect(),
             stream: false,
             options: options.map(ChatOptionsRequest::from),
         };
@@ -512,7 +515,10 @@ impl OllamaClient {
 
         let request = ChatRequest {
             model: model.to_string(),
-            messages: messages.iter().map(|m| ChatMessageRequest::from(m.clone())).collect(),
+            messages: messages
+                .iter()
+                .map(|m| ChatMessageRequest::from(m.clone()))
+                .collect(),
             stream: true,
             options: options.map(ChatOptionsRequest::from),
         };
@@ -588,11 +594,7 @@ impl OllamaClient {
     ///
     /// Returns `BackendError::ModelNotFound` if model doesn't exist.
     /// Returns `BackendError::NetworkError` if the API request fails.
-    pub async fn embed(
-        &self,
-        model: &str,
-        input: &str,
-    ) -> Result<EmbeddingResponse, BackendError> {
+    pub async fn embed(&self, model: &str, input: &str) -> Result<EmbeddingResponse, BackendError> {
         let url = format!("{}/api/embed", self.endpoint);
         debug!(url = %url, model = %model, "Generating embedding");
 
@@ -628,11 +630,7 @@ impl OllamaClient {
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
         // Ollama returns embeddings as array of arrays, we take the first one
-        let embedding = body
-            .embeddings
-            .into_iter()
-            .next()
-            .unwrap_or_default();
+        let embedding = body.embeddings.into_iter().next().unwrap_or_default();
 
         Ok(EmbeddingResponse {
             embedding,

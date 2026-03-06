@@ -94,7 +94,10 @@ impl PackageSource {
                 model: model.clone(),
             },
             PackageSource::Binary { platforms } => Source::Binary {
-                platforms: platforms.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+                platforms: platforms
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect(),
             },
         }
     }
@@ -285,8 +288,8 @@ impl McpRegistry {
 
     /// Parse registry.json content.
     fn parse_registry(&self, content: &str) -> Result<FxHashMap<String, McpPackage>> {
-        let registry: Registry =
-            serde_json::from_str(content).map_err(|e| McpRegistryError::ParseError(e.to_string()))?;
+        let registry: Registry = serde_json::from_str(content)
+            .map_err(|e| McpRegistryError::ParseError(e.to_string()))?;
 
         let mut packages = FxHashMap::default();
 
@@ -329,9 +332,7 @@ impl McpRegistry {
         if let Ok(modified) = metadata.modified() {
             let age = modified.elapsed().unwrap_or_default();
             if age.as_secs() > self.config.cache_ttl {
-                return Err(McpRegistryError::Io(std::io::Error::other(
-                    "Cache expired",
-                )));
+                return Err(McpRegistryError::Io(std::io::Error::other("Cache expired")));
             }
         }
 

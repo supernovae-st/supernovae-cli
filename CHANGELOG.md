@@ -247,10 +247,10 @@ spn CLI ──► spn daemon (IPC) ──► spn-ollama ──► Ollama API (lo
 
 - **📦 Workspace restructuring**: Split into 5 independent crates for better modularity
   - `spn-core` (v0.1.0): Shared types, provider definitions, validation
-  - `spn-keyring` (v0.1.0): OS keychain integration (macOS/Windows/Linux)
+  - `spn-keyring` (v0.1.1): OS keychain integration (macOS/Windows/Linux)
   - `spn-ollama` (v0.1.0): Ollama backend with `ModelBackend` trait
-  - `spn-client` (v0.2.1): SDK for external tool integration
-  - `spn-cli` (v0.10.0): Main CLI binary
+  - `spn-client` (v0.2.2): SDK for external tool integration
+  - `spn-cli` (v0.12.2): Main CLI binary
 
 - **🔐 Daemon infrastructure**: Background service for credential caching
   - Unix socket IPC with peer credential verification

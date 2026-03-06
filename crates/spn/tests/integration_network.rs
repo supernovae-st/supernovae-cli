@@ -16,7 +16,8 @@ async fn test_github_registry_connectivity() {
         .build()
         .expect("Failed to create HTTP client");
 
-    let index_url = "https://raw.githubusercontent.com/supernovae-st/supernovae-registry/main/index";
+    let index_url =
+        "https://raw.githubusercontent.com/supernovae-st/supernovae-registry/main/index";
 
     // Test that we can reach the registry
     let response = client.head(index_url).send().await;
@@ -112,7 +113,10 @@ async fn test_http_timeout() {
     let elapsed = start.elapsed();
 
     // Should fail with timeout or connection error
-    assert!(response.is_err(), "Should fail to connect to non-routable IP");
+    assert!(
+        response.is_err(),
+        "Should fail to connect to non-routable IP"
+    );
 
     // Should complete within reasonable time (timeout + overhead)
     assert!(

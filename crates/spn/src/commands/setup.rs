@@ -890,39 +890,48 @@ async fn run_claude_code_setup(force: bool) -> Result<()> {
         println!();
         println!(
             "{}",
-            "╭─────────────────────────────────────────────────────────────────────────────╮".yellow()
+            "╭─────────────────────────────────────────────────────────────────────────────╮"
+                .yellow()
         );
         println!(
             "{}",
-            "│  💡 INSTALL CLAUDE CODE                                                     │".yellow()
+            "│  💡 INSTALL CLAUDE CODE                                                     │"
+                .yellow()
         );
         println!(
             "{}",
-            "├─────────────────────────────────────────────────────────────────────────────┤".yellow()
+            "├─────────────────────────────────────────────────────────────────────────────┤"
+                .yellow()
         );
         println!(
             "{}",
-            "│  npm install -g @anthropic-ai/claude-code                                   │".yellow()
+            "│  npm install -g @anthropic-ai/claude-code                                   │"
+                .yellow()
         );
         println!(
             "{}",
-            "│                                                                             │".yellow()
+            "│                                                                             │"
+                .yellow()
         );
         println!(
             "{}",
-            "│  Or with Homebrew:                                                          │".yellow()
+            "│  Or with Homebrew:                                                          │"
+                .yellow()
         );
         println!(
             "{}",
-            "│  brew install claude                                                        │".yellow()
+            "│  brew install claude                                                        │"
+                .yellow()
         );
         println!(
             "{}",
-            "╰─────────────────────────────────────────────────────────────────────────────╯".yellow()
+            "╰─────────────────────────────────────────────────────────────────────────────╯"
+                .yellow()
         );
         println!();
         return Err(SpnError::NotFound(
-            "Claude Code CLI required. Install with: npm install -g @anthropic-ai/claude-code".into(),
+            "Claude Code CLI required. Install with: npm install -g @anthropic-ai/claude-code"
+                .into(),
         ));
     }
 
@@ -1035,8 +1044,8 @@ async fn run_claude_code_setup(force: bool) -> Result<()> {
 
 /// Check if a plugin is installed by checking ~/.claude/plugins/installed_plugins.json.
 fn is_plugin_installed(plugin_name: &str) -> bool {
-    let installed_plugins_path = dirs::home_dir()
-        .map(|h| h.join(".claude/plugins/installed_plugins.json"));
+    let installed_plugins_path =
+        dirs::home_dir().map(|h| h.join(".claude/plugins/installed_plugins.json"));
 
     if let Some(path) = installed_plugins_path {
         if path.exists() {
@@ -1051,8 +1060,10 @@ fn is_plugin_installed(plugin_name: &str) -> bool {
 
 /// Check if a marketplace is added by checking ~/.claude/plugins/marketplaces/.
 fn is_marketplace_added(marketplace_name: &str) -> bool {
-    let marketplaces_path = dirs::home_dir()
-        .map(|h| h.join(".claude/plugins/marketplaces").join(marketplace_name));
+    let marketplaces_path = dirs::home_dir().map(|h| {
+        h.join(".claude/plugins/marketplaces")
+            .join(marketplace_name)
+    });
 
     if let Some(path) = marketplaces_path {
         return path.exists() && path.is_dir();

@@ -37,8 +37,8 @@ async fn start(foreground: bool) -> Result<()> {
         println!();
         println!("Press Ctrl+C to stop");
 
-        let config = DaemonConfig::new()
-            .map_err(|e| anyhow::anyhow!("Configuration error: {}", e))?;
+        let config =
+            DaemonConfig::new().map_err(|e| anyhow::anyhow!("Configuration error: {}", e))?;
         let mut server = DaemonServer::new(config);
 
         server
@@ -237,8 +237,8 @@ fn get_daemon_pid() -> Option<i32> {
 async fn install() -> Result<()> {
     println!("{} Installing daemon as system service...", "🔧".cyan());
 
-    let manager = ServiceManager::detect()
-        .map_err(|e| anyhow::anyhow!("Service management: {}", e))?;
+    let manager =
+        ServiceManager::detect().map_err(|e| anyhow::anyhow!("Service management: {}", e))?;
 
     println!(
         "   {} Service manager: {:?}",
@@ -252,22 +252,13 @@ async fn install() -> Result<()> {
             println!();
             println!("The daemon will now start automatically at login.");
             println!();
-            println!(
-                "To check status:     {}",
-                "spn daemon status".cyan()
-            );
-            println!(
-                "To uninstall:        {}",
-                "spn daemon uninstall".cyan()
-            );
+            println!("To check status:     {}", "spn daemon status".cyan());
+            println!("To uninstall:        {}", "spn daemon uninstall".cyan());
         }
         Err(crate::daemon::ServiceError::AlreadyInstalled) => {
             println!("{} Daemon is already installed as a service", "⚠".yellow());
             println!();
-            println!(
-                "To reinstall, first run: {}",
-                "spn daemon uninstall".cyan()
-            );
+            println!("To reinstall, first run: {}", "spn daemon uninstall".cyan());
         }
         Err(e) => {
             println!("{} Installation failed: {}", "✗".red(), e);
@@ -282,8 +273,8 @@ async fn install() -> Result<()> {
 async fn uninstall() -> Result<()> {
     println!("{} Uninstalling daemon service...", "🔧".cyan());
 
-    let manager = ServiceManager::detect()
-        .map_err(|e| anyhow::anyhow!("Service management: {}", e))?;
+    let manager =
+        ServiceManager::detect().map_err(|e| anyhow::anyhow!("Service management: {}", e))?;
 
     match manager.uninstall() {
         Ok(()) => {

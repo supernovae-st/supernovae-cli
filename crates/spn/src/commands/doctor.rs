@@ -390,7 +390,8 @@ fn check_plugins() -> Vec<CheckResult> {
                 if content.contains("supernovae@claude-code-supernovae") {
                     // Try to get more details about the plugin
                     // Cache path: ~/.claude/plugins/cache/claude-code-supernovae/supernovae/<version>/
-                    let plugin_cache = home.join(".claude/plugins/cache/claude-code-supernovae/supernovae");
+                    let plugin_cache =
+                        home.join(".claude/plugins/cache/claude-code-supernovae/supernovae");
                     if plugin_cache.exists() {
                         // Find the version directory (e.g., 1.0.0)
                         let version_dir = std::fs::read_dir(&plugin_cache)
@@ -401,9 +402,11 @@ fn check_plugins() -> Vec<CheckResult> {
 
                         if let Some(version_path) = version_dir {
                             // Count skills, agents, commands
-                            let skills_count = count_files_in_dir(&version_path, "skills", "SKILL.md");
+                            let skills_count =
+                                count_files_in_dir(&version_path, "skills", "SKILL.md");
                             let agents_count = count_files_in_dir(&version_path, "agents", ".md");
-                            let commands_count = count_files_in_dir(&version_path, "commands", ".md");
+                            let commands_count =
+                                count_files_in_dir(&version_path, "commands", ".md");
 
                             let details = format!(
                                 "{} skills, {} agents, {} commands",

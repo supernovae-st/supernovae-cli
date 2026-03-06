@@ -14,8 +14,8 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use zeroize::Zeroizing;
 
-use super::types::provider_env_var;
 use super::storage::global_secrets_path;
+use super::types::provider_env_var;
 
 /// RAII guard to clean up temp files on error.
 struct TempFileGuard<'a>(&'a std::path::Path);

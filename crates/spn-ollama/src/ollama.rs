@@ -255,7 +255,11 @@ impl OllamaBackend {
         self.client.chat(model, messages, options).await
     }
 
-    async fn impl_embed(&self, model: &str, input: &str) -> Result<EmbeddingResponse, BackendError> {
+    async fn impl_embed(
+        &self,
+        model: &str,
+        input: &str,
+    ) -> Result<EmbeddingResponse, BackendError> {
         if !self.impl_is_running().await {
             return Err(BackendError::NotRunning);
         }
@@ -292,7 +296,9 @@ impl OllamaBackend {
         }
 
         info!(model = %model, messages = messages.len(), "Streaming chat request");
-        self.client.chat_stream(model, messages, options, on_token).await
+        self.client
+            .chat_stream(model, messages, options, on_token)
+            .await
     }
 }
 
@@ -394,7 +400,8 @@ impl ModelBackend for OllamaBackend {
     where
         F: FnMut(&str) + Send,
     {
-        self.impl_chat_stream(model, messages, options, on_token).await
+        self.impl_chat_stream(model, messages, options, on_token)
+            .await
     }
 }
 

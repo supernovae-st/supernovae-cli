@@ -52,7 +52,9 @@ struct RegistryPackage {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 enum PackageSource {
-    Ollama { model: String },
+    Ollama {
+        model: String,
+    },
     #[serde(other)]
     Other,
 }
@@ -249,7 +251,10 @@ impl ModelRegistry {
 
                     // Check keywords in capabilities and recommended_for
                     for keyword in &keywords {
-                        if pkg.capabilities.iter().any(|c| c.to_lowercase().contains(keyword))
+                        if pkg
+                            .capabilities
+                            .iter()
+                            .any(|c| c.to_lowercase().contains(keyword))
                             || pkg
                                 .recommended_for
                                 .iter()
@@ -530,7 +535,13 @@ mod tests {
 
         let packages = registry.parse_registry(content).unwrap();
 
-        assert_eq!(packages.get("@models/chat/llama3.2").unwrap().category, "chat");
-        assert_eq!(packages.get("@models/vision/llava").unwrap().category, "vision");
+        assert_eq!(
+            packages.get("@models/chat/llama3.2").unwrap().category,
+            "chat"
+        );
+        assert_eq!(
+            packages.get("@models/vision/llava").unwrap().category,
+            "vision"
+        );
     }
 }

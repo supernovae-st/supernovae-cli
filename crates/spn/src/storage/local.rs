@@ -219,9 +219,7 @@ impl LocalStorage {
 
         // Reject null bytes (can truncate paths in some systems)
         if component.contains('\0') {
-            return Err(StorageError::InvalidPath(
-                "Null byte in path".to_string(),
-            ));
+            return Err(StorageError::InvalidPath("Null byte in path".to_string()));
         }
 
         // Reject path traversal sequences
@@ -635,7 +633,9 @@ mod tests {
         assert!(storage.validate_path_component("/etc/passwd").is_err());
 
         // Windows absolute path
-        assert!(storage.validate_path_component("\\Windows\\System32").is_err());
+        assert!(storage
+            .validate_path_component("\\Windows\\System32")
+            .is_err());
     }
 
     #[test]

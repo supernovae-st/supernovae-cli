@@ -233,17 +233,44 @@ mod tests {
 
     #[test]
     fn test_matches_query_description() {
-        assert!(matches_query("package", "A workflow for testing", "workflow"));
-        assert!(matches_query("package", "A WORKFLOW for testing", "workflow"));
-        assert!(!matches_query("package", "An agent for testing", "workflow"));
+        assert!(matches_query(
+            "package",
+            "A workflow for testing",
+            "workflow"
+        ));
+        assert!(matches_query(
+            "package",
+            "A WORKFLOW for testing",
+            "workflow"
+        ));
+        assert!(!matches_query(
+            "package",
+            "An agent for testing",
+            "workflow"
+        ));
     }
 
     #[test]
     fn test_sort_results_exact_match_first() {
         let mut results = vec![
-            ("alpha-workflow".to_string(), "1.0".to_string(), "".to_string(), "".to_string()),
-            ("workflow".to_string(), "2.0".to_string(), "".to_string(), "".to_string()),
-            ("beta-workflow".to_string(), "1.0".to_string(), "".to_string(), "".to_string()),
+            (
+                "alpha-workflow".to_string(),
+                "1.0".to_string(),
+                "".to_string(),
+                "".to_string(),
+            ),
+            (
+                "workflow".to_string(),
+                "2.0".to_string(),
+                "".to_string(),
+                "".to_string(),
+            ),
+            (
+                "beta-workflow".to_string(),
+                "1.0".to_string(),
+                "".to_string(),
+                "".to_string(),
+            ),
         ];
 
         sort_results(&mut results, "workflow");
@@ -258,8 +285,18 @@ mod tests {
     #[test]
     fn test_sort_results_case_insensitive() {
         let mut results = vec![
-            ("alpha".to_string(), "1.0".to_string(), "".to_string(), "".to_string()),
-            ("WORKFLOW".to_string(), "2.0".to_string(), "".to_string(), "".to_string()),
+            (
+                "alpha".to_string(),
+                "1.0".to_string(),
+                "".to_string(),
+                "".to_string(),
+            ),
+            (
+                "WORKFLOW".to_string(),
+                "2.0".to_string(),
+                "".to_string(),
+                "".to_string(),
+            ),
         ];
 
         sort_results(&mut results, "workflow");
@@ -271,8 +308,18 @@ mod tests {
     #[test]
     fn test_sort_results_alphabetical_when_no_exact() {
         let mut results = vec![
-            ("zebra-workflow".to_string(), "1.0".to_string(), "".to_string(), "".to_string()),
-            ("alpha-workflow".to_string(), "2.0".to_string(), "".to_string(), "".to_string()),
+            (
+                "zebra-workflow".to_string(),
+                "1.0".to_string(),
+                "".to_string(),
+                "".to_string(),
+            ),
+            (
+                "alpha-workflow".to_string(),
+                "2.0".to_string(),
+                "".to_string(),
+                "".to_string(),
+            ),
         ];
 
         sort_results(&mut results, "workflow");

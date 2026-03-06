@@ -424,10 +424,7 @@ async fn test_client_disconnect() {
         let result = stream.read_exact(&mut len_buf).await;
 
         // Should get UnexpectedEof when client disconnects
-        assert!(
-            result.is_err(),
-            "Should get error when client disconnects"
-        );
+        assert!(result.is_err(), "Should get error when client disconnects");
     });
 
     // Connect and immediately disconnect

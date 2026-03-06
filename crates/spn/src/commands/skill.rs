@@ -16,24 +16,24 @@ pub async fn run(command: SkillCommands) -> Result<()> {
         SkillCommands::Add { name } => {
             println!("{} {}", "Installing skill:".cyan(), name);
 
-            let path = client.install(&name).map_err(|e| {
-                SpnError::CommandFailed(format!("Failed to install skill: {}", e))
-            })?;
+            let path = client
+                .install(&name)
+                .map_err(|e| SpnError::CommandFailed(format!("Failed to install skill: {}", e)))?;
             println!("{} {}", "✓".green(), "Skill installed successfully".green());
             println!("  Location: {}", path.display());
         }
         SkillCommands::Remove { name } => {
             println!("{} {}", "Removing skill:".cyan(), name);
 
-            client.remove(&name).map_err(|e| {
-                SpnError::CommandFailed(format!("Failed to remove skill: {}", e))
-            })?;
+            client
+                .remove(&name)
+                .map_err(|e| SpnError::CommandFailed(format!("Failed to remove skill: {}", e)))?;
             println!("{} {}", "✓".green(), "Skill removed successfully".green());
         }
         SkillCommands::List => {
-            let skills = client.list_installed().map_err(|e| {
-                SpnError::CommandFailed(format!("Failed to list skills: {}", e))
-            })?;
+            let skills = client
+                .list_installed()
+                .map_err(|e| SpnError::CommandFailed(format!("Failed to list skills: {}", e)))?;
             if skills.is_empty() {
                 println!("{}", "No skills installed".yellow());
                 println!("Install with: {}", "spn skill add <name>".cyan());

@@ -154,7 +154,17 @@ async fn publish_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
     }
 
     // Check if this is a valid scope
-    let valid_scopes = ["@nika", "@novanet", "@workflows", "@shared", "@agents", "@skills", "@jobs", "@prompts", "@schemas"];
+    let valid_scopes = [
+        "@nika",
+        "@novanet",
+        "@workflows",
+        "@shared",
+        "@agents",
+        "@skills",
+        "@jobs",
+        "@prompts",
+        "@schemas",
+    ];
     let scope = manifest.name.split('/').next().unwrap_or("");
 
     if !valid_scopes.contains(&scope) {
@@ -188,7 +198,10 @@ async fn publish_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
         println!();
         println!("   Manual workflow:");
         println!("   1. Fork supernovae-registry");
-        println!("   2. Copy tarball to releases/{}/", get_index_path(&manifest.name));
+        println!(
+            "   2. Copy tarball to releases/{}/",
+            get_index_path(&manifest.name)
+        );
         println!("   3. Update index/{}", get_index_path(&manifest.name));
         println!("   4. Submit a pull request");
         println!();
@@ -209,9 +222,7 @@ async fn publish_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
             println!("   ⚠️  Automated workflow failed: {}", e);
             println!();
             println!("   Manual steps:");
-            println!(
-                "   1. cd ~/path/to/supernovae-registry"
-            );
+            println!("   1. cd ~/path/to/supernovae-registry");
             println!(
                 "   2. git checkout -b publish/{}/{}",
                 manifest.name.replace('@', ""),
@@ -320,7 +331,12 @@ async fn git_publish_workflow(
     // Create directories and copy tarball
     let index_path = get_index_path(&manifest.name);
     let releases_dir = registry_path.join("releases").join(&index_path);
-    let index_dir = registry_path.join("index").join(&index_path).parent().unwrap().to_path_buf();
+    let index_dir = registry_path
+        .join("index")
+        .join(&index_path)
+        .parent()
+        .unwrap()
+        .to_path_buf();
     let index_file = registry_path.join("index").join(&index_path);
 
     println!("   Creating directories...");
@@ -550,8 +566,8 @@ fn should_exclude(path: &Path, base: &Path) -> bool {
 
 /// Calculate SHA256 checksum of a file.
 fn calculate_sha256(path: &Path) -> Result<String> {
-    let file =
-        File::open(path).map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to open file: {}", e)))?;
+    let file = File::open(path)
+        .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to open file: {}", e)))?;
     let mut reader = BufReader::new(file);
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; 8192];
@@ -618,8 +634,9 @@ fn update_registry_json(registry_path: &Path, manifest: &SpnManifest) -> Result<
     }
 
     // Write back with pretty formatting
-    let output = serde_json::to_string_pretty(&registry)
-        .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to serialize registry.json: {}", e)))?;
+    let output = serde_json::to_string_pretty(&registry).map_err(|e| {
+        SpnError::Other(anyhow::anyhow!("Failed to serialize registry.json: {}", e))
+    })?;
 
     std::fs::write(&registry_file, output)
         .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to write registry.json: {}", e)))?;
@@ -697,7 +714,9 @@ mod tests {
             description: Some("Test workflow".to_string()),
             ..Default::default()
         };
-        manifest.write_to_file(temp.path().join("spn.yaml")).unwrap();
+        manifest
+            .write_to_file(temp.path().join("spn.yaml"))
+            .unwrap();
 
         // Create workflow file
         std::fs::write(
@@ -741,11 +760,17 @@ mod tests {
         // Excluded files
         assert!(should_exclude(Path::new("/project/.env"), base));
         assert!(should_exclude(Path::new("/project/.DS_Store"), base));
-        assert!(should_exclude(Path::new("/project/config.local.yaml"), base));
+        assert!(should_exclude(
+            Path::new("/project/config.local.yaml"),
+            base
+        ));
 
         // Included files
         assert!(!should_exclude(Path::new("/project/spn.yaml"), base));
-        assert!(!should_exclude(Path::new("/project/workflow.nika.yaml"), base));
+        assert!(!should_exclude(
+            Path::new("/project/workflow.nika.yaml"),
+            base
+        ));
         assert!(!should_exclude(Path::new("/project/README.md"), base));
         assert!(!should_exclude(Path::new("/project/src/main.rs"), base));
     }
@@ -777,7 +802,10 @@ mod tests {
 
     #[test]
     fn test_detect_package_type() {
-        assert_eq!(detect_package_type("@workflows/dev/code-review"), "workflow");
+        assert_eq!(
+            detect_package_type("@workflows/dev/code-review"),
+            "workflow"
+        );
         assert_eq!(detect_package_type("@agents/researcher"), "agent");
         assert_eq!(detect_package_type("@skills/tdd"), "skill");
         assert_eq!(detect_package_type("@prompts/greeting"), "prompt");

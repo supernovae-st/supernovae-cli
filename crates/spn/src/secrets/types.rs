@@ -37,10 +37,7 @@ pub fn provider_env_var(provider: &str) -> &'static str {
 /// Returns provider IDs for LLM and Local categories.
 pub fn llm_provider_ids() -> impl Iterator<Item = &'static str> {
     KNOWN_PROVIDERS.iter().filter_map(|p| {
-        if matches!(
-            p.category,
-            ProviderCategory::Llm | ProviderCategory::Local
-        ) {
+        if matches!(p.category, ProviderCategory::Llm | ProviderCategory::Local) {
             Some(p.id)
         } else {
             None
@@ -52,15 +49,13 @@ pub fn llm_provider_ids() -> impl Iterator<Item = &'static str> {
 ///
 /// Returns provider IDs for MCP category.
 pub fn mcp_provider_ids() -> impl Iterator<Item = &'static str> {
-    KNOWN_PROVIDERS
-        .iter()
-        .filter_map(|p| {
-            if p.category == ProviderCategory::Mcp {
-                Some(p.id)
-            } else {
-                None
-            }
-        })
+    KNOWN_PROVIDERS.iter().filter_map(|p| {
+        if p.category == ProviderCategory::Mcp {
+            Some(p.id)
+        } else {
+            None
+        }
+    })
 }
 
 /// Supported LLM providers with their key formats.
@@ -304,7 +299,10 @@ mod tests {
 
     #[test]
     fn test_mask_api_key_alias() {
-        assert_eq!(mask_api_key("sk-ant-api03-abc123xyz789"), mask_key("sk-ant-api03-abc123xyz789"));
+        assert_eq!(
+            mask_api_key("sk-ant-api03-abc123xyz789"),
+            mask_key("sk-ant-api03-abc123xyz789")
+        );
     }
 
     #[test]

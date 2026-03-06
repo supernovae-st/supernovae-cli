@@ -25,7 +25,6 @@ mod secrets;
 mod storage;
 mod sync;
 
-
 /// SuperNovae CLI - AI Development Toolkit
 #[derive(Parser)]
 #[command(name = "spn")]

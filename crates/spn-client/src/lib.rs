@@ -74,13 +74,13 @@ pub use spn_core::{
     // Registry
     PackageRef,
     PackageType,
-    Source,
     // Providers
     Provider,
     ProviderCategory,
     // Backend
     PullProgress,
     RunningModel,
+    Source,
     // Validation
     ValidationResult,
     KNOWN_PROVIDERS,
@@ -106,13 +106,9 @@ pub const DEFAULT_IPC_TIMEOUT: Duration = Duration::from_secs(30);
 ///
 /// This is a convenience wrapper around `SpnPaths::new()?.socket_file()`.
 pub fn socket_path() -> Result<PathBuf, Error> {
-    SpnPaths::new()
-        .map(|p| p.socket_file())
-        .map_err(|_| {
-            Error::Configuration(
-                "HOME directory not found. Set HOME environment variable.".into(),
-            )
-        })
+    SpnPaths::new().map(|p| p.socket_file()).map_err(|_| {
+        Error::Configuration("HOME directory not found. Set HOME environment variable.".into())
+    })
 }
 
 /// Check if the daemon socket exists.

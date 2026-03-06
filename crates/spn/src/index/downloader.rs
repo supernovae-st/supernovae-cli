@@ -552,9 +552,7 @@ mod tests {
         let config = RegistryConfig::local(&index_dir, &releases_dir);
         let downloader = Downloader::with_config(config);
 
-        let result = downloader
-            .download_latest("@nonexistent/package")
-            .await;
+        let result = downloader.download_latest("@nonexistent/package").await;
         assert!(
             matches!(result, Err(DownloadError::Index(_))),
             "Expected Index error for missing package, got: {:?}",

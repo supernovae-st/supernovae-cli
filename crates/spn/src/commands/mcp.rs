@@ -71,18 +71,16 @@ async fn run_add(
     );
 
     // Install via npm (globally)
-    npm.install(name).map_err(|e| {
-        SpnError::CommandFailed(format!("Failed to install npm package: {}", e))
-    })?;
+    npm.install(name)
+        .map_err(|e| SpnError::CommandFailed(format!("Failed to install npm package: {}", e)))?;
     println!("{} {}", "✓".green(), "npm package installed".green());
 
     // Create MCP server config
     let server = create_server_from_alias(name, npm);
 
     // Add to config file
-    mcp.add_server(name, server, scope).map_err(|e| {
-        SpnError::CommandFailed(format!("Failed to add to config: {}", e))
-    })?;
+    mcp.add_server(name, server, scope)
+        .map_err(|e| SpnError::CommandFailed(format!("Failed to add to config: {}", e)))?;
     println!(
         "{} {} {} {}",
         "✓".green(),

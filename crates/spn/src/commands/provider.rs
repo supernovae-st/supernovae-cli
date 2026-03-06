@@ -182,8 +182,9 @@ async fn run_set(provider: &str, key: Option<String>, storage: Option<String>) -
     // If key is provided (scripting mode), use quick setup
     if let Some(k) = key {
         let backend = match &storage {
-            Some(s) => StorageBackend::from_str(s)
-                .map_err(|e| SpnError::CommandFailed(e.to_string()))?,
+            Some(s) => {
+                StorageBackend::from_str(s).map_err(|e| SpnError::CommandFailed(e.to_string()))?
+            }
             None => StorageBackend::default(),
         };
 
@@ -231,8 +232,9 @@ async fn run_set(provider: &str, key: Option<String>, storage: Option<String>) -
 /// Set an API key with storage already specified (simplified prompt).
 async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result<()> {
     let backend = match &storage {
-        Some(s) => StorageBackend::from_str(s)
-            .map_err(|e| SpnError::CommandFailed(e.to_string()))?,
+        Some(s) => {
+            StorageBackend::from_str(s).map_err(|e| SpnError::CommandFailed(e.to_string()))?
+        }
         None => StorageBackend::default(),
     };
 

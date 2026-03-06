@@ -2400,7 +2400,7 @@ cd supernovae-cli
 # Build the project
 cargo build
 
-# Run tests (251 tests)
+# Run tests (796 tests)
 cargo test
 
 # Run linter
