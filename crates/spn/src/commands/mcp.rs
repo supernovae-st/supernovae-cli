@@ -3,7 +3,7 @@
 //! Manages MCP servers via the unified config at ~/.spn/mcp.yaml.
 //! Servers are installed via npm but configuration is managed centrally.
 
-use crate::error::Result;
+use crate::error::{Result, SpnError};
 use crate::interop::npm::{mcp_aliases, NpmClient};
 use crate::mcp::{config_manager, McpConfigManager, McpScope, McpServer};
 use crate::McpCommands;
@@ -71,40 +71,25 @@ async fn run_add(
     );
 
     // Install via npm (globally)
-    match npm.install(name) {
-        Ok(_) => {
-            println!("{} {}", "✓".green(), "npm package installed".green());
-        }
-        Err(e) => {
-            eprintln!(
-                "{} {}: {}",
-                "✗".red(),
-                "Failed to install npm package".red(),
-                e
-            );
-            std::process::exit(1);
-        }
-    }
+    npm.install(name).map_err(|e| {
+        SpnError::CommandFailed(format!("Failed to install npm package: {}", e))
+    })?;
+    println!("{} {}", "✓".green(), "npm package installed".green());
 
     // Create MCP server config
     let server = create_server_from_alias(name, npm);
 
     // Add to config file
-    match mcp.add_server(name, server, scope) {
-        Ok(_) => {
-            println!(
-                "{} {} {} {}",
-                "✓".green(),
-                "Added to".green(),
-                scope.to_string().green().bold(),
-                scope_display
-            );
-        }
-        Err(e) => {
-            eprintln!("{} {}: {}", "✗".red(), "Failed to add to config".red(), e);
-            std::process::exit(1);
-        }
-    }
+    mcp.add_server(name, server, scope).map_err(|e| {
+        SpnError::CommandFailed(format!("Failed to add to config: {}", e))
+    })?;
+    println!(
+        "{} {} {} {}",
+        "✓".green(),
+        "Added to".green(),
+        scope.to_string().green().bold(),
+        scope_display
+    );
 
     // Sync to editors (unless --no-sync)
     if !no_sync {
@@ -157,8 +142,7 @@ async fn run_remove(mcp: &McpConfigManager, name: &str, global: bool, project: b
             );
         }
         Err(e) => {
-            eprintln!("{} {}: {}", "✗".red(), "Failed to remove".red(), e);
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed(format!("Failed to remove: {}", e)));
         }
     }
 
@@ -283,14 +267,10 @@ async fn run_test(npm: &NpmClient, mcp: &McpConfigManager, name: &str) -> Result
         if !mcp.has_server(name, McpScope::Global)?
             && !mcp.has_server(name, McpScope::Project).unwrap_or(false)
         {
-            eprintln!(
-                "{} {} {}",
-                "✗".red(),
-                "Server not found:".red(),
-                name.bold()
-            );
-            eprintln!("  Add with: {}", format!("spn mcp add {}", name).cyan());
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed(format!(
+                "Server not found: {}\n  Add with: spn mcp add {}",
+                name, name
+            )));
         }
 
         test_single_server(npm, name);

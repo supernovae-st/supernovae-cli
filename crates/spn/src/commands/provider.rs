@@ -10,7 +10,7 @@
 //! - Keys are validated before storage
 //! - Debug/Display implementations are redacted
 
-use crate::error::Result;
+use crate::error::{Result, SpnError};
 use crate::secrets::{
     global_secrets_path, is_gitignored, mask_api_key, migrate_env_to_keyring, mlock_available,
     mlock_limit, project_env_path, provider_env_var, resolve_api_key, run_quick_setup, run_wizard,
@@ -168,54 +168,37 @@ async fn run_set(provider: &str, key: Option<String>, storage: Option<String>) -
         .collect();
 
     if !all_providers.contains(&provider) {
-        eprintln!(
-            "{} {} {}",
-            "✗".red(),
-            "Unknown provider:".red(),
-            provider.bold()
-        );
-        eprintln!();
-        eprintln!("Supported providers:");
+        let mut msg = format!("Unknown provider: {}\n\n", provider);
+        msg.push_str("Supported providers:\n");
         for p in SUPPORTED_PROVIDERS {
-            eprintln!("  • {}", p.cyan());
+            msg.push_str(&format!("  • {}\n", p));
         }
-        eprintln!();
-        eprintln!("MCP secrets:");
+        msg.push_str("\nMCP secrets:\n");
         for p in MCP_SECRET_TYPES {
-            eprintln!("  • {}", p.cyan());
+            msg.push_str(&format!("  • {}\n", p));
         }
-        std::process::exit(1);
+        return Err(SpnError::CommandFailed(msg));
     }
 
     // If key is provided (scripting mode), use quick setup
     if let Some(k) = key {
         let backend = match &storage {
-            Some(s) => match StorageBackend::from_str(s) {
-                Ok(b) => b,
-                Err(e) => {
-                    eprintln!("{} {}", "✗".red(), e);
-                    std::process::exit(1);
-                }
-            },
+            Some(s) => StorageBackend::from_str(s)
+                .map_err(|e| SpnError::CommandFailed(e.to_string()))?,
             None => StorageBackend::default(),
         };
 
-        match run_quick_setup(provider, &k, backend) {
-            Ok(result) => {
-                println!(
-                    "{} {} {} {}",
-                    "✓".green(),
-                    "API key stored in".green(),
-                    result.location.cyan().bold(),
-                    format!("for {}", provider).green()
-                );
-                println!("  {} {}", "Key:".dimmed(), result.masked_key.dimmed());
-            }
-            Err(e) => {
-                eprintln!("{} {} {}", "✗".red(), "Failed:".red(), e);
-                std::process::exit(1);
-            }
-        }
+        let result = run_quick_setup(provider, &k, backend)
+            .map_err(|e| SpnError::CommandFailed(format!("Failed: {}", e)))?;
+
+        println!(
+            "{} {} {} {}",
+            "✓".green(),
+            "API key stored in".green(),
+            result.location.cyan().bold(),
+            format!("for {}", provider).green()
+        );
+        println!("  {} {}", "Key:".dimmed(), result.masked_key.dimmed());
         return Ok(());
     }
 
@@ -239,9 +222,7 @@ async fn run_set(provider: &str, key: Option<String>, storage: Option<String>) -
             // User cancelled - wizard already printed "Cancelled."
         }
         Err(e) => {
-            // Error handling is done in wizard, but let's be defensive
-            eprintln!("{} {}", "✗".red(), e);
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed(e.to_string()));
         }
     }
 
@@ -251,13 +232,8 @@ async fn run_set(provider: &str, key: Option<String>, storage: Option<String>) -
 /// Set an API key with storage already specified (simplified prompt).
 async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result<()> {
     let backend = match &storage {
-        Some(s) => match StorageBackend::from_str(s) {
-            Ok(b) => b,
-            Err(e) => {
-                eprintln!("{} {}", "✗".red(), e);
-                std::process::exit(1);
-            }
-        },
+        Some(s) => StorageBackend::from_str(s)
+            .map_err(|e| SpnError::CommandFailed(e.to_string()))?,
         None => StorageBackend::default(),
     };
 
@@ -284,34 +260,28 @@ async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result
     let api_key = Zeroizing::new(input);
 
     // Validate key format
-    if let Err(e) = validate_key_format(provider, &api_key) {
-        eprintln!("{} {} {}", "✗".red(), "Invalid key format:".red(), e);
-        std::process::exit(1);
-    }
+    validate_key_format(provider, &api_key)
+        .map_err(|e| SpnError::CommandFailed(format!("Invalid key format: {}", e)))?;
 
     // Store based on backend
     match backend {
-        StorageBackend::Keychain => match SpnKeyring::set(provider, &api_key) {
-            Ok(()) => {
-                println!(
-                    "{} {} {} {}",
-                    "✓".green(),
-                    "API key stored in".green(),
-                    "OS Keychain".cyan().bold(),
-                    format!("for {}", provider).green()
-                );
-                println!("  {} {}", "Key:".dimmed(), mask_api_key(&api_key).dimmed());
-                println!();
-                println!(
-                    "{}",
-                    "Key is now securely stored and will be used automatically.".dimmed()
-                );
-            }
-            Err(e) => {
-                eprintln!("{} {} {}", "✗".red(), "Failed to store key:".red(), e);
-                std::process::exit(1);
-            }
-        },
+        StorageBackend::Keychain => {
+            SpnKeyring::set(provider, &api_key)
+                .map_err(|e| SpnError::CommandFailed(format!("Failed to store key: {}", e)))?;
+            println!(
+                "{} {} {} {}",
+                "✓".green(),
+                "API key stored in".green(),
+                "OS Keychain".cyan().bold(),
+                format!("for {}", provider).green()
+            );
+            println!("  {} {}", "Key:".dimmed(), mask_api_key(&api_key).dimmed());
+            println!();
+            println!(
+                "{}",
+                "Key is now securely stored and will be used automatically.".dimmed()
+            );
+        }
         StorageBackend::Env => {
             let path = project_env_path();
 
@@ -329,54 +299,33 @@ async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result
                 eprintln!();
             }
 
-            match store_in_dotenv(provider, &api_key, &path) {
-                Ok(()) => {
-                    println!(
-                        "{} {} {} {}",
-                        "✓".green(),
-                        "API key stored in".green(),
-                        ".env".cyan().bold(),
-                        format!("for {}", provider).green()
-                    );
-                    println!("  {} {}", "Key:".dimmed(), mask_api_key(&api_key).dimmed());
-                    println!("  {} {}", "File:".dimmed(), path.display());
-                }
-                Err(e) => {
-                    eprintln!("{} {} {}", "✗".red(), "Failed to store key:".red(), e);
-                    std::process::exit(1);
-                }
-            }
+            store_in_dotenv(provider, &api_key, &path)
+                .map_err(|e| SpnError::CommandFailed(format!("Failed to store key: {}", e)))?;
+            println!(
+                "{} {} {} {}",
+                "✓".green(),
+                "API key stored in".green(),
+                ".env".cyan().bold(),
+                format!("for {}", provider).green()
+            );
+            println!("  {} {}", "Key:".dimmed(), mask_api_key(&api_key).dimmed());
+            println!("  {} {}", "File:".dimmed(), path.display());
         }
         StorageBackend::Global => {
-            let path = match global_secrets_path() {
-                Ok(p) => p,
-                Err(e) => {
-                    eprintln!(
-                        "{} {} {}",
-                        "✗".red(),
-                        "Failed to determine global secrets path:".red(),
-                        e
-                    );
-                    std::process::exit(1);
-                }
-            };
-            match store_in_global(provider, &api_key) {
-                Ok(()) => {
-                    println!(
-                        "{} {} {} {}",
-                        "✓".green(),
-                        "API key stored in".green(),
-                        "~/.spn/secrets.env".cyan().bold(),
-                        format!("for {}", provider).green()
-                    );
-                    println!("  {} {}", "Key:".dimmed(), mask_api_key(&api_key).dimmed());
-                    println!("  {} {}", "File:".dimmed(), path.display());
-                }
-                Err(e) => {
-                    eprintln!("{} {} {}", "✗".red(), "Failed to store key:".red(), e);
-                    std::process::exit(1);
-                }
-            }
+            let path = global_secrets_path().map_err(|e| {
+                SpnError::CommandFailed(format!("Failed to determine global secrets path: {}", e))
+            })?;
+            store_in_global(provider, &api_key)
+                .map_err(|e| SpnError::CommandFailed(format!("Failed to store key: {}", e)))?;
+            println!(
+                "{} {} {} {}",
+                "✓".green(),
+                "API key stored in".green(),
+                "~/.spn/secrets.env".cyan().bold(),
+                format!("for {}", provider).green()
+            );
+            println!("  {} {}", "Key:".dimmed(), mask_api_key(&api_key).dimmed());
+            println!("  {} {}", "File:".dimmed(), path.display());
         }
         StorageBackend::Shell => {
             println!();
@@ -448,18 +397,10 @@ async fn run_get(provider: &str, unmask: bool) -> Result<()> {
             }
         }
         None => {
-            eprintln!(
-                "{} {} {}",
-                "✗".red(),
-                "No key found for provider:".red(),
-                provider.bold()
-            );
-            eprintln!();
-            eprintln!(
-                "Set with: {}",
-                format!("spn provider set {}", provider).cyan()
-            );
-            std::process::exit(1);
+            return Err(SpnError::CommandFailed(format!(
+                "No key found for provider: {}\n\nSet with: spn provider set {}",
+                provider, provider
+            )));
         }
     }
 
@@ -498,20 +439,14 @@ async fn run_delete(provider: &str) -> Result<()> {
         return Ok(());
     }
 
-    match SpnKeyring::delete(provider) {
-        Ok(()) => {
-            println!(
-                "{} {} {}",
-                "✓".green(),
-                "Deleted key for".green(),
-                provider.bold()
-            );
-        }
-        Err(e) => {
-            eprintln!("{} {} {}", "✗".red(), "Failed to delete:".red(), e);
-            std::process::exit(1);
-        }
-    }
+    SpnKeyring::delete(provider)
+        .map_err(|e| SpnError::CommandFailed(format!("Failed to delete: {}", e)))?;
+    println!(
+        "{} {} {}",
+        "✓".green(),
+        "Deleted key for".green(),
+        provider.bold()
+    );
 
     Ok(())
 }

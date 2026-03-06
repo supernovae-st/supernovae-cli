@@ -2,7 +2,7 @@
 //!
 //! Manages skills from skills.sh registry.
 
-use crate::error::Result;
+use crate::error::{Result, SpnError};
 use crate::interop::skills::SkillsClient;
 use crate::SkillCommands;
 
@@ -16,48 +16,35 @@ pub async fn run(command: SkillCommands) -> Result<()> {
         SkillCommands::Add { name } => {
             println!("{} {}", "Installing skill:".cyan(), name);
 
-            match client.install(&name) {
-                Ok(path) => {
-                    println!("{} {}", "✓".green(), "Skill installed successfully".green());
-                    println!("  Location: {}", path.display());
-                }
-                Err(e) => {
-                    eprintln!("{} {}: {}", "✗".red(), "Failed to install skill".red(), e);
-                    std::process::exit(1);
-                }
-            }
+            let path = client.install(&name).map_err(|e| {
+                SpnError::CommandFailed(format!("Failed to install skill: {}", e))
+            })?;
+            println!("{} {}", "✓".green(), "Skill installed successfully".green());
+            println!("  Location: {}", path.display());
         }
         SkillCommands::Remove { name } => {
             println!("{} {}", "Removing skill:".cyan(), name);
 
-            match client.remove(&name) {
-                Ok(()) => {
-                    println!("{} {}", "✓".green(), "Skill removed successfully".green());
+            client.remove(&name).map_err(|e| {
+                SpnError::CommandFailed(format!("Failed to remove skill: {}", e))
+            })?;
+            println!("{} {}", "✓".green(), "Skill removed successfully".green());
+        }
+        SkillCommands::List => {
+            let skills = client.list_installed().map_err(|e| {
+                SpnError::CommandFailed(format!("Failed to list skills: {}", e))
+            })?;
+            if skills.is_empty() {
+                println!("{}", "No skills installed".yellow());
+                println!("Install with: {}", "spn skill add <name>".cyan());
+            } else {
+                println!("{}", "Installed skills:".cyan());
+                for skill in &skills {
+                    println!("  • {}", skill);
                 }
-                Err(e) => {
-                    eprintln!("{} {}: {}", "✗".red(), "Failed to remove skill".red(), e);
-                    std::process::exit(1);
-                }
+                println!("\n{} {} skill(s)", "Total:".dimmed(), skills.len());
             }
         }
-        SkillCommands::List => match client.list_installed() {
-            Ok(skills) => {
-                if skills.is_empty() {
-                    println!("{}", "No skills installed".yellow());
-                    println!("Install with: {}", "spn skill add <name>".cyan());
-                } else {
-                    println!("{}", "Installed skills:".cyan());
-                    for skill in &skills {
-                        println!("  • {}", skill);
-                    }
-                    println!("\n{} {} skill(s)", "Total:".dimmed(), skills.len());
-                }
-            }
-            Err(e) => {
-                eprintln!("{} {}: {}", "✗".red(), "Failed to list skills".red(), e);
-                std::process::exit(1);
-            }
-        },
         SkillCommands::Search { query } => {
             let url = client.search_url(&query);
             println!("{} {}", "Search on skills.sh:".cyan(), query);
