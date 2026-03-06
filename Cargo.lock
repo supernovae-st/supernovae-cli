@@ -2093,7 +2093,7 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
- "spn-core 0.1.0",
+ "spn-core 0.1.1",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
@@ -2103,15 +2103,15 @@ dependencies = [
 [[package]]
 name = "spn-core"
 version = "0.1.0"
-dependencies = [
- "serde",
-]
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "080b293b715c0eda90e4f4cb21d2ca5669d1f0ddf79e08d4b3485f87a57c67a7"
 
 [[package]]
 name = "spn-core"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "080b293b715c0eda90e4f4cb21d2ca5669d1f0ddf79e08d4b3485f87a57c67a7"
+version = "0.1.1"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "spn-keyring"
@@ -2120,7 +2120,7 @@ dependencies = [
  "keyring",
  "secrecy",
  "serial_test",
- "spn-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spn-core 0.1.0",
  "thiserror 2.0.18",
  "zeroize",
 ]
@@ -2133,7 +2133,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "spn-core 0.1.0",
+ "spn-core 0.1.1",
  "thiserror 2.0.18",
  "tokio",
  "tracing",

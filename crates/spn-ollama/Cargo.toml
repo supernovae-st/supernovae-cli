@@ -1,6 +1,6 @@
 [package]
 name = "spn-ollama"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.75"
 description = "Ollama backend for SuperNovae model management"
@@ -11,7 +11,7 @@ keywords = ["ollama", "llm", "ai", "model-management"]
 categories = ["api-bindings", "asynchronous"]
 
 [dependencies]
-spn-core = { version = "0.1", path = "../spn-core" }
+spn-core = { version = "0.1.1", path = "../spn-core" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
 tokio = { version = "1", features = ["process", "io-util", "time"] }
 serde = { version = "1.0", features = ["derive"] }
