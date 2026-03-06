@@ -1,7 +1,7 @@
 //! Ollama backend for `SuperNovae` model management.
 //!
 //! This crate provides the `ModelBackend` trait and an Ollama implementation
-//! for managing local LLM models.
+//! for managing local LLM models, chat completions, and embeddings.
 //!
 //! # Architecture
 //!
@@ -12,9 +12,17 @@
 //! │                                                                             │
 //! │  ┌─────────────────────────────────────────────────────────────────────┐   │
 //! │  │ ModelBackend Trait                                                   │   │
+//! │  │                                                                      │   │
+//! │  │ Lifecycle:                                                           │   │
 //! │  │ • is_running(), start(), stop()                                      │   │
+//! │  │                                                                      │   │
+//! │  │ Model Management:                                                    │   │
 //! │  │ • list_models(), pull(), delete()                                    │   │
 //! │  │ • load(), unload(), running_models()                                 │   │
+//! │  │                                                                      │   │
+//! │  │ Inference:                                                           │   │
+//! │  │ • chat() - Chat completions                                          │   │
+//! │  │ • embed(), embed_batch() - Text embeddings                           │   │
 //! │  └─────────────────────────────────────────────────────────────────────┘   │
 //! │                          ▲                                                  │
 //! │                          │ implements                                       │
@@ -22,7 +30,8 @@
 //! │  ┌─────────────────────────────────────────────────────────────────────┐   │
 //! │  │ OllamaBackend                                                        │   │
 //! │  │ • HTTP client for Ollama REST API                                    │   │
-//! │  │ • Streaming pull with progress                                       │   │
+//! │  │ • Streaming chat with token callback                                 │   │
+//! │  │ • Batch embeddings support                                           │   │
 //! │  │ • Process management (start/stop)                                    │   │
 //! │  └─────────────────────────────────────────────────────────────────────┘   │
 //! │                                                                             │
@@ -37,10 +46,10 @@
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! # Example
+//! # Example: Model Management
 //!
 //! ```rust,ignore
-//! use spn_ollama::{OllamaBackend, ModelBackend};
+//! use spn_ollama::{OllamaBackend, ModelBackend, LoadConfig};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -67,6 +76,60 @@
 //!     Ok(())
 //! }
 //! ```
+//!
+//! # Example: Chat Completions
+//!
+//! ```rust,ignore
+//! use spn_ollama::{OllamaBackend, ModelBackend, ChatMessage, ChatOptions};
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let backend = OllamaBackend::new();
+//!
+//!     let messages = vec![
+//!         ChatMessage::system("You are a helpful assistant."),
+//!         ChatMessage::user("What is Rust?"),
+//!     ];
+//!
+//!     let options = ChatOptions::new()
+//!         .with_temperature(0.7)
+//!         .with_max_tokens(500);
+//!
+//!     let response = backend.chat("llama3.2", &messages, Some(&options)).await?;
+//!     println!("Assistant: {}", response.content());
+//!
+//!     if let Some(tps) = response.tokens_per_second() {
+//!         println!("Speed: {:.1} tokens/sec", tps);
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! # Example: Embeddings
+//!
+//! ```rust,ignore
+//! use spn_ollama::{OllamaBackend, ModelBackend};
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let backend = OllamaBackend::new();
+//!
+//!     // Single embedding
+//!     let embedding = backend.embed("nomic-embed-text", "Hello world").await?;
+//!     println!("Dimension: {}", embedding.dimension());
+//!
+//!     // Batch embeddings
+//!     let texts = &["Hello", "World", "Rust"];
+//!     let embeddings = backend.embed_batch("nomic-embed-text", texts).await?;
+//!
+//!     // Calculate similarity
+//!     let similarity = embeddings[0].cosine_similarity(&embeddings[1]);
+//!     println!("Similarity: {:.4}", similarity);
+//!
+//!     Ok(())
+//! }
+//! ```
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -84,7 +147,10 @@ pub use client::{OllamaClient, DEFAULT_ENDPOINT};
 pub use ollama::OllamaBackend;
 
 // Re-export spn-core types for convenience
-pub use spn_core::{BackendError, GpuInfo, LoadConfig, ModelInfo, PullProgress, RunningModel};
+pub use spn_core::{
+    BackendError, ChatMessage, ChatOptions, ChatResponse, ChatRole, EmbeddingResponse, GpuInfo,
+    LoadConfig, ModelInfo, PullProgress, RunningModel,
+};
 
 /// Create a default Ollama backend.
 ///

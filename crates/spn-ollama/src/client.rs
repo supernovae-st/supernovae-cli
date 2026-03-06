@@ -5,7 +5,10 @@
 use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use spn_core::{BackendError, ModelInfo, PullProgress};
+use spn_core::{
+    BackendError, ChatMessage, ChatOptions, ChatResponse, ChatRole, EmbeddingResponse, ModelInfo,
+    PullProgress,
+};
 use tracing::{debug, trace};
 
 /// Default Ollama API endpoint.
@@ -309,6 +312,268 @@ impl OllamaClient {
 
         Ok(())
     }
+
+    /// Send a chat completion request.
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::ModelNotFound` if model doesn't exist.
+    /// Returns `BackendError::NetworkError` if the API request fails.
+    pub async fn chat(
+        &self,
+        model: &str,
+        messages: &[ChatMessage],
+        options: Option<&ChatOptions>,
+    ) -> Result<ChatResponse, BackendError> {
+        let url = format!("{}/api/chat", self.endpoint);
+        debug!(url = %url, model = %model, messages = messages.len(), "Sending chat request");
+
+        let request = ChatRequest {
+            model: model.to_string(),
+            messages: messages.iter().map(|m| ChatMessageRequest::from(m.clone())).collect(),
+            stream: false,
+            options: options.map(ChatOptionsRequest::from),
+        };
+
+        let response = self
+            .client
+            .post(&url)
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+
+        if response.status().as_u16() == 404 {
+            return Err(BackendError::ModelNotFound(model.to_string()));
+        }
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            return Err(BackendError::NetworkError(format!(
+                "API returned status {status}: {text}"
+            )));
+        }
+
+        let body: ChatResponseBody = response
+            .json()
+            .await
+            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+
+        Ok(ChatResponse {
+            message: ChatMessage {
+                role: body.message.role.into(),
+                content: body.message.content,
+            },
+            done: body.done,
+            total_duration: body.total_duration,
+            eval_count: body.eval_count,
+            prompt_eval_count: body.prompt_eval_count,
+        })
+    }
+
+    /// Stream a chat completion request.
+    ///
+    /// Calls the callback for each token as it's generated.
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::ModelNotFound` if model doesn't exist.
+    /// Returns `BackendError::NetworkError` if the API request fails.
+    pub async fn chat_stream<F>(
+        &self,
+        model: &str,
+        messages: &[ChatMessage],
+        options: Option<&ChatOptions>,
+        mut on_token: F,
+    ) -> Result<ChatResponse, BackendError>
+    where
+        F: FnMut(&str),
+    {
+        let url = format!("{}/api/chat", self.endpoint);
+        debug!(url = %url, model = %model, "Streaming chat request");
+
+        let request = ChatRequest {
+            model: model.to_string(),
+            messages: messages.iter().map(|m| ChatMessageRequest::from(m.clone())).collect(),
+            stream: true,
+            options: options.map(ChatOptionsRequest::from),
+        };
+
+        let response = self
+            .client
+            .post(&url)
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+
+        if response.status().as_u16() == 404 {
+            return Err(BackendError::ModelNotFound(model.to_string()));
+        }
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            return Err(BackendError::NetworkError(format!(
+                "API returned status {status}: {text}"
+            )));
+        }
+
+        // Stream the response
+        let mut stream = response.bytes_stream();
+        let mut buffer = String::new();
+        let mut final_response: Option<ChatResponseBody> = None;
+        let mut full_content = String::new();
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| BackendError::NetworkError(e.to_string()))?;
+            buffer.push_str(&String::from_utf8_lossy(&chunk));
+
+            // Process complete lines
+            while let Some(newline_pos) = buffer.find('\n') {
+                let line = buffer[..newline_pos].trim();
+                if !line.is_empty() {
+                    if let Ok(body) = serde_json::from_str::<ChatResponseBody>(line) {
+                        // Emit token
+                        on_token(&body.message.content);
+                        full_content.push_str(&body.message.content);
+
+                        if body.done {
+                            final_response = Some(body);
+                        }
+                    }
+                }
+                buffer = buffer[newline_pos + 1..].to_string();
+            }
+        }
+
+        // Build final response
+        let final_body = final_response.ok_or_else(|| {
+            BackendError::NetworkError("Stream ended without completion".to_string())
+        })?;
+
+        Ok(ChatResponse {
+            message: ChatMessage::assistant(full_content),
+            done: true,
+            total_duration: final_body.total_duration,
+            eval_count: final_body.eval_count,
+            prompt_eval_count: final_body.prompt_eval_count,
+        })
+    }
+
+    /// Generate embeddings for a text.
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::ModelNotFound` if model doesn't exist.
+    /// Returns `BackendError::NetworkError` if the API request fails.
+    pub async fn embed(
+        &self,
+        model: &str,
+        input: &str,
+    ) -> Result<EmbeddingResponse, BackendError> {
+        let url = format!("{}/api/embed", self.endpoint);
+        debug!(url = %url, model = %model, "Generating embedding");
+
+        let request = EmbedRequest {
+            model: model.to_string(),
+            input: input.to_string(),
+        };
+
+        let response = self
+            .client
+            .post(&url)
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+
+        if response.status().as_u16() == 404 {
+            return Err(BackendError::ModelNotFound(model.to_string()));
+        }
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            return Err(BackendError::NetworkError(format!(
+                "API returned status {status}: {text}"
+            )));
+        }
+
+        let body: EmbedResponseBody = response
+            .json()
+            .await
+            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+
+        // Ollama returns embeddings as array of arrays, we take the first one
+        let embedding = body
+            .embeddings
+            .into_iter()
+            .next()
+            .unwrap_or_default();
+
+        Ok(EmbeddingResponse {
+            embedding,
+            total_duration: body.total_duration,
+            prompt_eval_count: body.prompt_eval_count,
+        })
+    }
+
+    /// Generate embeddings for multiple texts (batch).
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::ModelNotFound` if model doesn't exist.
+    /// Returns `BackendError::NetworkError` if the API request fails.
+    pub async fn embed_batch(
+        &self,
+        model: &str,
+        inputs: &[&str],
+    ) -> Result<Vec<EmbeddingResponse>, BackendError> {
+        let url = format!("{}/api/embed", self.endpoint);
+        debug!(url = %url, model = %model, count = inputs.len(), "Generating batch embeddings");
+
+        let request = EmbedBatchRequest {
+            model: model.to_string(),
+            input: inputs.iter().map(|s| (*s).to_string()).collect(),
+        };
+
+        let response = self
+            .client
+            .post(&url)
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+
+        if response.status().as_u16() == 404 {
+            return Err(BackendError::ModelNotFound(model.to_string()));
+        }
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            return Err(BackendError::NetworkError(format!(
+                "API returned status {status}: {text}"
+            )));
+        }
+
+        let body: EmbedResponseBody = response
+            .json()
+            .await
+            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+
+        Ok(body
+            .embeddings
+            .into_iter()
+            .map(|embedding| EmbeddingResponse {
+                embedding,
+                total_duration: body.total_duration,
+                prompt_eval_count: body.prompt_eval_count,
+            })
+            .collect())
+    }
 }
 
 impl Default for OllamaClient {
@@ -409,6 +674,126 @@ struct GenerateRequest {
     stream: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     keep_alive: Option<String>,
+}
+
+// ============================================================================
+// Chat API Types
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+struct ChatRequest {
+    model: String,
+    messages: Vec<ChatMessageRequest>,
+    stream: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    options: Option<ChatOptionsRequest>,
+}
+
+#[derive(Debug, Serialize)]
+struct ChatMessageRequest {
+    role: String,
+    content: String,
+}
+
+impl From<ChatMessage> for ChatMessageRequest {
+    fn from(msg: ChatMessage) -> Self {
+        Self {
+            role: msg.role.to_string(),
+            content: msg.content,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct ChatOptionsRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    top_p: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    top_k: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    num_predict: Option<u32>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    stop: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    seed: Option<u64>,
+}
+
+impl From<&ChatOptions> for ChatOptionsRequest {
+    fn from(opts: &ChatOptions) -> Self {
+        Self {
+            temperature: opts.temperature,
+            top_p: opts.top_p,
+            top_k: opts.top_k,
+            num_predict: opts.max_tokens,
+            stop: opts.stop.clone(),
+            seed: opts.seed,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct ChatResponseBody {
+    message: ChatMessageResponse,
+    done: bool,
+    #[serde(default)]
+    total_duration: Option<u64>,
+    #[serde(default)]
+    eval_count: Option<u32>,
+    #[serde(default)]
+    prompt_eval_count: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ChatMessageResponse {
+    role: ChatRoleResponse,
+    #[serde(default)]
+    content: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum ChatRoleResponse {
+    System,
+    User,
+    Assistant,
+}
+
+impl From<ChatRoleResponse> for ChatRole {
+    fn from(role: ChatRoleResponse) -> Self {
+        match role {
+            ChatRoleResponse::System => ChatRole::System,
+            ChatRoleResponse::User => ChatRole::User,
+            ChatRoleResponse::Assistant => ChatRole::Assistant,
+        }
+    }
+}
+
+// ============================================================================
+// Embedding API Types
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+struct EmbedRequest {
+    model: String,
+    input: String,
+}
+
+#[derive(Debug, Serialize)]
+struct EmbedBatchRequest {
+    model: String,
+    input: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct EmbedResponseBody {
+    #[serde(default)]
+    embeddings: Vec<Vec<f32>>,
+    #[serde(default)]
+    total_duration: Option<u64>,
+    #[serde(default)]
+    prompt_eval_count: Option<u32>,
 }
 
 #[cfg(test)]

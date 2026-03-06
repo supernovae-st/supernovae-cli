@@ -72,6 +72,7 @@ pub use spn_core::{
     // Registry
     PackageRef,
     PackageType,
+    Source,
     // Providers
     Provider,
     ProviderCategory,

@@ -4,7 +4,10 @@
 
 use crate::backend::{DynModelBackend, ModelBackend, ProgressCallback};
 use crate::client::OllamaClient;
-use spn_core::{BackendError, GpuInfo, LoadConfig, ModelInfo, PullProgress, RunningModel};
+use spn_core::{
+    BackendError, ChatMessage, ChatOptions, ChatResponse, EmbeddingResponse, GpuInfo, LoadConfig,
+    ModelInfo, PullProgress, RunningModel,
+};
 use std::future::Future;
 use std::pin::Pin;
 use tracing::{debug, info, warn};
@@ -214,6 +217,42 @@ impl OllamaBackend {
         debug!("GPU info not directly available from Ollama API");
         Ok(vec![])
     }
+
+    async fn impl_chat(
+        &self,
+        model: &str,
+        messages: &[ChatMessage],
+        options: Option<&ChatOptions>,
+    ) -> Result<ChatResponse, BackendError> {
+        if !self.impl_is_running().await {
+            return Err(BackendError::NotRunning);
+        }
+
+        info!(model = %model, messages = messages.len(), "Sending chat request");
+        self.client.chat(model, messages, options).await
+    }
+
+    async fn impl_embed(&self, model: &str, input: &str) -> Result<EmbeddingResponse, BackendError> {
+        if !self.impl_is_running().await {
+            return Err(BackendError::NotRunning);
+        }
+
+        debug!(model = %model, "Generating embedding");
+        self.client.embed(model, input).await
+    }
+
+    async fn impl_embed_batch(
+        &self,
+        model: &str,
+        inputs: &[&str],
+    ) -> Result<Vec<EmbeddingResponse>, BackendError> {
+        if !self.impl_is_running().await {
+            return Err(BackendError::NotRunning);
+        }
+
+        debug!(model = %model, count = inputs.len(), "Generating batch embeddings");
+        self.client.embed_batch(model, inputs).await
+    }
 }
 
 impl Default for OllamaBackend {
@@ -281,6 +320,27 @@ impl ModelBackend for OllamaBackend {
 
     fn endpoint_url(&self) -> &str {
         self.client.endpoint()
+    }
+
+    async fn chat(
+        &self,
+        model: &str,
+        messages: &[ChatMessage],
+        options: Option<&ChatOptions>,
+    ) -> Result<ChatResponse, BackendError> {
+        self.impl_chat(model, messages, options).await
+    }
+
+    async fn embed(&self, model: &str, input: &str) -> Result<EmbeddingResponse, BackendError> {
+        self.impl_embed(model, input).await
+    }
+
+    async fn embed_batch(
+        &self,
+        model: &str,
+        inputs: &[&str],
+    ) -> Result<Vec<EmbeddingResponse>, BackendError> {
+        self.impl_embed_batch(model, inputs).await
     }
 }
 
@@ -372,6 +432,39 @@ impl DynModelBackend for OllamaBackend {
 
     fn endpoint_url(&self) -> &str {
         self.client.endpoint()
+    }
+
+    fn chat(
+        &self,
+        model: &str,
+        messages: Vec<ChatMessage>,
+        options: Option<ChatOptions>,
+    ) -> Pin<Box<dyn Future<Output = Result<ChatResponse, BackendError>> + Send + '_>> {
+        let model = model.to_string();
+        Box::pin(async move { self.impl_chat(&model, &messages, options.as_ref()).await })
+    }
+
+    fn embed(
+        &self,
+        model: &str,
+        input: &str,
+    ) -> Pin<Box<dyn Future<Output = Result<EmbeddingResponse, BackendError>> + Send + '_>> {
+        let model = model.to_string();
+        let input = input.to_string();
+        Box::pin(async move { self.impl_embed(&model, &input).await })
+    }
+
+    fn embed_batch(
+        &self,
+        model: &str,
+        inputs: Vec<String>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<EmbeddingResponse>, BackendError>> + Send + '_>>
+    {
+        let model = model.to_string();
+        Box::pin(async move {
+            let refs: Vec<&str> = inputs.iter().map(String::as_str).collect();
+            self.impl_embed_batch(&model, &refs).await
+        })
     }
 }
 

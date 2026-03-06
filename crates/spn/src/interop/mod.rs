@@ -3,8 +3,18 @@
 //! This module handles:
 //! - Binary discovery (nika, novanet in PATH or ~/.spn/bin/)
 //! - Command execution with proper argument forwarding
+//! - MCP registry for package metadata
+//! - Model registry for package metadata
 //! - Error handling for missing binaries
 
 pub mod binary;
+pub mod mcp_registry;
+pub mod model_registry;
 pub mod npm;
 pub mod skills;
+
+// Re-export for convenience
+#[allow(unused_imports)]
+pub use mcp_registry::{McpPackage, McpRegistry, McpRegistryConfig};
+#[allow(unused_imports)]
+pub use model_registry::{ModelPackage, ModelRegistry, ModelRegistryConfig};

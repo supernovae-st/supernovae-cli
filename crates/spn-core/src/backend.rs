@@ -266,6 +266,236 @@ pub struct LoadConfig {
     pub keep_alive: bool,
 }
 
+// ============================================================================
+// Chat Types
+// ============================================================================
+
+/// Role in a chat conversation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
+pub enum ChatRole {
+    /// System message (instructions).
+    System,
+    /// User message.
+    User,
+    /// Assistant response.
+    Assistant,
+}
+
+impl fmt::Display for ChatRole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::System => write!(f, "system"),
+            Self::User => write!(f, "user"),
+            Self::Assistant => write!(f, "assistant"),
+        }
+    }
+}
+
+/// A message in a chat conversation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct ChatMessage {
+    /// Role of the message sender.
+    pub role: ChatRole,
+    /// Content of the message.
+    pub content: String,
+}
+
+impl ChatMessage {
+    /// Create a new system message.
+    #[must_use]
+    pub fn system(content: impl Into<String>) -> Self {
+        Self {
+            role: ChatRole::System,
+            content: content.into(),
+        }
+    }
+
+    /// Create a new user message.
+    #[must_use]
+    pub fn user(content: impl Into<String>) -> Self {
+        Self {
+            role: ChatRole::User,
+            content: content.into(),
+        }
+    }
+
+    /// Create a new assistant message.
+    #[must_use]
+    pub fn assistant(content: impl Into<String>) -> Self {
+        Self {
+            role: ChatRole::Assistant,
+            content: content.into(),
+        }
+    }
+}
+
+/// Options for chat completion.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct ChatOptions {
+    /// Temperature for sampling (0.0 to 2.0).
+    pub temperature: Option<f32>,
+    /// Top-p (nucleus) sampling.
+    pub top_p: Option<f32>,
+    /// Top-k sampling.
+    pub top_k: Option<u32>,
+    /// Maximum tokens to generate.
+    pub max_tokens: Option<u32>,
+    /// Stop sequences.
+    pub stop: Vec<String>,
+    /// Seed for reproducibility.
+    pub seed: Option<u64>,
+}
+
+impl Default for ChatOptions {
+    fn default() -> Self {
+        Self {
+            temperature: None,
+            top_p: None,
+            top_k: None,
+            max_tokens: None,
+            stop: Vec::new(),
+            seed: None,
+        }
+    }
+}
+
+impl ChatOptions {
+    /// Create new chat options.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set temperature.
+    #[must_use]
+    pub fn with_temperature(mut self, temp: f32) -> Self {
+        self.temperature = Some(temp);
+        self
+    }
+
+    /// Set top-p sampling.
+    #[must_use]
+    pub fn with_top_p(mut self, top_p: f32) -> Self {
+        self.top_p = Some(top_p);
+        self
+    }
+
+    /// Set top-k sampling.
+    #[must_use]
+    pub fn with_top_k(mut self, top_k: u32) -> Self {
+        self.top_k = Some(top_k);
+        self
+    }
+
+    /// Set maximum tokens.
+    #[must_use]
+    pub fn with_max_tokens(mut self, max: u32) -> Self {
+        self.max_tokens = Some(max);
+        self
+    }
+
+    /// Add a stop sequence.
+    #[must_use]
+    pub fn with_stop(mut self, stop: impl Into<String>) -> Self {
+        self.stop.push(stop.into());
+        self
+    }
+
+    /// Set seed for reproducibility.
+    #[must_use]
+    pub fn with_seed(mut self, seed: u64) -> Self {
+        self.seed = Some(seed);
+        self
+    }
+}
+
+/// Response from a chat completion.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct ChatResponse {
+    /// The assistant's response message.
+    pub message: ChatMessage,
+    /// Whether the response is complete (not streaming).
+    pub done: bool,
+    /// Total duration in nanoseconds.
+    pub total_duration: Option<u64>,
+    /// Tokens generated.
+    pub eval_count: Option<u32>,
+    /// Prompt tokens.
+    pub prompt_eval_count: Option<u32>,
+}
+
+impl ChatResponse {
+    /// Get the response content.
+    #[must_use]
+    pub fn content(&self) -> &str {
+        &self.message.content
+    }
+
+    /// Get tokens per second (if metrics available).
+    #[must_use]
+    pub fn tokens_per_second(&self) -> Option<f64> {
+        match (self.eval_count, self.total_duration) {
+            (Some(count), Some(duration)) if duration > 0 => {
+                Some(count as f64 / (duration as f64 / 1_000_000_000.0))
+            }
+            _ => None,
+        }
+    }
+}
+
+// ============================================================================
+// Embedding Types
+// ============================================================================
+
+/// Response from an embedding request.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct EmbeddingResponse {
+    /// The embedding vector.
+    pub embedding: Vec<f32>,
+    /// Total duration in nanoseconds.
+    pub total_duration: Option<u64>,
+    /// Number of tokens in the input.
+    pub prompt_eval_count: Option<u32>,
+}
+
+impl EmbeddingResponse {
+    /// Get the dimension of the embedding.
+    #[must_use]
+    pub fn dimension(&self) -> usize {
+        self.embedding.len()
+    }
+
+    /// Calculate cosine similarity with another embedding.
+    #[must_use]
+    pub fn cosine_similarity(&self, other: &Self) -> f32 {
+        if self.embedding.len() != other.embedding.len() {
+            return 0.0;
+        }
+
+        let dot_product: f32 = self
+            .embedding
+            .iter()
+            .zip(&other.embedding)
+            .map(|(a, b)| a * b)
+            .sum();
+
+        let norm_a: f32 = self.embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm_b: f32 = other.embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
+
+        if norm_a == 0.0 || norm_b == 0.0 {
+            0.0
+        } else {
+            dot_product / (norm_a * norm_b)
+        }
+    }
+}
+
 impl Default for LoadConfig {
     fn default() -> Self {
         Self {
@@ -446,5 +676,127 @@ mod tests {
         let config = LoadConfig::new().with_gpu_layers(0);
         assert!(config.is_cpu_only());
         assert!(!config.is_full_gpu());
+    }
+
+    #[test]
+    fn test_chat_role_display() {
+        assert_eq!(ChatRole::System.to_string(), "system");
+        assert_eq!(ChatRole::User.to_string(), "user");
+        assert_eq!(ChatRole::Assistant.to_string(), "assistant");
+    }
+
+    #[test]
+    fn test_chat_message_constructors() {
+        let system = ChatMessage::system("You are helpful");
+        assert_eq!(system.role, ChatRole::System);
+        assert_eq!(system.content, "You are helpful");
+
+        let user = ChatMessage::user("Hello");
+        assert_eq!(user.role, ChatRole::User);
+
+        let assistant = ChatMessage::assistant("Hi there!");
+        assert_eq!(assistant.role, ChatRole::Assistant);
+    }
+
+    #[test]
+    fn test_chat_options_builder() {
+        let options = ChatOptions::new()
+            .with_temperature(0.7)
+            .with_top_p(0.9)
+            .with_top_k(40)
+            .with_max_tokens(100)
+            .with_stop("END")
+            .with_seed(42);
+
+        assert_eq!(options.temperature, Some(0.7));
+        assert_eq!(options.top_p, Some(0.9));
+        assert_eq!(options.top_k, Some(40));
+        assert_eq!(options.max_tokens, Some(100));
+        assert_eq!(options.stop, vec!["END"]);
+        assert_eq!(options.seed, Some(42));
+    }
+
+    #[test]
+    fn test_chat_response_content() {
+        let response = ChatResponse {
+            message: ChatMessage::assistant("Hello!"),
+            done: true,
+            total_duration: Some(1_000_000_000),
+            eval_count: Some(10),
+            prompt_eval_count: Some(5),
+        };
+
+        assert_eq!(response.content(), "Hello!");
+        assert!(response.done);
+    }
+
+    #[test]
+    fn test_chat_response_tokens_per_second() {
+        let response = ChatResponse {
+            message: ChatMessage::assistant("Test"),
+            done: true,
+            total_duration: Some(2_000_000_000), // 2 seconds
+            eval_count: Some(100),
+            prompt_eval_count: None,
+        };
+
+        let tps = response.tokens_per_second().unwrap();
+        assert!((tps - 50.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_embedding_response_dimension() {
+        let response = EmbeddingResponse {
+            embedding: vec![0.1, 0.2, 0.3, 0.4],
+            total_duration: None,
+            prompt_eval_count: None,
+        };
+
+        assert_eq!(response.dimension(), 4);
+    }
+
+    #[test]
+    fn test_embedding_cosine_similarity() {
+        let a = EmbeddingResponse {
+            embedding: vec![1.0, 0.0, 0.0],
+            total_duration: None,
+            prompt_eval_count: None,
+        };
+
+        let b = EmbeddingResponse {
+            embedding: vec![1.0, 0.0, 0.0],
+            total_duration: None,
+            prompt_eval_count: None,
+        };
+
+        // Identical vectors should have similarity of 1.0
+        assert!((a.cosine_similarity(&b) - 1.0).abs() < 0.001);
+
+        let c = EmbeddingResponse {
+            embedding: vec![0.0, 1.0, 0.0],
+            total_duration: None,
+            prompt_eval_count: None,
+        };
+
+        // Orthogonal vectors should have similarity of 0.0
+        assert!((a.cosine_similarity(&c)).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_embedding_cosine_similarity_different_dimensions() {
+        let a = EmbeddingResponse {
+            embedding: vec![1.0, 0.0],
+            total_duration: None,
+            prompt_eval_count: None,
+        };
+
+        let b = EmbeddingResponse {
+            embedding: vec![1.0, 0.0, 0.0],
+            total_duration: None,
+            prompt_eval_count: None,
+        };
+
+        // Different dimensions should return 0.0
+        assert_eq!(a.cosine_similarity(&b), 0.0);
     }
 }

@@ -1,6 +1,7 @@
 //! npm integration for MCP servers.
 //!
 //! Proxies MCP server installation via npm/npx.
+//! Uses the MCP registry for package resolution, with hardcoded fallbacks.
 
 use rustc_hash::FxHashMap;
 use std::path::PathBuf;
@@ -8,8 +9,11 @@ use std::process::{Command, ExitStatus, Stdio};
 
 use thiserror::Error;
 
-/// Known MCP server aliases.
+use super::mcp_registry::McpRegistry;
+
+/// Known MCP server aliases (fallback for offline/fast access).
 /// Maps short names to npm packages.
+/// NOTE: Registry is the source of truth; this is for offline fallback.
 pub fn mcp_aliases() -> FxHashMap<&'static str, &'static str> {
     FxHashMap::from_iter([
         // Anthropic official
@@ -96,13 +100,18 @@ pub type Result<T> = std::result::Result<T, NpmError>;
 pub struct NpmClient {
     /// Global npm directory.
     global_dir: Option<PathBuf>,
+    /// MCP registry for package resolution.
+    registry: McpRegistry,
 }
 
 impl NpmClient {
     /// Create a new npm client.
     pub fn new() -> Self {
         let global_dir = Self::find_global_dir();
-        Self { global_dir }
+        Self {
+            global_dir,
+            registry: McpRegistry::new(),
+        }
     }
 
     /// Find the global npm directory.
@@ -122,12 +131,22 @@ impl NpmClient {
         which::which("npm").is_ok()
     }
 
-    /// Resolve an alias to the full package name.
+    /// Resolve an alias to the full package name (sync, uses fallback).
     pub fn resolve_alias(&self, name: &str) -> String {
         mcp_aliases()
             .get(name)
             .map(|s| s.to_string())
             .unwrap_or_else(|| name.to_string())
+    }
+
+    /// Resolve an alias using the registry (async, preferred).
+    pub async fn resolve_alias_async(&self, name: &str) -> String {
+        self.registry.resolve(name).await
+    }
+
+    /// Get the MCP registry.
+    pub fn registry(&self) -> &McpRegistry {
+        &self.registry
     }
 
     /// Install an MCP server package globally.
@@ -217,6 +236,44 @@ impl NpmClient {
     pub fn npx_command(&self, name: &str) -> String {
         let package = self.resolve_alias(name);
         format!("npx {}", package)
+    }
+
+    /// Get the npx command using registry (async, preferred).
+    pub async fn npx_command_async(&self, name: &str) -> String {
+        let package = self.resolve_alias_async(name).await;
+        format!("npx {}", package)
+    }
+
+    /// Install an MCP server using registry resolution (async).
+    pub async fn install_async(&self, name: &str) -> Result<ExitStatus> {
+        if !self.is_available() {
+            return Err(NpmError::NpmNotFound);
+        }
+
+        let package = self.resolve_alias_async(name).await;
+
+        let status = Command::new("npm")
+            .args(["install", "-g", &package])
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .status()?;
+
+        if !status.success() {
+            return Err(NpmError::InstallFailed(package));
+        }
+
+        Ok(status)
+    }
+
+    /// Search MCP servers in registry.
+    pub async fn search_mcp(&self, query: &str) -> Vec<super::mcp_registry::McpPackage> {
+        self.registry.search(query).await
+    }
+
+    /// List all available MCP servers from registry.
+    pub async fn list_available_mcp(&self) -> Vec<super::mcp_registry::McpPackage> {
+        self.registry.list().await
     }
 }
 

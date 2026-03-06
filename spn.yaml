@@ -6,4 +6,5 @@ license: null
 repository: null
 dependencies:
   '@workflows/test-integration': ^1.0.0
+  '@workflows/data/json-transformer': ^1.0.0
 dev-dependencies: {}

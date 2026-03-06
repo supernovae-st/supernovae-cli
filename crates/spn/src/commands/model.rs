@@ -1,8 +1,10 @@
 //! Model CLI commands.
 //!
 //! Manage local LLM models via the spn daemon + Ollama.
+//! Search and discover models from the SuperNovae registry.
 
 use crate::error::Result;
+use crate::interop::model_registry::ModelRegistry;
 use crate::ModelCommands;
 use colored::Colorize;
 use dialoguer::Confirm;
@@ -16,6 +18,9 @@ pub async fn run(command: ModelCommands) -> Result<()> {
         ModelCommands::Unload { name } => unload(&name).await,
         ModelCommands::Delete { name, yes } => delete(&name, yes).await,
         ModelCommands::Status { json } => status(json).await,
+        ModelCommands::Search { query, category } => search(&query, category.as_deref()).await,
+        ModelCommands::Info { name, json } => info(&name, json).await,
+        ModelCommands::Recommend { use_case } => recommend(use_case.as_deref()).await,
     }
 }
 
@@ -379,6 +384,252 @@ fn format_size(bytes: u64) -> String {
     } else {
         format!("{} B", bytes)
     }
+}
+
+// ============================================================================
+// Search Models (from registry)
+// ============================================================================
+
+async fn search(query: &str, category: Option<&str>) -> Result<()> {
+    let registry = ModelRegistry::new();
+
+    println!("{} Searching for: {}", "->".cyan(), query.bold());
+    println!();
+
+    let results = if let Some(cat) = category {
+        // Filter by category first, then search
+        let models = registry.list_by_category(cat).await;
+        let query_lower = query.to_lowercase();
+        models
+            .into_iter()
+            .filter(|m| {
+                m.name.to_lowercase().contains(&query_lower)
+                    || m.ollama_model.to_lowercase().contains(&query_lower)
+                    || m.description
+                        .as_ref()
+                        .map(|d| d.to_lowercase().contains(&query_lower))
+                        .unwrap_or(false)
+            })
+            .collect::<Vec<_>>()
+    } else {
+        registry.search(query).await
+    };
+
+    if results.is_empty() {
+        println!("{}", "No models found.".yellow());
+        println!();
+        println!("Try:");
+        println!("  {} spn model search coding", "•".cyan());
+        println!("  {} spn model search --category vision", "•".cyan());
+        return Ok(());
+    }
+
+    println!("{}", "Available Models".bold());
+    println!();
+
+    // Header
+    println!(
+        "  {:<35} {:<12} {}",
+        "NAME".dimmed(),
+        "CATEGORY".dimmed(),
+        "DESCRIPTION".dimmed()
+    );
+    println!("  {}", "-".repeat(80));
+
+    for model in &results {
+        let desc = model
+            .description
+            .as_ref()
+            .map(|d| {
+                if d.len() > 40 {
+                    format!("{}...", &d[..37])
+                } else {
+                    d.clone()
+                }
+            })
+            .unwrap_or_else(|| "-".to_string());
+
+        println!(
+            "  {:<35} {:<12} {}",
+            model.ollama_model.cyan(),
+            model.category,
+            desc.dimmed()
+        );
+    }
+
+    println!();
+    println!("  {} model(s) found", results.len());
+    println!();
+    println!(
+        "  Pull a model: {} spn model pull {}",
+        "->".cyan(),
+        results.first().map(|m| m.ollama_model.as_str()).unwrap_or("llama3.2")
+    );
+
+    Ok(())
+}
+
+// ============================================================================
+// Model Info (from registry)
+// ============================================================================
+
+async fn info(name: &str, json_output: bool) -> Result<()> {
+    let registry = ModelRegistry::new();
+
+    let model = registry.get(name).await;
+
+    if let Some(model) = model {
+        if json_output {
+            let json = serde_json::json!({
+                "name": model.name,
+                "ollama_model": model.ollama_model,
+                "description": model.description,
+                "category": model.category,
+                "variants": model.variants.iter().map(|v| {
+                    serde_json::json!({
+                        "name": v.name,
+                        "ollama": v.ollama,
+                        "size": v.size,
+                        "vram": v.vram,
+                        "best_for": v.best_for
+                    })
+                }).collect::<Vec<_>>(),
+                "benchmarks": model.benchmarks,
+                "capabilities": model.capabilities,
+                "recommended_for": model.recommended_for
+            });
+            println!("{}", serde_json::to_string_pretty(&json)?);
+            return Ok(());
+        }
+
+        println!("{}", "Model Information".bold());
+        println!();
+        println!("  {} {}", "Name:".dimmed(), model.name.bold());
+        println!("  {} {}", "Ollama:".dimmed(), model.ollama_model.cyan());
+        println!("  {} {}", "Category:".dimmed(), model.category);
+
+        if let Some(desc) = &model.description {
+            println!("  {} {}", "Description:".dimmed(), desc);
+        }
+
+        if !model.capabilities.is_empty() {
+            println!();
+            println!("  {}", "Capabilities:".dimmed());
+            for cap in &model.capabilities {
+                println!("    {} {}", "•".green(), cap);
+            }
+        }
+
+        if !model.recommended_for.is_empty() {
+            println!();
+            println!("  {}", "Recommended for:".dimmed());
+            for rec in &model.recommended_for {
+                println!("    {} {}", "→".cyan(), rec);
+            }
+        }
+
+        if !model.variants.is_empty() {
+            println!();
+            println!("  {}", "Variants:".dimmed());
+            for var in &model.variants {
+                println!(
+                    "    {} {} (Size: {}, VRAM: {})",
+                    "•".cyan(),
+                    var.ollama.bold(),
+                    var.size,
+                    var.vram
+                );
+                if !var.best_for.is_empty() {
+                    println!("      Best for: {}", var.best_for.dimmed());
+                }
+            }
+        }
+
+        if !model.benchmarks.is_empty() {
+            println!();
+            println!("  {}", "Benchmarks:".dimmed());
+            for (name, score) in &model.benchmarks {
+                println!("    {} {}: {:.1}", "•".cyan(), name, score);
+            }
+        }
+
+        println!();
+        println!(
+            "  Pull this model: {} spn model pull {}",
+            "->".cyan(),
+            model.ollama_model
+        );
+    } else {
+        println!("{} Model '{}' not found in registry", "!".yellow(), name);
+        println!();
+        println!("Try:");
+        println!("  {} spn model search {}", "•".cyan(), name);
+        println!("  {} spn model list", "•".cyan());
+    }
+
+    Ok(())
+}
+
+// ============================================================================
+// Recommend Models
+// ============================================================================
+
+async fn recommend(use_case: Option<&str>) -> Result<()> {
+    let registry = ModelRegistry::new();
+
+    println!("{}", "Model Recommendations".bold());
+    println!();
+
+    let models = registry.recommend(use_case).await;
+
+    if models.is_empty() {
+        println!("{}", "No recommendations available.".yellow());
+        return Ok(());
+    }
+
+    if let Some(case) = use_case {
+        println!("  For use case: {}", case.bold().cyan());
+        println!();
+    } else {
+        println!("  {}", "Top models by category:".dimmed());
+        println!();
+    }
+
+    for model in &models {
+        let desc = model
+            .description
+            .as_ref()
+            .map(|d| {
+                if d.len() > 50 {
+                    format!("{}...", &d[..47])
+                } else {
+                    d.clone()
+                }
+            })
+            .unwrap_or_default();
+
+        println!(
+            "  {} {} [{}]",
+            "*".green(),
+            model.ollama_model.bold(),
+            model.category.cyan()
+        );
+        if !desc.is_empty() {
+            println!("    {}", desc.dimmed());
+        }
+        println!();
+    }
+
+    println!(
+        "  Pull a model: {} spn model pull <model>",
+        "->".cyan()
+    );
+    println!(
+        "  More info: {} spn model info <model>",
+        "->".cyan()
+    );
+
+    Ok(())
 }
 
 #[cfg(test)]

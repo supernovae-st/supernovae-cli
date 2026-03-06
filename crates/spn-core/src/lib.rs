@@ -59,6 +59,9 @@ pub use validation::{mask_key, validate_key_format, ValidationResult};
 
 pub use mcp::{McpConfig, McpServer, McpServerType, McpSource};
 
-pub use registry::{PackageManifest, PackageRef, PackageType};
+pub use registry::{PackageManifest, PackageRef, PackageType, Source};
 
-pub use backend::{BackendError, GpuInfo, LoadConfig, ModelInfo, PullProgress, RunningModel};
+pub use backend::{
+    BackendError, ChatMessage, ChatOptions, ChatResponse, ChatRole, EmbeddingResponse, GpuInfo,
+    LoadConfig, ModelInfo, PullProgress, RunningModel,
+};

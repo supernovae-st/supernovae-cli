@@ -618,6 +618,33 @@ pub enum ModelCommands {
         #[arg(long)]
         json: bool,
     },
+
+    /// Search available models in registry
+    Search {
+        /// Search query (e.g., "coding", "vision", "reasoning")
+        query: String,
+
+        /// Filter by category (code, chat, embed, vision, reasoning)
+        #[arg(long, short)]
+        category: Option<String>,
+    },
+
+    /// Show detailed info about a model
+    Info {
+        /// Model name (e.g., deepseek-coder, llama3.2)
+        name: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Get model recommendations for a use case
+    Recommend {
+        /// Use case (e.g., "coding", "chat", "embeddings", "vision")
+        #[arg(value_name = "USE_CASE")]
+        use_case: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]

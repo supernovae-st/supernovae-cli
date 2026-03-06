@@ -3,6 +3,12 @@
 version = 1
 
 [[package]]
+name = "@workflows/data/json-transformer"
+version = "1.0.0"
+source = "registry+https://registry.supernova.sh"
+checksum = "sha256:4793c852b3e1240b0cd1475a4470ef5c4211a11ffece227739822a5126d31b6f"
+
+[[package]]
 name = "@workflows/test-integration"
 version = "1.0.0"
 source = "registry+https://registry.supernova.sh"

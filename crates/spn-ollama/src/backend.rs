@@ -33,7 +33,10 @@
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //! ```
 
-use spn_core::{BackendError, GpuInfo, LoadConfig, ModelInfo, PullProgress, RunningModel};
+use spn_core::{
+    BackendError, ChatMessage, ChatOptions, ChatResponse, EmbeddingResponse, GpuInfo, LoadConfig,
+    ModelInfo, PullProgress, RunningModel,
+};
 use std::future::Future;
 use std::pin::Pin;
 
@@ -142,6 +145,32 @@ pub trait ModelBackend: Send + Sync {
                 .unwrap_or(false)
         }
     }
+
+    // =========================================================================
+    // Inference Methods
+    // =========================================================================
+
+    /// Send a chat completion request.
+    fn chat(
+        &self,
+        model: &str,
+        messages: &[ChatMessage],
+        options: Option<&ChatOptions>,
+    ) -> impl Future<Output = Result<ChatResponse, BackendError>> + Send;
+
+    /// Generate an embedding for text.
+    fn embed(
+        &self,
+        model: &str,
+        input: &str,
+    ) -> impl Future<Output = Result<EmbeddingResponse, BackendError>> + Send;
+
+    /// Generate embeddings for multiple texts (batch).
+    fn embed_batch(
+        &self,
+        model: &str,
+        inputs: &[&str],
+    ) -> impl Future<Output = Result<Vec<EmbeddingResponse>, BackendError>> + Send;
 }
 
 /// Boxed version of the progress callback for trait objects.
@@ -219,4 +248,26 @@ pub trait DynModelBackend: Send + Sync {
 
     /// Get the API endpoint URL.
     fn endpoint_url(&self) -> &str;
+
+    /// Send a chat completion request.
+    fn chat(
+        &self,
+        model: &str,
+        messages: Vec<ChatMessage>,
+        options: Option<ChatOptions>,
+    ) -> Pin<Box<dyn Future<Output = Result<ChatResponse, BackendError>> + Send + '_>>;
+
+    /// Generate an embedding for text.
+    fn embed(
+        &self,
+        model: &str,
+        input: &str,
+    ) -> Pin<Box<dyn Future<Output = Result<EmbeddingResponse, BackendError>> + Send + '_>>;
+
+    /// Generate embeddings for multiple texts (batch).
+    fn embed_batch(
+        &self,
+        model: &str,
+        inputs: Vec<String>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<EmbeddingResponse>, BackendError>> + Send + '_>>;
 }
