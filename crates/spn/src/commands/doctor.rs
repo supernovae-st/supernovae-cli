@@ -241,29 +241,35 @@ fn check_directories() -> Vec<CheckResult> {
     let mut results = Vec::new();
 
     // Check ~/.spn/
-    if let Some(home) = dirs::home_dir() {
-        let spn_dir = home.join(".spn");
-        if spn_dir.exists() {
-            let packages_dir = spn_dir.join("packages");
-            let package_count = if packages_dir.exists() {
-                std::fs::read_dir(&packages_dir)
-                    .map(|entries| entries.count())
-                    .unwrap_or(0)
+    match spn_client::SpnPaths::new() {
+        Ok(paths) => {
+            if paths.root().exists() {
+                let packages_dir = paths.packages_dir();
+                let package_count = if packages_dir.exists() {
+                    std::fs::read_dir(&packages_dir)
+                        .map(|entries| entries.count())
+                        .unwrap_or(0)
+                } else {
+                    0
+                };
+                results.push(CheckResult::ok_with(
+                    "~/.spn/",
+                    &format!("{} package(s) installed", package_count),
+                ));
             } else {
-                0
-            };
-            results.push(CheckResult::ok_with(
-                "~/.spn/",
-                &format!("{} package(s) installed", package_count),
-            ));
-        } else {
-            results.push(CheckResult::ok_with(
-                "~/.spn/",
-                "will be created on first install",
-            ));
+                results.push(CheckResult::ok_with(
+                    "~/.spn/",
+                    "will be created on first install",
+                ));
+            }
         }
+        Err(_) => {
+            results.push(CheckResult::error("home directory", "could not determine"));
+        }
+    }
 
-        // Check ~/.claude/
+    // Check ~/.claude/
+    if let Some(home) = dirs::home_dir() {
         let claude_dir = home.join(".claude");
         if claude_dir.exists() {
             let skills_dir = claude_dir.join("skills");
@@ -284,8 +290,6 @@ fn check_directories() -> Vec<CheckResult> {
                 "not found - create with Claude Code",
             ));
         }
-    } else {
-        results.push(CheckResult::error("home directory", "could not determine"));
     }
 
     // Check current project
@@ -338,8 +342,8 @@ fn check_configuration() -> Vec<CheckResult> {
     }
 
     // Check sync config
-    if let Some(home) = dirs::home_dir() {
-        let sync_config = home.join(".spn").join("sync.json");
+    if let Ok(paths) = spn_client::SpnPaths::new() {
+        let sync_config = paths.root().join("sync.json");
         if sync_config.exists() {
             results.push(CheckResult::ok_with("sync config", "~/.spn/sync.json"));
         } else {

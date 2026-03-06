@@ -200,8 +200,8 @@ impl ServiceManager {
         }
 
         // Ensure ~/.spn exists for logs
-        let spn_dir = home.join(".spn");
-        fs::create_dir_all(&spn_dir)?;
+        let paths = spn_client::SpnPaths::new().map_err(|_| ServiceError::HomeNotSet)?;
+        fs::create_dir_all(paths.root())?;
 
         // Write plist
         fs::write(&plist_path, content)?;
@@ -277,7 +277,6 @@ impl ServiceManager {
 
         // Find spn binary
         let spn_bin = Self::find_spn_binary()?;
-        let home = dirs::home_dir().ok_or(ServiceError::HomeNotSet)?;
 
         // Load template and replace placeholders
         // NOTE: Do NOT replace %h - it's a systemd specifier resolved at runtime
@@ -290,8 +289,8 @@ impl ServiceManager {
         }
 
         // Ensure ~/.spn exists for logs
-        let spn_dir = home.join(".spn");
-        fs::create_dir_all(&spn_dir)?;
+        let paths = spn_client::SpnPaths::new().map_err(|_| ServiceError::HomeNotSet)?;
+        fs::create_dir_all(paths.root())?;
 
         // Write unit file
         fs::write(&unit_path, content)?;
