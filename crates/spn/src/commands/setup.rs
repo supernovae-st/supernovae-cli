@@ -1181,10 +1181,18 @@ mod tests {
     }
 
     #[test]
-    fn test_is_plugin_installed_returns_false_when_no_file() {
-        // Should return false when plugins file doesn't exist
-        // This test works because is_plugin_installed handles missing file gracefully
-        let result = is_plugin_installed("nonexistent-plugin/test");
-        assert!(!result || result); // Always passes, just verifies no panic
+    fn test_is_plugin_installed_handles_nonexistent_gracefully() {
+        // Should not panic and return false for nonexistent plugin
+        let result = is_plugin_installed("nonexistent-plugin-xyz-12345");
+        // Result depends on whether any plugin file contains this string (unlikely)
+        // Main test is that it doesn't panic
+        let _ = result;
+    }
+
+    #[test]
+    fn test_is_marketplace_added_handles_nonexistent() {
+        // Should return false for nonexistent marketplace
+        let result = is_marketplace_added("nonexistent-marketplace-xyz-12345");
+        assert!(!result);
     }
 }
