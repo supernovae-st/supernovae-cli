@@ -26,6 +26,12 @@
 //! │  ├── unload()        Unload a model from memory                            │
 //! │  └── running_models() List currently loaded models                         │
 //! │                                                                             │
+//! │  Inference:                                                                 │
+//! │  ├── chat()          Send chat completion request                          │
+//! │  ├── chat_stream()   Stream chat with token callback                       │
+//! │  ├── embed()         Generate text embedding                               │
+//! │  └── embed_batch()   Batch embedding generation                            │
+//! │                                                                             │
 //! │  System:                                                                    │
 //! │  ├── gpu_info()      Get GPU information                                   │
 //! │  └── endpoint_url()  Get the API endpoint URL                              │
@@ -199,7 +205,21 @@ pub type BoxedBackend = Box<dyn DynModelBackend>;
 /// Object-safe version of `ModelBackend` for dynamic dispatch.
 ///
 /// This trait mirrors `ModelBackend` but uses boxed futures for
-/// compatibility with trait objects.
+/// compatibility with trait objects (`Box<dyn DynModelBackend>`).
+///
+/// # API Signature Differences
+///
+/// Some method signatures differ from `ModelBackend` for object safety:
+///
+/// | Method | `ModelBackend` | `DynModelBackend` | Reason |
+/// |--------|---------------|-------------------|--------|
+/// | `chat` | `&[ChatMessage]` | `Vec<ChatMessage>` | References can't outlive the future |
+/// | `chat` | `Option<&ChatOptions>` | `Option<ChatOptions>` | Same - owned for lifetime safety |
+/// | `embed_batch` | `&[&str]` | `Vec<String>` | Double references are not object-safe |
+/// | `chat_stream` | `F: FnMut` | `BoxedTokenCallback` | Generic callbacks aren't object-safe |
+///
+/// When using `DynModelBackend`, callers must allocate owned data.
+/// For performance-critical code with known backend types, prefer `ModelBackend`.
 pub trait DynModelBackend: Send + Sync {
     /// Unique identifier for this backend.
     fn id(&self) -> &'static str;
