@@ -406,4 +406,102 @@ mod tests {
         assert_eq!(stats.direct, 0);
         assert_eq!(stats.transitive, 0);
     }
+
+    #[test]
+    fn test_resolver_error_display() {
+        let err = ResolverError::PackageNotFound("@test/pkg".to_string());
+        assert_eq!(err.to_string(), "Package not found: @test/pkg");
+
+        let err = ResolverError::NoSatisfyingVersion {
+            package: "@test/pkg".to_string(),
+            requirement: "^2.0".to_string(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "No version of @test/pkg satisfies requirement ^2.0"
+        );
+
+        let err = ResolverError::CyclicDependency {
+            cycle: "a@1.0.0 → b@1.0.0 → a@1.0.0".to_string(),
+        };
+        assert!(err.to_string().contains("Cyclic dependency detected"));
+
+        let err = ResolverError::VersionConflict {
+            package: "@test/pkg".to_string(),
+            v1: "1.0.0".to_string(),
+            v2: "2.0.0".to_string(),
+        };
+        assert!(err.to_string().contains("Version conflict"));
+        assert!(err.to_string().contains("1.0.0"));
+        assert!(err.to_string().contains("2.0.0"));
+    }
+
+    #[test]
+    fn test_resolved_package_fields() {
+        let entry = make_entry("@test/pkg", "1.0.0");
+        let pkg = ResolvedPackage {
+            name: "@test/pkg".to_string(),
+            version: "1.0.0".to_string(),
+            entry: entry.clone(),
+            is_direct: true,
+        };
+
+        assert_eq!(pkg.name, "@test/pkg");
+        assert_eq!(pkg.version, "1.0.0");
+        assert!(pkg.is_direct);
+        assert_eq!(pkg.entry.cksum, entry.cksum);
+    }
+
+    #[test]
+    fn test_version_matches_invalid_version() {
+        let result = version_matches("invalid", "^1.0");
+        assert!(result.is_err());
+        assert!(matches!(result, Err(ResolverError::InvalidVersion(_))));
+    }
+
+    #[test]
+    fn test_version_matches_invalid_requirement() {
+        let result = version_matches("1.0.0", "not a version req");
+        assert!(result.is_err());
+        assert!(matches!(result, Err(ResolverError::InvalidRequirement(_))));
+    }
+
+    #[test]
+    fn test_find_best_match_prefers_latest() {
+        let entries = vec![
+            make_entry("pkg", "1.0.0"),
+            make_entry("pkg", "1.2.0"),
+            make_entry("pkg", "1.1.0"),
+        ];
+
+        // Should return 1.2.0 (highest matching), not 1.1.0 (last in list)
+        let best = find_best_match("^1.0", &entries).unwrap();
+        assert_eq!(best.version, "1.2.0");
+    }
+
+    #[test]
+    fn test_find_best_match_equal_operator() {
+        let entries = vec![
+            make_entry("pkg", "1.0.0"),
+            make_entry("pkg", "1.1.0"),
+            make_entry("pkg", "1.2.0"),
+        ];
+
+        // =1.1.0 should only match exactly 1.1.0
+        let best = find_best_match("=1.1.0", &entries).unwrap();
+        assert_eq!(best.version, "1.1.0");
+    }
+
+    #[test]
+    fn test_find_best_match_all_yanked() {
+        let mut entries = vec![
+            make_entry("pkg", "1.0.0"),
+            make_entry("pkg", "1.1.0"),
+        ];
+        entries[0].yanked = true;
+        entries[1].yanked = true;
+
+        let best = find_best_match("^1.0", &entries);
+        assert!(best.is_none());
+    }
 }
