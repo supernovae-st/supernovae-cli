@@ -110,18 +110,6 @@ pub fn insert_mcp_server(config: &mut Value, name: &str, server_config: Value) {
     }
 }
 
-/// Insert multiple MCP servers into a config.
-///
-/// Convenience wrapper around [`insert_mcp_server`] for batch operations.
-pub fn insert_mcp_servers<I>(config: &mut Value, servers: I)
-where
-    I: IntoIterator<Item = (String, Value)>,
-{
-    for (name, server_config) in servers {
-        insert_mcp_server(config, &name, server_config);
-    }
-}
-
 /// Write a JSON config file with pretty formatting.
 ///
 /// Creates parent directories if they don't exist.
