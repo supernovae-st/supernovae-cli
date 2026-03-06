@@ -1,12 +1,15 @@
 //! IDE-specific sync adapters.
 //!
 //! Each adapter knows how to write package configurations to IDE-specific formats.
+//!
+//! Uses [`config_loader`] for shared JSON operations (load, insert MCP, write).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use serde_json::{json, Value};
 
+use super::config_loader::{insert_mcp_server, load_json_config, write_json_config};
 use super::types::{IdeTarget, McpConfig, PackageManifest, SyncResult, SyncedItem};
 
 /// Trait for IDE-specific sync adapters.
@@ -81,38 +84,25 @@ impl IdeAdapter for ClaudeCodeAdapter {
         let mut synced = Vec::new();
         let config_path = self.config_path(project_root);
 
-        // Load existing settings
-        let mut settings = if config_path.exists() {
-            let content = match std::fs::read_to_string(&config_path) {
-                Ok(c) => c,
-                Err(e) => {
-                    return SyncResult {
-                        package: package_name.to_string(),
-                        target: self.target(),
-                        success: false,
-                        synced: vec![],
-                        error: Some(format!("Failed to read settings: {}", e)),
-                    };
-                }
-            };
-            serde_json::from_str(&content).unwrap_or_else(|_| json!({}))
-        } else {
-            json!({})
+        // Load existing settings using shared config_loader
+        let mut settings = match load_json_config(&config_path, None) {
+            Ok(s) => s,
+            Err(e) => {
+                return SyncResult {
+                    package: package_name.to_string(),
+                    target: self.target(),
+                    success: false,
+                    synced: vec![],
+                    error: Some(format!("Failed to read settings: {}", e)),
+                };
+            }
         };
 
-        // Add MCP server if present
+        // Add MCP server if present using shared insert_mcp_server
         if let Some(mcp) = &manifest.mcp {
             let server_name = mcp_server_name(package_name);
             let server_config = build_mcp_config(package_path, mcp);
-
-            if let Some(servers) = settings.get_mut("mcpServers") {
-                if let Some(obj) = servers.as_object_mut() {
-                    obj.insert(server_name.clone(), server_config);
-                }
-            } else {
-                settings["mcpServers"] = json!({ server_name.clone(): server_config });
-            }
-
+            insert_mcp_server(&mut settings, &server_name, server_config);
             synced.push(SyncedItem::McpServer(server_name));
         }
 
@@ -159,8 +149,8 @@ impl IdeAdapter for ClaudeCodeAdapter {
             }
         }
 
-        // Write updated settings
-        if let Err(e) = write_json_file(&config_path, &settings) {
+        // Write updated settings using shared config_loader
+        if let Err(e) = write_json_config(&config_path, &settings) {
             return SyncResult {
                 package: package_name.to_string(),
                 target: self.target(),
@@ -202,51 +192,38 @@ impl IdeAdapter for CursorAdapter {
 
     fn sync_package(
         &self,
-        project_root: &Path,
+        _project_root: &Path,
         package_name: &str,
         package_path: &Path,
         manifest: &PackageManifest,
     ) -> SyncResult {
         let mut synced = Vec::new();
-        let config_path = self.config_path(project_root);
+        let config_path = self.config_path(_project_root);
 
-        // Load existing MCP config
-        let mut mcp_config = if config_path.exists() {
-            let content = match std::fs::read_to_string(&config_path) {
-                Ok(c) => c,
-                Err(e) => {
-                    return SyncResult {
-                        package: package_name.to_string(),
-                        target: self.target(),
-                        success: false,
-                        synced: vec![],
-                        error: Some(format!("Failed to read mcp.json: {}", e)),
-                    };
-                }
-            };
-            serde_json::from_str(&content).unwrap_or_else(|_| json!({"mcpServers": {}}))
-        } else {
-            json!({"mcpServers": {}})
+        // Load existing MCP config using shared config_loader
+        let mut mcp_config = match load_json_config(&config_path, Some("mcpServers")) {
+            Ok(c) => c,
+            Err(e) => {
+                return SyncResult {
+                    package: package_name.to_string(),
+                    target: self.target(),
+                    success: false,
+                    synced: vec![],
+                    error: Some(format!("Failed to read mcp.json: {}", e)),
+                };
+            }
         };
 
-        // Add MCP server if present
+        // Add MCP server if present using shared insert_mcp_server
         if let Some(mcp) = &manifest.mcp {
             let server_name = mcp_server_name(package_name);
             let server_config = build_mcp_config(package_path, mcp);
-
-            if let Some(servers) = mcp_config.get_mut("mcpServers") {
-                if let Some(obj) = servers.as_object_mut() {
-                    obj.insert(server_name.clone(), server_config);
-                }
-            } else {
-                mcp_config["mcpServers"] = json!({ server_name.clone(): server_config });
-            }
-
+            insert_mcp_server(&mut mcp_config, &server_name, server_config);
             synced.push(SyncedItem::McpServer(server_name));
         }
 
-        // Write updated config
-        if let Err(e) = write_json_file(&config_path, &mcp_config) {
+        // Write updated config using shared config_loader
+        if let Err(e) = write_json_config(&config_path, &mcp_config) {
             return SyncResult {
                 package: package_name.to_string(),
                 target: self.target(),
@@ -424,14 +401,7 @@ fn create_symlink(source: &Path, target: &Path) -> Result<(), std::io::Error> {
     }
 }
 
-/// Write JSON to file with pretty formatting.
-fn write_json_file(path: &Path, value: &Value) -> Result<(), std::io::Error> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    let content = serde_json::to_string_pretty(value)?;
-    std::fs::write(path, content)
-}
+// write_json_file removed - use config_loader::write_json_config instead
 
 #[cfg(test)]
 mod tests {
