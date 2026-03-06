@@ -151,11 +151,13 @@ impl StoreResult {
 
 /// Get the path to the global secrets file.
 ///
+/// Uses [`spn_client::SpnPaths`] as the single source of truth.
+///
 /// Returns an error if the home directory cannot be determined
 /// (e.g., in Docker containers or chroot environments).
 pub fn global_secrets_path() -> Result<PathBuf> {
-    dirs::home_dir()
-        .map(|home| home.join(".spn").join("secrets.env"))
+    spn_client::SpnPaths::new()
+        .map(|p| p.secrets_file())
         .context("Could not determine home directory. This can happen in Docker containers or chroot environments.")
 }
 
