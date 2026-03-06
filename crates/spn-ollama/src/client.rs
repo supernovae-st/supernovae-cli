@@ -309,6 +309,7 @@ impl OllamaClient {
         let url = format!("{}/api/pull", self.endpoint);
         debug!(url = %url, model = %name, "Pulling model");
 
+        // Timeout applies to initial connection; streaming continues until download completes
         let response = self
             .client
             .post(&url)
@@ -316,6 +317,7 @@ impl OllamaClient {
                 name: name.to_string(),
                 stream: true,
             })
+            .timeout(self.config.model_timeout)
             .send()
             .await
             .map_err(|e| BackendError::NetworkError(e.to_string()))?;
