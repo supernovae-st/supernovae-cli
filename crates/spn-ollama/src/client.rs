@@ -303,7 +303,8 @@ impl OllamaClient {
                         }
                     }
                 }
-                buffer = buffer[newline_pos + 1..].to_string();
+                // Use drain() to avoid String reallocation
+                buffer.drain(..=newline_pos);
             }
         }
 
@@ -562,7 +563,8 @@ impl OllamaClient {
                         }
                     }
                 }
-                buffer = buffer[newline_pos + 1..].to_string();
+                // Use drain() to avoid String reallocation
+                buffer.drain(..=newline_pos);
             }
         }
 
