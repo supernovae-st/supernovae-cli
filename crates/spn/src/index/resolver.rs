@@ -3,6 +3,8 @@
 //! Uses a directed graph (petgraph) to resolve transitive dependencies
 //! and topological sort to determine installation order.
 //!
+//! TODO(v0.14): Integrate with `spn add` and `spn install` for dependency resolution
+//!
 //! # Example
 //!
 //! ```rust,ignore
@@ -19,6 +21,8 @@
 //!     println!("Install: {}@{}", pkg.name, pkg.version);
 //! }
 //! ```
+
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 

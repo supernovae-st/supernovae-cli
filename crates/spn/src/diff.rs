@@ -1,6 +1,10 @@
 //! Diff utilities for displaying file changes.
 //!
 //! Provides interactive diff previews with colored output.
+//!
+//! TODO(v0.14): Integrate with sync command for change confirmation
+
+#![allow(dead_code)]
 
 use colored::Colorize;
 use dialoguer::Confirm;

@@ -90,12 +90,14 @@ impl StorageState {
 /// Local storage manager.
 pub struct LocalStorage {
     /// Root directory (~/.spn/).
+    #[allow(dead_code)] // Reserved for future API
     root: PathBuf,
 
     /// Packages directory.
     packages_dir: PathBuf,
 
     /// Cache directory.
+    #[allow(dead_code)] // Reserved for future API
     cache_dir: PathBuf,
 
     /// State file path.
@@ -137,16 +139,19 @@ impl LocalStorage {
     }
 
     /// Get the root directory.
+    #[allow(dead_code)] // Reserved for future API
     pub fn root(&self) -> &Path {
         &self.root
     }
 
     /// Get the packages directory.
+    #[allow(dead_code)] // Reserved for future API
     pub fn packages_dir(&self) -> &Path {
         &self.packages_dir
     }
 
     /// Get the cache directory.
+    #[allow(dead_code)] // Reserved for future API
     pub fn cache_dir(&self) -> &Path {
         &self.cache_dir
     }
@@ -170,12 +175,44 @@ impl LocalStorage {
     }
 
     /// Validate that a path component doesn't contain traversal sequences.
+    ///
+    /// Security: Rejects absolute paths, path traversal, and null bytes.
     pub fn validate_path_component(&self, component: &str) -> Result<(), StorageError> {
+        // Reject empty components
+        if component.is_empty() {
+            return Err(StorageError::InvalidPath(
+                "Empty path component".to_string(),
+            ));
+        }
+
+        // Reject null bytes (can truncate paths in some systems)
+        if component.contains('\0') {
+            return Err(StorageError::InvalidPath(
+                "Null byte in path".to_string(),
+            ));
+        }
+
+        // Reject path traversal sequences
         if component.contains("..") {
             return Err(StorageError::InvalidPath(
                 "Path traversal detected".to_string(),
             ));
         }
+
+        // Reject absolute paths (Unix and Windows)
+        if component.starts_with('/') || component.starts_with('\\') {
+            return Err(StorageError::InvalidPath(
+                "Absolute paths not allowed".to_string(),
+            ));
+        }
+
+        // Reject Windows drive letters (C:, D:, etc.)
+        if component.len() >= 2 && component.chars().nth(1) == Some(':') {
+            return Err(StorageError::InvalidPath(
+                "Drive letters not allowed".to_string(),
+            ));
+        }
+
         Ok(())
     }
 
@@ -307,18 +344,21 @@ impl LocalStorage {
     }
 
     /// Check if a package is installed.
+    #[allow(dead_code)] // Reserved for future API
     pub fn is_installed(&self, name: &str) -> Result<bool, StorageError> {
         let state = self.load_state()?;
         Ok(state.packages.contains_key(name))
     }
 
     /// Get installed package info.
+    #[allow(dead_code)] // Reserved for future API
     pub fn get_installed(&self, name: &str) -> Result<Option<InstalledPackage>, StorageError> {
         let state = self.load_state()?;
         Ok(state.packages.get(name).cloned())
     }
 
     /// List all installed packages.
+    #[allow(dead_code)] // Reserved for future API
     pub fn list_installed(&self) -> Result<Vec<InstalledPackage>, StorageError> {
         let state = self.load_state()?;
         Ok(state.packages.values().cloned().collect())
@@ -392,6 +432,7 @@ impl LocalStorage {
     }
 
     /// Clear the package cache.
+    #[allow(dead_code)] // Reserved for future API
     pub fn clear_cache(&self) -> Result<(), StorageError> {
         let tarballs_dir = self.cache_dir.join("tarballs");
         if tarballs_dir.exists() {
@@ -544,5 +585,77 @@ mod tests {
         // Create new storage instance pointing to same directory
         let storage2 = LocalStorage::with_root(temp.path()).unwrap();
         assert!(storage2.is_installed("@test/pkg").unwrap());
+    }
+
+    // === Security Tests ===
+
+    #[test]
+    fn test_rejects_path_traversal() {
+        let (_temp, storage) = create_test_storage();
+
+        // Direct path traversal
+        assert!(storage.validate_path_component("../etc/passwd").is_err());
+        assert!(storage.validate_path_component("..").is_err());
+        assert!(storage.validate_path_component("foo/../bar").is_err());
+
+        // In package name
+        let result = storage.safe_package_path("@test/../../../etc", "1.0.0");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_rejects_absolute_paths() {
+        let (_temp, storage) = create_test_storage();
+
+        // Unix absolute path
+        assert!(storage.validate_path_component("/etc/passwd").is_err());
+
+        // Windows absolute path
+        assert!(storage.validate_path_component("\\Windows\\System32").is_err());
+    }
+
+    #[test]
+    fn test_rejects_windows_drive_letters() {
+        let (_temp, storage) = create_test_storage();
+
+        assert!(storage.validate_path_component("C:\\Windows").is_err());
+        assert!(storage.validate_path_component("D:").is_err());
+    }
+
+    #[test]
+    fn test_rejects_null_bytes() {
+        let (_temp, storage) = create_test_storage();
+
+        // Null byte can truncate paths in C-based systems
+        assert!(storage.validate_path_component("safe\0malicious").is_err());
+    }
+
+    #[test]
+    fn test_rejects_empty_component() {
+        let (_temp, storage) = create_test_storage();
+
+        assert!(storage.validate_path_component("").is_err());
+    }
+
+    #[test]
+    fn test_accepts_valid_paths() {
+        let (_temp, storage) = create_test_storage();
+
+        // These should all be valid
+        assert!(storage.validate_path_component("@workflows/test").is_ok());
+        assert!(storage.validate_path_component("my-package").is_ok());
+        assert!(storage.validate_path_component("1.0.0").is_ok());
+        assert!(storage.validate_path_component("v2.0.0-beta.1").is_ok());
+    }
+
+    #[test]
+    fn test_safe_package_path_stays_within_sandbox() {
+        let (temp, storage) = create_test_storage();
+
+        let path = storage.safe_package_path("@test/pkg", "1.0.0").unwrap();
+
+        // Must be under packages_dir
+        assert!(path.starts_with(temp.path()));
+        assert!(path.starts_with(storage.packages_dir()));
     }
 }

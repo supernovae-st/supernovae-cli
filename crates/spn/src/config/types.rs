@@ -1,4 +1,8 @@
 //! Configuration data types.
+//!
+//! TODO(v0.14): Integrate sync configuration with `spn sync`
+
+#![allow(dead_code)]
 
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};

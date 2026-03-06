@@ -3,6 +3,8 @@
 //! Provides an intuitive, step-by-step interface for setting up API keys
 //! with clear explanations of each storage option's security tradeoffs.
 
+#![allow(dead_code)]
+
 use crate::secrets::{
     global_secrets_path, is_gitignored, mask_api_key, project_env_path, provider_env_var,
     store_in_dotenv, store_in_global, validate_key_format, SpnKeyring, StorageBackend,

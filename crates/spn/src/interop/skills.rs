@@ -1,6 +1,10 @@
 //! skills.sh integration.
 //!
 //! Proxies skill installation from https://skills.sh
+//!
+//! TODO(v0.14): Integrate with `spn skill` commands
+
+#![allow(dead_code)]
 
 use std::path::PathBuf;
 use std::process::{Command, Stdio};

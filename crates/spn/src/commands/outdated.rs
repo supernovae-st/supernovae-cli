@@ -58,15 +58,13 @@ pub async fn run() -> Result<()> {
     Ok(())
 }
 
-/// Check if a package is outdated (installed version differs from latest).
-#[inline]
-fn is_outdated(installed_version: &str, latest_version: &str) -> bool {
-    installed_version != latest_version
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    /// Check if a package is outdated (installed version differs from latest).
+    #[inline]
+    fn is_outdated(installed_version: &str, latest_version: &str) -> bool {
+        installed_version != latest_version
+    }
 
     #[test]
     fn test_is_outdated_true() {

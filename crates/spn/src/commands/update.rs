@@ -92,15 +92,13 @@ pub async fn run(package: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-/// Check if a version update is needed.
-#[inline]
-fn needs_update(installed_version: &str, latest_version: &str) -> bool {
-    installed_version != latest_version
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    /// Check if a version update is needed.
+    #[inline]
+    fn needs_update(installed_version: &str, latest_version: &str) -> bool {
+        installed_version != latest_version
+    }
 
     #[test]
     fn test_needs_update_different_versions() {

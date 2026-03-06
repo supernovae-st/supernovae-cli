@@ -2,6 +2,8 @@
 //!
 //! Provides health checks, import/export functionality for secrets.
 
+#![allow(dead_code)]
+
 use crate::error::Result;
 use crate::secrets::{
     global_secrets_path, is_gitignored, mask_api_key, mlock_available, mlock_limit,

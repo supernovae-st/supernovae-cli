@@ -3,6 +3,10 @@
 //! Handles loading and saving MCP configurations from:
 //! - Global: `~/.spn/mcp.yaml`
 //! - Project: `.spn/mcp.yaml` or `spn.yaml` (mcp section)
+//!
+//! TODO(v0.14): Integrate with `spn mcp` and `spn sync` commands
+
+#![allow(dead_code)]
 
 use crate::error::Result;
 use crate::mcp::types::{McpConfig, McpServer, McpSource, ProjectMcpConfig};

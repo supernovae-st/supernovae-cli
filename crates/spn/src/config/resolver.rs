@@ -1,4 +1,8 @@
 //! Configuration resolver - merges all three scopes.
+//!
+//! TODO(v0.14): Integrate with `spn config` command
+
+#![allow(dead_code)]
 
 use crate::config::{global, local, team, types::Config, ConfigScope, ScopeType};
 use crate::error::Result;

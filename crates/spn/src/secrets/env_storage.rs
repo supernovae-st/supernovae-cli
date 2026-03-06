@@ -2,6 +2,10 @@
 //!
 //! Provides functions to store, read, and delete secrets from .env files.
 //! Supports both project-local .env and global ~/.spn/secrets.env files.
+//!
+//! TODO(v0.14): Integrate with `spn provider migrate` and storage backend selection
+
+#![allow(dead_code)]
 
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};

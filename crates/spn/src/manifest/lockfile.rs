@@ -2,6 +2,8 @@
 //!
 //! The lockfile captures exact resolved versions for reproducible installs.
 //!
+//! TODO(v0.14): Integrate with `spn install --frozen` for reproducible builds
+//!
 //! # Example
 //!
 //! ```toml
@@ -21,6 +23,8 @@
 //! checksum = "sha256:def456..."
 //! dependencies = ["@community/mock-mcp"]
 //! ```
+
+#![allow(dead_code)]
 
 use std::collections::BTreeMap;
 use std::path::Path;

@@ -2,6 +2,10 @@
 //!
 //! Downloads package tarballs from the registry and verifies SHA256 checksums.
 //! Uses retry middleware for resilient network operations.
+//!
+//! TODO(v0.14): Integrate version-specific download and extraction
+
+#![allow(dead_code)]
 
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};

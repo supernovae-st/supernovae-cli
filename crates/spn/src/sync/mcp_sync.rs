@@ -2,6 +2,10 @@
 //!
 //! Syncs MCP servers from ~/.spn/mcp.yaml to editor configurations.
 //! This is the single source of truth for MCP servers.
+//!
+//! TODO(v0.14): Integrate with `spn sync` command
+
+#![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
 

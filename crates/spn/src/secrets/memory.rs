@@ -3,6 +3,8 @@
 //! Provides memory locking (mlock) to prevent secrets from being swapped to disk,
 //! and MADV_DONTDUMP to prevent secrets from appearing in core dumps.
 //!
+//! TODO(v0.14): Integrate advanced memory protection methods
+//!
 //! # Security Features
 //!
 //! - `mlock()`: Locks memory pages in RAM, preventing swap
@@ -28,6 +30,8 @@
 //!
 //! // Automatically unlocked and zeroized on drop
 //! ```
+
+#![allow(dead_code)]
 
 use std::alloc::{alloc_zeroed, dealloc, Layout};
 use std::ptr::NonNull;

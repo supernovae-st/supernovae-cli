@@ -1,4 +1,8 @@
 //! Types for IDE synchronization.
+//!
+//! TODO(v0.14): Integrate IDE target detection and sync methods
+
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

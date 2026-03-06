@@ -14,4 +14,7 @@ pub mod types;
 // Re-export types used by other modules
 pub use client::IndexClient;
 pub use downloader::{DownloadedPackage, Downloader};
-pub use resolver::{DependencyResolver, ResolvedPackage, ResolverError};
+pub use resolver::DependencyResolver;
+// Reserved for dependency resolution API (not yet integrated into commands)
+#[allow(unused_imports)]
+pub use resolver::{ResolvedPackage, ResolverError};

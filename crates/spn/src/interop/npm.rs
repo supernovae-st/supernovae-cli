@@ -2,6 +2,10 @@
 //!
 //! Proxies MCP server installation via npm/npx.
 //! Uses the MCP registry for package resolution, with hardcoded fallbacks.
+//!
+//! TODO(v0.14): Integrate with `spn mcp` commands
+
+#![allow(dead_code)]
 
 use rustc_hash::FxHashMap;
 use std::path::PathBuf;

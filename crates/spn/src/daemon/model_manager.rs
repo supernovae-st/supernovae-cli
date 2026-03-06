@@ -1,6 +1,10 @@
 //! Model manager for the spn daemon.
 //!
 //! Manages model lifecycle (pull, load, unload) using the ModelBackend trait.
+//!
+//! TODO(v0.14): Integrate with `spn model` commands and daemon IPC
+
+#![allow(dead_code)]
 
 use spn_client::{BackendError, LoadConfig, ModelInfo, RunningModel};
 use spn_ollama::{DynModelBackend, OllamaBackend};

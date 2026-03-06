@@ -3,6 +3,8 @@
 //! Adds a package to the project's spn.yaml manifest and installs it.
 //! Uses transitive dependency resolution to install all required packages.
 
+#![allow(dead_code)]
+
 use colored::Colorize;
 
 use crate::error::{Result, SpnError};

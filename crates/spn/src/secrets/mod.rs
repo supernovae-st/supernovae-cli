@@ -80,9 +80,12 @@ mod wizard;
 
 // Core keyring exports (from spn_keyring via keyring.rs)
 pub use keyring::{
-    has_any_keys, mask_api_key, migrate_env_to_keyring, resolve_api_key, security_audit,
-    validate_key_format, KeyringError, MigrationReport, SpnKeyring,
+    mask_api_key, migrate_env_to_keyring, resolve_api_key, security_audit,
+    validate_key_format, SpnKeyring,
 };
+// Reserved for advanced keyring API
+#[allow(unused_imports)]
+pub use keyring::{has_any_keys, KeyringError, MigrationReport};
 
 // Storage exports
 pub use env_storage::{is_gitignored, store_in_dotenv, store_in_global};
@@ -100,6 +103,8 @@ pub use memory::{mlock_available, mlock_limit};
 pub use wizard::{run_quick_setup, run_wizard};
 
 // Re-export core types from spn_keyring/spn_core for convenience
+// Reserved for extended provider API (not yet used in CLI commands)
+#[allow(unused_imports)]
 pub use types::{
     find_provider, llm_provider_ids, mask_key, mcp_provider_ids, Provider, ProviderCategory,
     ValidationResult, KNOWN_PROVIDERS,

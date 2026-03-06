@@ -1,4 +1,8 @@
 //! Global user configuration (~/.spn/config.toml).
+//!
+//! TODO(v0.14): Integrate advanced config options
+
+#![allow(dead_code)]
 
 use crate::config::types::Config;
 use crate::error::{Result, SpnError};

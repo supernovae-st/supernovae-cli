@@ -2,6 +2,10 @@
 //!
 //! Defines the structure for ~/.spn/mcp.yaml - the single source of truth
 //! for all MCP server configurations across the SuperNovae ecosystem.
+//!
+//! TODO(v0.14): Integrate with `spn mcp` and `spn sync` commands
+
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

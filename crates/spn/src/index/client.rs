@@ -1,6 +1,10 @@
 //! Sparse index client for SuperNovae registry.
 //!
 //! Fetches package metadata from the sparse index using HTTP or local files.
+//!
+//! TODO(v0.14): Integrate cache management and local index support
+
+#![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

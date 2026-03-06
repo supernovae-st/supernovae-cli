@@ -1,6 +1,10 @@
 //! Binary discovery and execution.
 //!
 //! Handles finding and running nika/novanet binaries.
+//!
+//! TODO(v0.14): Fully integrate with `spn nk` and `spn nv` proxy commands
+
+#![allow(dead_code)]
 
 use std::path::PathBuf;
 use std::process::{Command, ExitStatus, Stdio};

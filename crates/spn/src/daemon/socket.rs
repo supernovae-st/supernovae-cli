@@ -1,6 +1,10 @@
 //! Socket utilities for secure IPC.
 //!
 //! Provides SO_PEERCRED verification and socket permission management.
+//!
+//! TODO(v0.14): Integrate socket ownership verification
+
+#![allow(dead_code)]
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;

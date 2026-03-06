@@ -2,6 +2,8 @@
 //!
 //! This module provides CLI-specific extensions on top of `spn_keyring`.
 //!
+//! TODO(v0.14): Integrate additional keyring methods
+//!
 //! # Core keyring functionality
 //!
 //! For basic keyring operations, use `SpnKeyring` from spn_keyring:
@@ -14,6 +16,8 @@
 //! - `resolve_api_key()` - Resolution with .env file support
 //! - `migrate_env_to_keyring()` - Interactive migration with colored output
 //! - `security_audit()` - Provider security status check
+
+#![allow(dead_code)]
 
 use colored::Colorize;
 use zeroize::Zeroizing;

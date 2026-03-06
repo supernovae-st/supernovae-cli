@@ -2,6 +2,8 @@
 //!
 //! Provides structured error types with helpful suggestions for users.
 
+#![allow(dead_code)]
+
 use colored::Colorize;
 use thiserror::Error;
 
@@ -117,10 +119,11 @@ impl SpnError {
                 "spn install".cyan()
             )),
 
-            SpnError::IndexError(_) => Some(format!(
+            SpnError::IndexError(_) => Some(
                 "Check your network connection and try again.\n   \
                  Registry: https://github.com/supernovae-st/supernovae-registry"
-            )),
+                    .to_string(),
+            ),
 
             SpnError::NetworkError(_) => Some(
                 "Check your network connection. If behind a proxy, ensure \

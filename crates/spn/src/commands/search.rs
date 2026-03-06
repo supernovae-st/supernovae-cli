@@ -182,32 +182,32 @@ pub async fn run(query: &str, json: bool) -> Result<()> {
     Ok(())
 }
 
-/// Sort search results: exact matches first, then alphabetically.
-fn sort_results(results: &mut [(String, String, String, String)], query: &str) {
-    let query_lower = query.to_lowercase();
-    results.sort_by(|a, b| {
-        let a_exact = a.0.to_lowercase() == query_lower;
-        let b_exact = b.0.to_lowercase() == query_lower;
-
-        match (a_exact, b_exact) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a.0.cmp(&b.0),
-        }
-    });
-}
-
-/// Check if a package name or description matches a query.
-fn matches_query(name: &str, description: &str, query: &str) -> bool {
-    let query_lower = query.to_lowercase();
-    let name_lower = name.to_lowercase();
-    let desc_lower = description.to_lowercase();
-    name_lower.contains(&query_lower) || desc_lower.contains(&query_lower)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Sort search results: exact matches first, then alphabetically.
+    fn sort_results(results: &mut [(String, String, String, String)], query: &str) {
+        let query_lower = query.to_lowercase();
+        results.sort_by(|a, b| {
+            let a_exact = a.0.to_lowercase() == query_lower;
+            let b_exact = b.0.to_lowercase() == query_lower;
+
+            match (a_exact, b_exact) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => a.0.cmp(&b.0),
+            }
+        });
+    }
+
+    /// Check if a package name or description matches a query.
+    fn matches_query(name: &str, description: &str, query: &str) -> bool {
+        let query_lower = query.to_lowercase();
+        let name_lower = name.to_lowercase();
+        let desc_lower = description.to_lowercase();
+        name_lower.contains(&query_lower) || desc_lower.contains(&query_lower)
+    }
 
     #[test]
     fn test_search_result_serialization() {

@@ -5,6 +5,10 @@
 //! - Project .env file
 //! - Global ~/.spn/secrets.env
 //! - Shell export (print only)
+//!
+//! TODO(v0.14): Integrate storage backend selection with `spn provider`
+
+#![allow(dead_code)]
 
 use std::fmt;
 use std::path::PathBuf;

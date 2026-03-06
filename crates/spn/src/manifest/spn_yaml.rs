@@ -2,6 +2,8 @@
 //!
 //! The manifest file defines project dependencies for the SuperNovae package ecosystem.
 //!
+//! TODO(v0.14): Fully integrate with `spn add`, `spn remove`, `spn install`
+//!
 //! # Example
 //!
 //! ```yaml
@@ -15,6 +17,8 @@
 //! dev-dependencies:
 //!   "@community/mock-mcp": "^0.1"
 //! ```
+
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::path::Path;

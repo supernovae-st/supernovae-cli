@@ -2,6 +2,10 @@
 //!
 //! Fetches MCP server metadata from the SuperNovae registry.json.
 //! Falls back to hardcoded aliases for offline/fast access.
+//!
+//! TODO(v0.14): Integrate with `spn mcp` commands
+
+#![allow(dead_code)]
 
 use rustc_hash::FxHashMap;
 use serde::Deserialize;

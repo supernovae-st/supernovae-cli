@@ -1,6 +1,10 @@
 //! Model Registry client for package metadata.
 //!
 //! Fetches model metadata from the SuperNovae registry.json.
+//!
+//! TODO(v0.14): Integrate with `spn model` commands
+
+#![allow(dead_code)]
 
 use rustc_hash::FxHashMap;
 use serde::Deserialize;

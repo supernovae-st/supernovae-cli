@@ -1,5 +1,7 @@
 //! Secret types with zeroize support.
 //!
+//! TODO(v0.14): Integrate additional provider methods
+//!
 //! # Security Design
 //!
 //! All sensitive data in this module follows defense-in-depth:
@@ -7,6 +9,8 @@
 //! 2. `ZeroizeOnDrop` - automatic clearing when dropped
 //! 3. `SecretString` - prevents accidental exposure (Debug, Display)
 //! 4. `Zeroizing<T>` wrapper - auto-zeroize for any type
+
+#![allow(dead_code)]
 
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
