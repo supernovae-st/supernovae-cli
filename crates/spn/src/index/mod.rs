@@ -4,11 +4,14 @@
 //! - `types`: Index entry types (NDJSON format)
 //! - `client`: HTTP/local client for fetching index entries
 //! - `downloader`: Tarball download with integrity verification
+//! - `resolver`: Dependency resolution with topological sort
 
 pub mod client;
 pub mod downloader;
+pub mod resolver;
 pub mod types;
 
 // Re-export types used by other modules
 pub use client::IndexClient;
 pub use downloader::{DownloadedPackage, Downloader};
+pub use resolver::{DependencyResolver, ResolvedPackage, ResolverError};

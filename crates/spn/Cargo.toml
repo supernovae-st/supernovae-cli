@@ -95,6 +95,9 @@ libc = "0.2"
 rustc-hash = "2.1"
 dashmap = "6.1"
 
+# Dependency resolution
+petgraph = "0.6"
+
 # HTTP retry logic
 reqwest-retry = "0.6"
 reqwest-middleware = "0.3"
