@@ -1,4 +1,9 @@
 //! CLI command implementations.
+//!
+//! Many command handlers are marked `async` for API uniformity even when they
+//! don't currently contain await points. This allows future async operations
+//! without breaking changes.
+#![allow(clippy::unused_async)]
 
 pub mod add;
 pub mod config;

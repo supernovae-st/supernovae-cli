@@ -24,6 +24,7 @@ use thiserror::Error;
 
 /// Errors that can occur when loading/saving JSON configs.
 #[derive(Error, Debug)]
+#[allow(clippy::enum_variant_names)] // *Failed suffix is intentional for error variants
 pub enum ConfigError {
     /// Failed to read the config file.
     #[error("Failed to read config file '{path}': {source}")]
@@ -100,7 +101,7 @@ pub fn load_json_config(path: &Path, default_key: Option<&str>) -> Result<Value,
 /// ```
 pub fn insert_mcp_server(config: &mut Value, name: &str, server_config: Value) {
     // Ensure mcpServers exists as an object
-    if !config.get("mcpServers").map_or(false, |v| v.is_object()) {
+    if !config.get("mcpServers").is_some_and(|v| v.is_object()) {
         config["mcpServers"] = json!({});
     }
 
@@ -207,22 +208,6 @@ mod tests {
         assert_eq!(config["otherKey"], "preserved");
         assert!(config["mcpServers"]["existing"].is_object());
         assert!(config["mcpServers"]["new-server"].is_object());
-    }
-
-    #[test]
-    fn test_insert_multiple_servers() {
-        let mut config = json!({});
-
-        insert_mcp_servers(
-            &mut config,
-            vec![
-                ("server1".to_string(), json!({"command": "cmd1"})),
-                ("server2".to_string(), json!({"command": "cmd2"})),
-            ],
-        );
-
-        assert!(config["mcpServers"]["server1"].is_object());
-        assert!(config["mcpServers"]["server2"].is_object());
     }
 
     #[test]

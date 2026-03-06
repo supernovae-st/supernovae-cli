@@ -100,7 +100,7 @@ impl DaemonServer {
         }
 
         // Bind to socket
-        let listener = self.bind_socket().await?;
+        let listener = self.bind_socket()?;
 
         info!("Daemon listening on {:?}", self.config.socket_path);
 
@@ -183,7 +183,7 @@ impl DaemonServer {
     ///
     /// Uses umask to ensure the socket is created with restrictive permissions
     /// from the start, preventing any race condition between bind and chmod.
-    async fn bind_socket(&self) -> Result<UnixListener, DaemonError> {
+    fn bind_socket(&self) -> Result<UnixListener, DaemonError> {
         let path = &self.config.socket_path;
 
         // Set restrictive umask BEFORE bind to prevent race condition.

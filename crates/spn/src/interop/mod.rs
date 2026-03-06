@@ -12,9 +12,3 @@ pub mod mcp_registry;
 pub mod model_registry;
 pub mod npm;
 pub mod skills;
-
-// Re-export for convenience
-#[allow(unused_imports)]
-pub use mcp_registry::{McpPackage, McpRegistry, McpRegistryConfig};
-#[allow(unused_imports)]
-pub use model_registry::{ModelPackage, ModelRegistry, ModelRegistryConfig};

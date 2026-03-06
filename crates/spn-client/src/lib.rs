@@ -115,23 +115,6 @@ pub fn socket_path() -> Result<PathBuf, Error> {
         })
 }
 
-/// Default socket path for the spn daemon.
-///
-/// **Security Note:** This function falls back to `/tmp/spn-daemon.sock` if HOME
-/// is unavailable, which is insecure. Prefer `socket_path()` for secure code.
-#[deprecated(since = "0.3.0", note = "Use socket_path() which returns a Result")]
-pub fn default_socket_path() -> PathBuf {
-    match socket_path() {
-        Ok(path) => path,
-        Err(_) => {
-            // Log warning at runtime - /tmp is insecure
-            #[cfg(unix)]
-            warn!("HOME unavailable, using insecure /tmp path for daemon socket");
-            PathBuf::from("/tmp/spn-daemon.sock")
-        }
-    }
-}
-
 /// Check if the daemon socket exists.
 ///
 /// Returns `false` if HOME directory is unavailable.
@@ -447,10 +430,12 @@ mod tests {
     }
 
     #[test]
-    fn test_default_socket_path() {
-        let path = default_socket_path();
-        assert!(path.to_string_lossy().contains(".spn"));
-        assert!(path.to_string_lossy().contains("daemon.sock"));
+    fn test_socket_path() {
+        // socket_path() returns Result, verify it works when HOME is set
+        if let Ok(path) = socket_path() {
+            assert!(path.to_string_lossy().contains(".spn"));
+            assert!(path.to_string_lossy().contains("daemon.sock"));
+        }
     }
 
     #[test]

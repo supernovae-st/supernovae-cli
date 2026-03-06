@@ -161,13 +161,12 @@ fn list_providers(providers: &[&str], show_source: bool) {
 /// Set an API key for a provider.
 async fn run_set(provider: &str, key: Option<String>, storage: Option<String>) -> Result<()> {
     // Validate provider name
-    let all_providers: Vec<&str> = SUPPORTED_PROVIDERS
+    let is_known_provider = SUPPORTED_PROVIDERS
         .iter()
         .chain(MCP_SECRET_TYPES.iter())
-        .copied()
-        .collect();
+        .any(|&p| p == provider);
 
-    if !all_providers.contains(&provider) {
+    if !is_known_provider {
         let mut msg = format!("Unknown provider: {}\n\n", provider);
         msg.push_str("Supported providers:\n");
         for p in SUPPORTED_PROVIDERS {

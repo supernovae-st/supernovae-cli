@@ -237,16 +237,6 @@ impl LocalStorage {
         Ok(full_path)
     }
 
-    /// Get the installation path for a package (legacy, unchecked).
-    #[allow(dead_code)]
-    pub fn package_path(&self, name: &str, version: &str) -> PathBuf {
-        // Convert @scope/path to directory structure
-        let path = name
-            .replace('@', "")
-            .replace('/', std::path::MAIN_SEPARATOR_STR);
-        self.packages_dir.join(path).join(version)
-    }
-
     /// Install a downloaded package.
     pub fn install(
         &self,
@@ -500,10 +490,12 @@ mod tests {
     }
 
     #[test]
-    fn test_package_path() {
+    fn test_safe_package_path() {
         let (_temp, storage) = create_test_storage();
 
-        let path = storage.package_path("@workflows/dev-productivity/code-review", "1.0.0");
+        let path = storage
+            .safe_package_path("@workflows/dev-productivity/code-review", "1.0.0")
+            .unwrap();
         assert!(path.to_string_lossy().contains("workflows"));
         assert!(path.to_string_lossy().contains("code-review"));
         assert!(path.to_string_lossy().contains("1.0.0"));

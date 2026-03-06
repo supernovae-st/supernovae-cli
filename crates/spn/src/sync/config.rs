@@ -106,7 +106,7 @@ impl SyncConfig {
 
         // Create new
         self.projects.push(ProjectSyncConfig {
-            path: path.clone(),
+            path,
             targets: HashSet::new(),
             last_sync: None,
         });
