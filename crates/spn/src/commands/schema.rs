@@ -21,10 +21,16 @@ pub async fn run(command: SchemaCommands) -> Result<()> {
         eprintln!("{} NovaNet CLI not found", style("⚠").yellow().bold());
         eprintln!();
         eprintln!("   Schema commands require NovaNet to be installed:");
-        eprintln!("   {} brew install supernovae-st/tap/novanet", style("•").cyan());
+        eprintln!(
+            "   {} brew install supernovae-st/tap/novanet",
+            style("•").cyan()
+        );
         eprintln!("   {} cargo install novanet-cli", style("•").cyan());
         eprintln!();
-        eprintln!("   Run {} to install automatically.", style("spn setup novanet").cyan());
+        eprintln!(
+            "   Run {} to install automatically.",
+            style("spn setup novanet").cyan()
+        );
         eprintln!();
         return Ok(());
     }
@@ -114,7 +120,10 @@ async fn schema_generate() -> Result<()> {
             if out.status.success() {
                 print!("{}", String::from_utf8_lossy(&out.stdout));
                 println!();
-                println!("   {} Schema artifacts generated successfully.", style("✓").green());
+                println!(
+                    "   {} Schema artifacts generated successfully.",
+                    style("✓").green()
+                );
             } else {
                 eprint!("{}", String::from_utf8_lossy(&out.stderr));
             }

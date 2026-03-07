@@ -7,33 +7,9 @@ use console::style;
 
 /// All available top-level commands.
 const COMMANDS: &[&str] = &[
-    "add",
-    "remove",
-    "install",
-    "update",
-    "outdated",
-    "search",
-    "info",
-    "list",
-    "publish",
-    "version",
-    "init",
-    "mcp",
-    "skill",
-    "model",
-    "provider",
-    "nk",
-    "nv",
-    "schema",
-    "config",
-    "sync",
-    "secrets",
-    "daemon",
-    "doctor",
-    "status",
-    "topic",
-    "setup",
-    "help",
+    "add", "remove", "install", "update", "outdated", "search", "info", "list", "publish",
+    "version", "init", "mcp", "skill", "model", "provider", "nk", "nv", "schema", "config", "sync",
+    "secrets", "daemon", "doctor", "status", "topic", "setup", "help",
 ];
 
 /// Calculate Levenshtein distance between two strings.

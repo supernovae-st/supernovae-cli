@@ -866,23 +866,51 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
     // Show status
     println!(
         "  {} Rust/Cargo: {}",
-        if has_cargo { "✓".green() } else { "✗".red() },
+        if has_cargo {
+            "✓".green()
+        } else {
+            "✗".red()
+        },
         if has_cargo { "installed" } else { "not found" }
     );
     println!(
         "  {} Homebrew: {}",
-        if has_brew { "✓".green() } else { "○".dimmed() },
-        if has_brew { "installed" } else { "not found (optional)" }
+        if has_brew {
+            "✓".green()
+        } else {
+            "○".dimmed()
+        },
+        if has_brew {
+            "installed"
+        } else {
+            "not found (optional)"
+        }
     );
     println!(
         "  {} NovaNet CLI: {}",
-        if has_novanet { "✓".green() } else { "○".yellow() },
-        if has_novanet { "installed" } else { "not installed" }
+        if has_novanet {
+            "✓".green()
+        } else {
+            "○".yellow()
+        },
+        if has_novanet {
+            "installed"
+        } else {
+            "not installed"
+        }
     );
     println!(
         "  {} Neo4j: {}",
-        if has_neo4j { "✓".green() } else { "○".yellow() },
-        if has_neo4j { "connected" } else { "not running" }
+        if has_neo4j {
+            "✓".green()
+        } else {
+            "○".yellow()
+        },
+        if has_neo4j {
+            "connected"
+        } else {
+            "not running"
+        }
     );
     println!();
 
@@ -968,7 +996,10 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
         }
         println!();
     } else {
-        println!("{}", "STEP 2/4: NovaNet CLI Already Installed".bold().underline());
+        println!(
+            "{}",
+            "STEP 2/4: NovaNet CLI Already Installed".bold().underline()
+        );
         println!();
         // Show version
         if let Ok(output) = Command::new("novanet").arg("--version").output() {
@@ -1058,12 +1089,18 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
                 println!("  {} Starting Neo4j container...", "→".cyan());
                 let docker_result = Command::new("docker")
                     .args([
-                        "run", "-d",
-                        "--name", "novanet-neo4j",
-                        "-p", "7474:7474",
-                        "-p", "7687:7687",
-                        "-e", "NEO4J_AUTH=neo4j/password",
-                        "-e", "NEO4J_PLUGINS=[\"apoc\"]",
+                        "run",
+                        "-d",
+                        "--name",
+                        "novanet-neo4j",
+                        "-p",
+                        "7474:7474",
+                        "-p",
+                        "7687:7687",
+                        "-e",
+                        "NEO4J_AUTH=neo4j/password",
+                        "-e",
+                        "NEO4J_PLUGINS=[\"apoc\"]",
                         "neo4j:5",
                     ])
                     .status();
@@ -1080,10 +1117,7 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
                             "  {} Docker start failed (container may already exist)",
                             "⚠".yellow()
                         );
-                        println!(
-                            "     {}",
-                            "Try: docker start novanet-neo4j".dimmed()
-                        );
+                        println!("     {}", "Try: docker start novanet-neo4j".dimmed());
                     }
                     Err(e) => {
                         println!("  {} Docker error: {}", "✗".red(), e);
@@ -1092,7 +1126,10 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
             }
         }
     } else {
-        println!("  {} Neo4j is running and accepting connections", "✓".green());
+        println!(
+            "  {} Neo4j is running and accepting connections",
+            "✓".green()
+        );
     }
     println!();
 
@@ -1179,7 +1216,10 @@ fn print_novanet_success() {
     println!("     {}", "spn schema generate".cyan());
     println!();
     println!("  {} Query the graph:", "4.".cyan().bold());
-    println!("     {}", "novanet query \"MATCH (n) RETURN n LIMIT 10\"".cyan());
+    println!(
+        "     {}",
+        "novanet query \"MATCH (n) RETURN n LIMIT 10\"".cyan()
+    );
     println!();
     println!(
         "{}",

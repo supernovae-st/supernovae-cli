@@ -44,13 +44,23 @@ pub async fn run(command: NikaCommands) -> Result<()> {
         }
         NikaCommands::Trace { command } => match command {
             TraceCommands::List { limit } => {
-                vec!["trace".to_string(), "list".to_string(), "--limit".to_string(), limit.to_string()]
+                vec![
+                    "trace".to_string(),
+                    "list".to_string(),
+                    "--limit".to_string(),
+                    limit.to_string(),
+                ]
             }
             TraceCommands::Show { id } => {
                 vec!["trace".to_string(), "show".to_string(), id.clone()]
             }
             TraceCommands::Clean { keep } => {
-                vec!["trace".to_string(), "clean".to_string(), "--keep".to_string(), keep.clone()]
+                vec![
+                    "trace".to_string(),
+                    "clean".to_string(),
+                    "--keep".to_string(),
+                    keep.clone(),
+                ]
             }
         },
         NikaCommands::Config { command } => match command {
@@ -59,7 +69,12 @@ pub async fn run(command: NikaCommands) -> Result<()> {
                 vec!["config".to_string(), "get".to_string(), key.clone()]
             }
             NikaConfigCommands::Set { key, value } => {
-                vec!["config".to_string(), "set".to_string(), key.clone(), value.clone()]
+                vec![
+                    "config".to_string(),
+                    "set".to_string(),
+                    key.clone(),
+                    value.clone(),
+                ]
             }
         },
     };

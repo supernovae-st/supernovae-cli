@@ -242,10 +242,7 @@ fn check_tools() -> Vec<Check> {
     let nika = BinaryRunner::new(BinaryType::Nika);
     if nika.is_available() {
         // Try to get version
-        if let Ok(output) = std::process::Command::new("nika")
-            .arg("--version")
-            .output()
-        {
+        if let Ok(output) = std::process::Command::new("nika").arg("--version").output() {
             let version = String::from_utf8_lossy(&output.stdout);
             let version = version.split_whitespace().last().unwrap_or("?");
             checks.push(Check::ok_with("nika", &format!("v{}", version)));
@@ -284,10 +281,7 @@ fn check_tools() -> Vec<Check> {
     // Check npm
     let npm = NpmClient::new();
     if npm.is_available() {
-        if let Ok(output) = std::process::Command::new("npm")
-            .arg("--version")
-            .output()
-        {
+        if let Ok(output) = std::process::Command::new("npm").arg("--version").output() {
             let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
             checks.push(Check::ok_with("npm", &format!("v{}", version)));
         } else {
@@ -303,15 +297,9 @@ fn check_tools() -> Vec<Check> {
 
     // Check git
     if which::which("git").is_ok() {
-        if let Ok(output) = std::process::Command::new("git")
-            .arg("--version")
-            .output()
-        {
+        if let Ok(output) = std::process::Command::new("git").arg("--version").output() {
             let version = String::from_utf8_lossy(&output.stdout);
-            let version = version
-                .trim()
-                .strip_prefix("git version ")
-                .unwrap_or("?");
+            let version = version.trim().strip_prefix("git version ").unwrap_or("?");
             checks.push(Check::ok_with("git", &format!("v{}", version)));
         } else {
             checks.push(Check::ok_with("git", "installed"));
@@ -364,7 +352,8 @@ fn check_ecosystem() -> Vec<Check> {
                 if let Ok(content) = std::fs::read_to_string(&plugins_file) {
                     if content.contains("supernovae") {
                         // Count assets
-                        let cache = home.join(".claude/plugins/cache/claude-code-supernovae/supernovae");
+                        let cache =
+                            home.join(".claude/plugins/cache/claude-code-supernovae/supernovae");
                         if cache.exists() {
                             let version_dir = std::fs::read_dir(&cache)
                                 .ok()
@@ -378,7 +367,10 @@ fn check_ecosystem() -> Vec<Check> {
                                 let cmds = count_in_dir(&path, "commands", ".md");
                                 checks.push(Check::ok_with(
                                     "spn-plugin",
-                                    &format!("{} skills, {} agents, {} commands", skills, agents, cmds),
+                                    &format!(
+                                        "{} skills, {} agents, {} commands",
+                                        skills, agents, cmds
+                                    ),
                                 ));
                             } else {
                                 checks.push(Check::ok_with("spn-plugin", "active"));

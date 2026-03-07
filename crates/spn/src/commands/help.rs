@@ -344,7 +344,10 @@ fn show_models_help() {
     println!();
     println!("{}", "Commands:".bold());
     println!();
-    println!("  {}             List installed models", "spn model list".green());
+    println!(
+        "  {}             List installed models",
+        "spn model list".green()
+    );
     println!("  {}  Download a model", "spn model pull <name>".green());
     println!("  {}  Load into memory", "spn model load <name>".green());
     println!("  {}    Free memory", "spn model unload <name>".green());
@@ -392,12 +395,18 @@ fn show_providers_help() {
     println!();
     println!("{}", "Commands:".bold());
     println!();
-    println!("  {}         List all keys (masked)", "spn provider list".green());
+    println!(
+        "  {}         List all keys (masked)",
+        "spn provider list".green()
+    );
     println!("  {}  Set a key", "spn provider set <name>".green());
     println!("  {}  Get a key", "spn provider get <name>".green());
     println!("  {}  Remove key", "spn provider delete <name>".green());
     println!("  {}  Validate format", "spn provider test <name>".green());
-    println!("  {}       Move env vars to keychain", "spn provider migrate".green());
+    println!(
+        "  {}       Move env vars to keychain",
+        "spn provider migrate".green()
+    );
     println!();
     println!("{}", "Key Resolution Priority:".bold());
     println!();
@@ -419,7 +428,10 @@ fn show_daemon_help() {
     println!("{}", "Architecture:".bold());
     println!();
     println!("  ┌──────────────────────────────────────────┐");
-    println!("  │ {} (single keychain accessor)    │", "spn daemon".cyan());
+    println!(
+        "  │ {} (single keychain accessor)    │",
+        "spn daemon".cyan()
+    );
     println!("  └────────────────┬─────────────────────────┘");
     println!("                   │ Unix socket");
     println!("       ┌───────────┼───────────┐");
@@ -442,7 +454,10 @@ fn show_daemon_help() {
     println!("  {}           Stop daemon", "spn daemon stop".green());
     println!("  {}         Check status", "spn daemon status".green());
     println!("  {}        Restart", "spn daemon restart".green());
-    println!("  {}        Install as system service", "spn daemon install".green());
+    println!(
+        "  {}        Install as system service",
+        "spn daemon install".green()
+    );
     println!("  {}      Remove service", "spn daemon uninstall".green());
     println!();
     println!("{}", "Files:".bold());
@@ -461,7 +476,10 @@ fn show_architecture_help() {
     println!("{}", "System Overview:".bold());
     println!();
     println!("                    ┌─────────────────────────────────┐");
-    println!("                    │              {}                │", "spn".cyan().bold());
+    println!(
+        "                    │              {}                │",
+        "spn".cyan().bold()
+    );
     println!("                    │    (Package Manager + CLI)      │");
     println!("                    └────────────┬────────────────────┘");
     println!("                                 │");
@@ -469,7 +487,12 @@ fn show_architecture_help() {
     println!("          │                      │                      │");
     println!("          ▼                      ▼                      ▼");
     println!("    ┌──────────┐          ┌──────────┐          ┌──────────┐");
-    println!("    │   {}   │          │ {} │          │  {}  │", "nika".cyan(), "novanet".cyan(), "ollama".cyan());
+    println!(
+        "    │   {}   │          │ {} │          │  {}  │",
+        "nika".cyan(),
+        "novanet".cyan(),
+        "ollama".cyan()
+    );
     println!("    │ (Engine) │          │ (Brain)  │          │ (Models) │");
     println!("    └──────────┘          └──────────┘          └──────────┘");
     println!();
@@ -506,7 +529,10 @@ fn show_architecture_help() {
     println!();
     println!("{}", "Learn More:".bold());
     println!();
-    println!("  {}              System health check", "spn doctor".green());
+    println!(
+        "  {}              System health check",
+        "spn doctor".green()
+    );
     println!("  {}       Detailed status", "spn status --json".green());
     println!("  {}    Interactive onboarding", "spn setup".green());
 }

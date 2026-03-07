@@ -233,24 +233,22 @@ impl SpnError {
                 style("•").dim()
             )),
 
-            SpnError::IoError(e) => {
-                match e.kind() {
-                    std::io::ErrorKind::NotFound => Some(
-                        "File or directory not found.\n   \
+            SpnError::IoError(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => Some(
+                    "File or directory not found.\n   \
                          Check the path exists and you have access permissions."
-                            .to_string()
-                    ),
-                    std::io::ErrorKind::PermissionDenied => Some(format!(
-                        "Permission denied.\n   \
+                        .to_string(),
+                ),
+                std::io::ErrorKind::PermissionDenied => Some(format!(
+                    "Permission denied.\n   \
                          Try running with {} or check file permissions.",
-                        style("sudo").cyan()
-                    )),
-                    std::io::ErrorKind::AlreadyExists => Some(
-                        "File or directory already exists.".to_string()
-                    ),
-                    _ => None,
+                    style("sudo").cyan()
+                )),
+                std::io::ErrorKind::AlreadyExists => {
+                    Some("File or directory already exists.".to_string())
                 }
-            }
+                _ => None,
+            },
 
             _ => None,
         }
@@ -259,11 +257,7 @@ impl SpnError {
     /// Print the error with optional help message to stderr.
     pub fn print(&self) {
         eprintln!();
-        eprintln!(
-            "  {} {}",
-            style("✗").red().bold(),
-            style(self).red()
-        );
+        eprintln!("  {} {}", style("✗").red().bold(), style(self).red());
 
         if let Some(help) = self.help() {
             eprintln!();

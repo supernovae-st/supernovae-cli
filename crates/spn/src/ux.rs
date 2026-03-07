@@ -73,7 +73,9 @@ impl SpinnerTheme {
     fn frames(&self) -> &[&str] {
         match self {
             SpinnerTheme::Default => &["◐", "◓", "◑", "◒"],
-            SpinnerTheme::Download => &["    ", "=   ", "==  ", "=== ", " ===", "  ==", "   =", "    "],
+            SpinnerTheme::Download => &[
+                "    ", "=   ", "==  ", "=== ", " ===", "  ==", "   =", "    ",
+            ],
             SpinnerTheme::Search => &["◜", "◠", "◝", "◞", "◡", "◟"],
             SpinnerTheme::Install => &["▱▱▱", "▰▱▱", "▰▰▱", "▰▰▰", "▱▰▰", "▱▱▰"],
             SpinnerTheme::Sync => &["↻", "↺"],
@@ -349,7 +351,10 @@ pub fn input_with_default(
 }
 
 /// Select from a list of options
-pub fn select<T: ToString>(prompt: &str, items: &[T]) -> std::result::Result<usize, dialoguer::Error> {
+pub fn select<T: ToString>(
+    prompt: &str,
+    items: &[T],
+) -> std::result::Result<usize, dialoguer::Error> {
     Select::with_theme(&theme())
         .with_prompt(prompt)
         .items(items)

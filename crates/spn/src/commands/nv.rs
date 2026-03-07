@@ -4,7 +4,10 @@
 
 use crate::error::Result;
 use crate::interop::binary::{BinaryRunner, BinaryType};
-use crate::{DbCommands, EntityCommands, KnowledgeCommands, LocaleCommands, McpServerCommands, NovaNetCommands};
+use crate::{
+    DbCommands, EntityCommands, KnowledgeCommands, LocaleCommands, McpServerCommands,
+    NovaNetCommands,
+};
 
 use colored::Colorize;
 
@@ -109,7 +112,11 @@ pub async fn run(command: NovaNetCommands) -> Result<()> {
                 ]
             }
         },
-        NovaNetCommands::Export { output, format, entity } => {
+        NovaNetCommands::Export {
+            output,
+            format,
+            entity,
+        } => {
             let mut args = vec![
                 "export".to_string(),
                 "--output".to_string(),
