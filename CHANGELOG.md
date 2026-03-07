@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.3](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.3) - 2026-03-07
+
+### Added
+
+- **cli**: Add shell completion and verbose logging
+- **ipc**: Add protocol versioning for daemon communication
+
+### Changed
+
+- Format FxHashMap collection patterns
+- Simplify conditional patterns
+
+### Documentation
+
+- Update for v0.14.3 release
+- **plan**: Complete spn-cli improvement verification v2.0
+- Sync versions to v0.14.2 and improve DX
+
+### Fixed
+
+- **daemon**: Improve async correctness
+
+### Performance
+
+- Use FxHashMap for faster hashing
+- **tokio**: Use minimal features for smaller binary
+
+### Deps
+
+- Update reqwest 0.12→0.13, indicatif 0.17→0.18, reqwest-retry 0.6→0.9
+
+
 ## [0.14.2](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.2) - 2026-03-07
 
 ### Added
