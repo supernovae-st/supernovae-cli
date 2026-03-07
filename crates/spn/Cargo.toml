@@ -67,7 +67,7 @@ serde_yaml = "0.9"
 toml = "0.8"
 
 # HTTP client (async only - no blocking feature)
-reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"], default-features = false }
+reqwest = { version = "0.13", features = ["json", "rustls", "stream"], default-features = false }
 futures-util = "0.3"
 
 # Error handling
@@ -92,7 +92,7 @@ which = "7.0"
 semver = "1.0"
 walkdir = "2.5"
 urlencoding = "2.1"
-indicatif = "0.17"
+indicatif = "0.18"
 console = "0.15"
 dialoguer = { version = "0.11", features = ["fuzzy-select"] }
 similar = { version = "2.6", features = ["inline"] }
@@ -112,8 +112,8 @@ dashmap = "6.1"
 petgraph = "0.6"
 
 # HTTP retry logic
-reqwest-retry = "0.6"
-reqwest-middleware = "0.3"
+reqwest-retry = "0.9"
+reqwest-middleware = "0.5"
 
 [dev-dependencies]
 assert_cmd = "2.0"
