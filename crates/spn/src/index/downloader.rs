@@ -43,6 +43,9 @@ pub enum DownloadError {
 
     #[error("Failed to extract tarball: {0}")]
     ExtractError(String),
+
+    #[error("Invalid path in tarball: {0}")]
+    InvalidPath(String),
 }
 
 /// Downloaded package with verified content.
@@ -307,9 +310,53 @@ impl Downloader {
         let decoder = flate2::read::GzDecoder::new(file);
         let mut archive = tar::Archive::new(decoder);
 
-        archive
-            .unpack(dest)
-            .map_err(|e| DownloadError::ExtractError(e.to_string()))?;
+        // Security: Disable potentially dangerous features
+        archive.set_preserve_permissions(false);
+        archive.set_unpack_xattrs(false);
+
+        // Security: Validate each entry before extraction
+        for entry in archive
+            .entries()
+            .map_err(|e| DownloadError::ExtractError(e.to_string()))?
+        {
+            let mut entry = entry.map_err(|e| DownloadError::ExtractError(e.to_string()))?;
+            let path = entry
+                .path()
+                .map_err(|e| DownloadError::ExtractError(e.to_string()))?;
+
+            // Check for path traversal attacks (e.g., ../../../etc/passwd)
+            if path
+                .components()
+                .any(|c| matches!(c, std::path::Component::ParentDir))
+            {
+                return Err(DownloadError::InvalidPath(format!(
+                    "Tarball contains path traversal: {}",
+                    path.display()
+                )));
+            }
+
+            // Check for symlinks pointing outside extraction directory
+            if entry.header().entry_type().is_symlink() {
+                if let Ok(link) = entry.link_name() {
+                    if let Some(link_path) = link {
+                        if link_path
+                            .components()
+                            .any(|c| matches!(c, std::path::Component::ParentDir))
+                        {
+                            return Err(DownloadError::InvalidPath(format!(
+                                "Tarball contains symlink with path traversal: {} -> {}",
+                                path.display(),
+                                link_path.display()
+                            )));
+                        }
+                    }
+                }
+            }
+
+            entry
+                .unpack_in(dest)
+                .map_err(|e| DownloadError::ExtractError(e.to_string()))?;
+        }
 
         pb.finish_with_message(format!(
             "✅ Extracted {}@{}",
@@ -654,5 +701,76 @@ mod tests {
     fn test_downloader_default() {
         // Just verify Default impl doesn't panic
         let _downloader = Downloader::default();
+    }
+
+    #[tokio::test]
+    async fn test_symlink_traversal_rejection() {
+        let temp = TempDir::new().unwrap();
+        let index_dir = temp.path().join("index");
+        let releases_dir = temp.path().join("releases");
+
+        // Create package dir structure
+        let pkg_dir = releases_dir.join("@w/data/evil-symlink");
+        std::fs::create_dir_all(&pkg_dir).unwrap();
+
+        // Create a malicious tarball with symlink pointing outside
+        let tarball_path = pkg_dir.join("1.0.0.tar.gz");
+        {
+            let tar_gz = std::fs::File::create(&tarball_path).unwrap();
+            let enc = flate2::write::GzEncoder::new(tar_gz, flate2::Compression::default());
+            let mut tar = tar::Builder::new(enc);
+
+            // Add a symlink with path traversal target
+            let mut header = tar::Header::new_gnu();
+            header.set_entry_type(tar::EntryType::Symlink);
+            header.set_size(0);
+            header.set_mode(0o777);
+
+            // Link target pointing outside extraction directory
+            let link_target = "../../../etc/passwd";
+            header.set_link_name(link_target).unwrap();
+            header.set_cksum();
+
+            tar.append_data(&mut header, "evil-link", std::io::empty())
+                .unwrap();
+
+            let enc = tar.into_inner().unwrap();
+            enc.finish().unwrap();
+        }
+
+        // Compute checksum
+        let mut file = std::fs::File::open(&tarball_path).unwrap();
+        let mut hasher = Sha256::new();
+        std::io::copy(&mut file, &mut hasher).unwrap();
+        let checksum = format!("sha256:{}", hex::encode(hasher.finalize()));
+
+        // Create index entry
+        let pkg_idx_dir = index_dir.join("@w/data");
+        std::fs::create_dir_all(&pkg_idx_dir).unwrap();
+        let mut file = std::fs::File::create(pkg_idx_dir.join("evil-symlink")).unwrap();
+        writeln!(
+            file,
+            r#"{{"name":"@workflows/data/evil-symlink","vers":"1.0.0","deps":[],"cksum":"{}","features":{{}},"yanked":false}}"#,
+            checksum
+        )
+        .unwrap();
+
+        let config = RegistryConfig::local(&index_dir, &releases_dir);
+        let downloader = Downloader::with_config(config);
+
+        // Download should succeed
+        let pkg = downloader
+            .download_latest("@workflows/data/evil-symlink")
+            .await
+            .unwrap();
+
+        // Extraction should fail with InvalidPath
+        let extract_dir = temp.path().join("extracted");
+        let result = downloader.extract(&pkg, &extract_dir);
+        assert!(
+            matches!(result, Err(DownloadError::InvalidPath(_))),
+            "Expected InvalidPath error for symlink traversal, got: {:?}",
+            result
+        );
     }
 }

@@ -462,11 +462,8 @@ impl LocalStorage {
     }
 }
 
-impl Default for LocalStorage {
-    fn default() -> Self {
-        Self::new().expect("Failed to create default local storage")
-    }
-}
+// NOTE: Default intentionally NOT implemented to prevent panics.
+// Use LocalStorage::new() or LocalStorage::with_root() instead.
 
 #[cfg(test)]
 mod tests {

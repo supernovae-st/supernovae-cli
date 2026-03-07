@@ -8,6 +8,17 @@
 //! [4 bytes: message length (big-endian u32)][JSON payload]
 //! ```
 //!
+//! ## Protocol Versioning
+//!
+//! The protocol version is exchanged during the initial PING/PONG handshake.
+//! This allows clients and daemons to detect incompatible versions early.
+//!
+//! - `protocol_version`: Integer version for wire protocol changes
+//! - `version`: CLI version string for display purposes
+//!
+//! When the protocol version doesn't match, clients should warn and may
+//! fall back to environment variables.
+//!
 //! ## Example
 //!
 //! Request:
@@ -22,6 +33,24 @@
 
 use serde::{Deserialize, Serialize};
 use spn_core::{LoadConfig, ModelInfo, RunningModel};
+
+/// Current protocol version.
+///
+/// Increment this when making breaking changes to the wire protocol:
+/// - Adding required fields to requests/responses
+/// - Changing the serialization format
+/// - Removing commands or response variants
+///
+/// Do NOT increment for:
+/// - Adding new optional fields
+/// - Adding new commands (backwards compatible)
+pub const PROTOCOL_VERSION: u32 = 1;
+
+/// Default protocol version for backwards compatibility.
+/// Old daemons that don't send protocol_version are assumed to be v0.
+fn default_protocol_version() -> u32 {
+    0
+}
 
 /// Request sent to the daemon.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,8 +106,15 @@ pub enum Request {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Response {
-    /// Successful ping response.
-    Pong { version: String },
+    /// Successful ping response with version info.
+    Pong {
+        /// Protocol version for compatibility checking.
+        /// Clients should verify this matches PROTOCOL_VERSION.
+        #[serde(default = "default_protocol_version")]
+        protocol_version: u32,
+        /// CLI version string for display.
+        version: String,
+    },
 
     /// Secret value response.
     ///

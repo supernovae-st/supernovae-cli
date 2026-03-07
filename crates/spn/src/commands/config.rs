@@ -3,12 +3,51 @@
 //! Manages configuration across three scopes: Global, Team, Local.
 
 use std::env;
-
-use crate::ux::design_system as ds;
+use std::path::Path;
 
 use crate::config::{global, local, scope::ScopeType, team, ConfigResolver};
 use crate::error::{Result, SpnError};
+use crate::ux::design_system as ds;
 use crate::ConfigCommands;
+
+/// Validate that an editor command is safe to execute.
+///
+/// Returns the validated editor command, or an error if the command is invalid.
+/// This prevents command injection attacks via malicious EDITOR env vars.
+fn validate_editor(editor: &str) -> Result<&str> {
+    // Check for empty editor
+    if editor.is_empty() {
+        return Err(SpnError::ConfigError("EDITOR is empty".to_string()));
+    }
+
+    // Shell metacharacters that could enable command injection
+    const SHELL_METACHARACTERS: &[char] = &[
+        ';', '|', '&', '$', '`', '(', ')', '{', '}', '[', ']', '<', '>', '\n', '\r', '\0',
+    ];
+
+    // Check for shell metacharacters
+    if editor.chars().any(|c| SHELL_METACHARACTERS.contains(&c)) {
+        return Err(SpnError::ConfigError(format!(
+            "EDITOR contains invalid characters: {}",
+            editor
+        )));
+    }
+
+    // Split editor command (may have args like "code --wait")
+    let editor_cmd = editor.split_whitespace().next().unwrap_or(editor);
+
+    // If absolute path, verify it exists
+    if editor_cmd.starts_with('/') {
+        if !Path::new(editor_cmd).exists() {
+            return Err(SpnError::ConfigError(format!(
+                "Editor not found: {}",
+                editor_cmd
+            )));
+        }
+    }
+
+    Ok(editor)
+}
 
 pub async fn run(command: ConfigCommands) -> Result<()> {
     match command {
@@ -237,10 +276,11 @@ async fn edit_config(local_flag: bool, user: bool, mcp: bool) -> Result<()> {
         team::package_config_path(&cwd)
     };
 
-    // Determine editor
+    // Determine and validate editor
     let editor = env::var("EDITOR")
         .or_else(|_| env::var("VISUAL"))
         .unwrap_or_else(|_| "vi".to_string());
+    let editor = validate_editor(&editor)?;
 
     if !path.exists() {
         println!("⚠️  File does not exist: {}", path.display());
@@ -433,5 +473,49 @@ mod tests {
     async fn test_show_locations_runs() {
         let result = show_locations().await;
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_editor_accepts_valid_editors() {
+        // Simple command names
+        assert!(validate_editor("vi").is_ok());
+        assert!(validate_editor("vim").is_ok());
+        assert!(validate_editor("nano").is_ok());
+        assert!(validate_editor("code").is_ok());
+
+        // Commands with flags
+        assert!(validate_editor("code --wait").is_ok());
+        assert!(validate_editor("vim -c startinsert").is_ok());
+    }
+
+    #[test]
+    fn test_validate_editor_rejects_empty() {
+        let result = validate_editor("");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("empty"));
+    }
+
+    #[test]
+    fn test_validate_editor_rejects_shell_metacharacters() {
+        // Command injection attempts
+        assert!(validate_editor("vi; rm -rf /").is_err());
+        assert!(validate_editor("vi | cat /etc/passwd").is_err());
+        assert!(validate_editor("vi && malicious").is_err());
+        assert!(validate_editor("vi $(whoami)").is_err());
+        assert!(validate_editor("vi `id`").is_err());
+
+        // Various dangerous characters
+        assert!(validate_editor("vi>output").is_err());
+        assert!(validate_editor("vi<input").is_err());
+        assert!(validate_editor("vi(subshell)").is_err());
+        assert!(validate_editor("vi{block}").is_err());
+        assert!(validate_editor("vi\nmalicious").is_err());
+    }
+
+    #[test]
+    fn test_validate_editor_rejects_nonexistent_absolute_path() {
+        let result = validate_editor("/nonexistent/path/to/editor");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
     }
 }
