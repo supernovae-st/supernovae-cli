@@ -159,8 +159,13 @@ docker run --rm \
 ### Verify Installation
 
 ```bash
-spn --version  # spn-cli 0.14.2
+spn --version  # spn-cli 0.14.3
 spn doctor     # System diagnostic
+
+# Enable shell completions
+spn completion bash >> ~/.bashrc
+spn completion zsh >> ~/.zshrc
+spn completion fish > ~/.config/fish/completions/spn.fish
 ```
 
 <br>
@@ -2464,7 +2469,9 @@ For detailed diagnostics:
 
 ```bash
 # Run any command with verbose output
-spn --verbose doctor
+spn -v doctor          # info level
+spn -vv doctor         # debug level
+spn -vvv doctor        # trace level
 
 # Check all systems
 spn doctor --verbose
@@ -2551,7 +2558,7 @@ cd supernovae-cli
 # Build the project
 cargo build
 
-# Run tests (914 tests)
+# Run tests (920+ tests)
 cargo test
 
 # Run linter
