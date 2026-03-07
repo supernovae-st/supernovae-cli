@@ -64,7 +64,7 @@ pub async fn run(command: NikaCommands) -> Result<()> {
             }
         },
         NikaCommands::Config { command } => match command {
-            NikaConfigCommands::Show => vec!["config".to_string(), "show".to_string()],
+            NikaConfigCommands::List => vec!["config".to_string(), "list".to_string()],
             NikaConfigCommands::Get { key } => {
                 vec!["config".to_string(), "get".to_string(), key.clone()]
             }

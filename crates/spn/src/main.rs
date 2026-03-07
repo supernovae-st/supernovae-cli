@@ -461,8 +461,8 @@ enum TraceCommands {
 
 #[derive(Subcommand)]
 enum NikaConfigCommands {
-    /// Show configuration
-    Show,
+    /// List all configuration values
+    List,
     /// Get a config value
     Get {
         /// Config key
