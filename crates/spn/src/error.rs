@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn test_io_error_generic_no_help() {
         // Generic IO errors still don't have specific help
-        let io_err = std::io::Error::new(std::io::ErrorKind::Other, "something went wrong");
+        let io_err = std::io::Error::other("something went wrong");
         let err = SpnError::IoError(io_err);
         assert!(err.help().is_none());
     }

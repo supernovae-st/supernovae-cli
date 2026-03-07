@@ -249,8 +249,7 @@ async fn test_connection_timeout_unreachable() {
     // Allow 2 seconds for test overhead on slow CI
     assert!(
         elapsed < Duration::from_secs(2),
-        "Connection should timeout within configured time, took {:?}",
-        elapsed
+        "Connection should timeout within configured time, took {elapsed:?}"
     );
 }
 
@@ -274,8 +273,7 @@ async fn test_list_models_unreachable() {
     // Should fail within configured timeout + overhead
     assert!(
         elapsed < Duration::from_secs(5),
-        "Should fail within timeout, took {:?}",
-        elapsed
+        "Should fail within timeout, took {elapsed:?}"
     );
 }
 
@@ -300,7 +298,6 @@ async fn test_chat_unreachable() {
     assert!(result.is_err(), "Should fail to connect to unreachable IP");
     assert!(
         elapsed < Duration::from_secs(5),
-        "Should fail within timeout, took {:?}",
-        elapsed
+        "Should fail within timeout, took {elapsed:?}"
     );
 }
