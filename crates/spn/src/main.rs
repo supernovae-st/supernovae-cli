@@ -305,7 +305,9 @@ enum Commands {
 
     /// Manage local LLM models (Ollama)
     #[command(visible_alias = "m")]
-    #[command(after_help = "Requires: Ollama must be running (ollama serve)\nRelated: spn provider list, spn nk studio")]
+    #[command(
+        after_help = "Requires: Ollama must be running (ollama serve)\nRelated: spn provider list, spn nk studio"
+    )]
     Model {
         #[command(subcommand)]
         command: ModelCommands,

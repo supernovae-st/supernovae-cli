@@ -576,7 +576,10 @@ pub fn badge<D: std::fmt::Display>(text: D, color: &str) -> String {
     match color {
         "green" => format!("{}", style(format!(" {} ", text)).on_green().black().bold()),
         "red" => format!("{}", style(format!(" {} ", text)).on_red().white().bold()),
-        "yellow" => format!("{}", style(format!(" {} ", text)).on_yellow().black().bold()),
+        "yellow" => format!(
+            "{}",
+            style(format!(" {} ", text)).on_yellow().black().bold()
+        ),
         "blue" => format!("{}", style(format!(" {} ", text)).on_blue().white().bold()),
         "cyan" => format!("{}", style(format!(" {} ", text)).on_cyan().black().bold()),
         _ => format!("{}", style(format!(" {} ", text)).on_black().white()),
