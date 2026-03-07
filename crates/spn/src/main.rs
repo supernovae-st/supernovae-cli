@@ -236,6 +236,9 @@ enum Commands {
     #[command(visible_alias = "dr")]
     Doctor,
 
+    /// Show a guided tour of spn features
+    Tour,
+
     /// Manage API keys and secrets for providers
     #[command(visible_alias = "p")]
     Provider {
@@ -969,7 +972,13 @@ enum ProviderCommands {
 // ============================================================================
 
 /// Handle the first-run welcome experience
-async fn handle_first_run() -> Result<(), Box<dyn std::error::Error>> {
+///
+/// Shows the welcome screen and handles user choices:
+/// - QuickSetup: Runs the setup wizard
+/// - TakeTour: Shows feature tour, then loops back
+/// - ShowHelp: Shows --help and marks complete
+/// - SkipForever: Marks complete and exits
+async fn handle_first_run() -> error::Result<()> {
     use welcome::WelcomeAction;
 
     loop {
@@ -1029,11 +1038,13 @@ async fn main() {
 
     // Check for first-run experience BEFORE parsing CLI
     // This allows us to show welcome screen when user just types "spn"
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() == 1 && first_run::is_first_run() {
+    // Use count() instead of collect() to avoid unnecessary allocation
+    let has_no_args = std::env::args().count() == 1;
+    if has_no_args && first_run::is_first_run() {
         // No subcommand provided and it's first run - show welcome
         if let Err(e) = handle_first_run().await {
-            eprintln!("Error during first run: {e}");
+            // Use SpnError::print() for consistent error formatting with help
+            e.print();
             std::process::exit(1);
         }
         return;
@@ -1050,7 +1061,7 @@ async fn main() {
                 println!(
                     "  {} {}",
                     console::style("spn").cyan().bold(),
-                    console::style("v").dim()
+                    console::style(format!("v{}", env!("CARGO_PKG_VERSION"))).dim()
                 );
                 println!();
                 println!("  Run {} to see all commands", console::style("spn --help").cyan());
@@ -1104,6 +1115,10 @@ async fn main() {
         Commands::Config { command } => commands::config::run(command).await,
         Commands::Schema { command } => commands::schema::run(command).await,
         Commands::Doctor => commands::doctor::run().await,
+        Commands::Tour => {
+            welcome::show_tour();
+            Ok(())
+        }
         Commands::Provider { command } => commands::provider::run(command).await,
         Commands::Status { json } => commands::status::run(json).await,
         Commands::Init {

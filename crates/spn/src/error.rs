@@ -95,8 +95,17 @@ pub enum SpnError {
     #[error("No versions available for package: {0}")]
     NoVersionsAvailable(String),
 
+    #[error("Interactive prompt error: {0}")]
+    DialoguerError(String),
+
     #[error("{0}")]
     Other(#[from] anyhow::Error),
+}
+
+impl From<dialoguer::Error> for SpnError {
+    fn from(e: dialoguer::Error) -> Self {
+        SpnError::DialoguerError(e.to_string())
+    }
 }
 
 impl SpnError {

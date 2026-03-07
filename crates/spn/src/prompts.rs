@@ -125,15 +125,30 @@ pub fn select_provider() -> PromptResult<String> {
         .default(0)
         .interact()?;
 
-    // Map selection back to provider id
-    let provider_id = if selection < LLM_PROVIDERS.len() {
+    // Map selection index back to provider id
+    // Layout: [LLM_PROVIDERS (0..6)] [separator (6)] [header (7)] [MCP_PROVIDERS (8..13)]
+    let llm_count = LLM_PROVIDERS.len();
+    let separator_idx = llm_count;
+    let header_idx = llm_count + 1;
+    let mcp_start_idx = llm_count + 2;
+
+    let provider_id = if selection < llm_count {
+        // Selected an LLM provider
         LLM_PROVIDERS[selection].id
+    } else if selection == separator_idx || selection == header_idx {
+        // User selected separator or header - treat as first LLM provider
+        // This shouldn't happen with FuzzySelect but handle defensively
+        tracing::debug!("User selected separator/header at index {}", selection);
+        LLM_PROVIDERS[0].id
     } else {
-        let mcp_index = selection - LLM_PROVIDERS.len() - 2; // -2 for separator + header
+        // Selected an MCP provider
+        let mcp_index = selection - mcp_start_idx;
         if mcp_index < MCP_PROVIDERS.len() {
             MCP_PROVIDERS[mcp_index].id
         } else {
-            LLM_PROVIDERS[0].id // Fallback
+            // Out of bounds - fallback to first LLM provider
+            tracing::warn!("Invalid selection index {} - falling back to anthropic", selection);
+            LLM_PROVIDERS[0].id
         }
     };
 
