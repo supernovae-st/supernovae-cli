@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.0) - 2026-03-07
+
+### Added
+
+- **ux**: Migrate to semantic design system
+- **cli**: V0.14.0 "The Delight Release" - UX improvements
+- **cli**: Complete Phase 3-5 improvements
+- **cli**: Complete Phase 2 UX improvements
+- **ux**: Add comprehensive UX module and improve CLI experience
+
+### Changed
+
+- Cargo fmt
+- Apply cargo fmt
+
+### Fixed
+
+- **lint**: Resolve clippy warnings for io_other_error and uninlined_format_args
+- **ux**: Complete migration of remaining 4 files
+- **cli**: Resolve 3 bugs found in e2e testing
+- **lint**: Resolve all clippy warnings in integration tests
+
+
 ### Added
 
 - **🦙 spn-ollama**: Added `chat_stream()` method to `ModelBackend` trait for streaming chat completions
