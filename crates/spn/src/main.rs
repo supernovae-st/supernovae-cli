@@ -25,6 +25,7 @@ mod manifest;
 mod mcp;
 mod prompts;
 mod secrets;
+mod status;
 mod storage;
 mod suggest;
 mod sync;

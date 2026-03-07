@@ -14,9 +14,9 @@
 
 # 🌟 SuperNovae CLI
 
-### One config. Every AI tool.
+### The Agentic AI Toolkit
 
-<sup>✨ MCP servers • LLM providers • Packages • Secrets — all in one CLI ✨</sup>
+<sup>✨ Local models • MCP servers • LLM providers • Secrets • Status Dashboard ✨</sup>
 
 <!-- Primary Badges (Dynamic) -->
 [![Crates.io](https://img.shields.io/crates/v/spn-cli?style=for-the-badge&logo=rust&logoColor=white&labelColor=6366f1&color=000000)](https://crates.io/crates/spn-cli)
@@ -48,19 +48,19 @@
 
 ---
 
-**spn** — **One config. Every AI tool.**<br>
-MCP servers, LLM providers, packages, and secrets. Works with **Ollama**, **Claude**, **OpenAI**, and **any AI editor** (Claude Code, Cursor, Windsurf, Continue.dev).
+**spn** — **The Agentic AI Toolkit**<br>
+Local models, MCP servers, LLM providers, and secrets. Works with **Ollama**, **Claude**, **OpenAI**, and **any AI editor** (Claude Code, Cursor, Windsurf, Continue.dev).
 
 <br>
 
 ```
     ╔═══════════════════════════════════════════════════════════════════════╗
     ║                                                                       ║
-    ║   🌟  "One command. Infinite possibilities."                          ║
+    ║   🌟  "The Agentic AI Toolkit"                                        ║
     ║                                                                       ║
     ║       • 7 LLM providers           • Any AI editor                     ║
     ║       • 48 MCP server aliases     • OS Keychain secrets               ║
-    ║       • 57K+ skills.sh            • Three-level config                ║
+    ║       • Ollama model manager      • Status dashboard                  ║
     ║       • Nika direct integration   • Open source first                 ║
     ║                                                                       ║
     ╚═══════════════════════════════════════════════════════════════════════╝
@@ -96,6 +96,7 @@ MCP servers, LLM providers, packages, and secrets. Works with **Ollama**, **Clau
   - [Selective Package Sync](#selective-package-sync)
   - [Security Architecture](#security-architecture)
 - [Commands Reference](#-commands-reference)
+  - [Status Dashboard](#-status-dashboard)
   - [Package Management](#-package-management)
   - [Configuration Management](#-configuration-management)
   - [Onboarding](#-onboarding)
@@ -477,6 +478,78 @@ flowchart TB
 ---
 
 ## 📖 Commands Reference
+
+### 📊 Status Dashboard
+
+View the complete state of your SuperNovae ecosystem at a glance.
+
+#### `spn status [--json]`
+
+Display the unified status dashboard showing local models, credentials, MCP servers, and daemon status.
+
+```bash
+# ASCII dashboard (default)
+spn status
+
+# Machine-readable JSON output
+spn status --json
+```
+
+**Output:**
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  ✦ spn status                                    The Agentic AI Toolkit  ✦  ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─ 🦙 LOCAL MODELS ────────────────────────────────────────────────────────────┐
+│  Ollama → http://localhost:11434                            ✅ running        │
+│  Memory  2.1 / 16.0 GB                    ████░░░░░░░░░░░░  13%              │
+│  Models                                                                      │
+│  ├── ● llama3.2:1b          1.2 GB  ← active                                 │
+│  └── ○ mistral:7b           4.1 GB                                           │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─ 🔑 CREDENTIALS ─────────────────────────────────────────────────────────────┐
+│  Name          Type   Status      Source      Endpoint                       │
+│  anthropic     LLM    ✅ ready     🔐 keychain api.anthropic.com             │
+│  openai        LLM    ✅ ready     📦 env      api.openai.com                 │
+│  ollama        LLM    ✅ local     🦙 local    localhost:11434                │
+│  neo4j         MCP    ✅ ready     🔐 keychain bolt://localhost:7687          │
+│  7/13 configured   │   🔐 2 keychain   📦 4 env   🦙 1 local                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─ 🔌 MCP SERVERS ───────────────────────────────────────────────────────────────┐
+│  Server        Status      Transport   Command             Credential         │
+│  neo4j         ○ ready     stdio       uvx                 → neo4j            │
+│  perplexity    ○ ready     stdio       npx                 → perplexity       │
+│  7/8 active                                                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─ 📡 DAEMON ──────────────────────────────────────────────────────────────────┐
+│  spn daemon ✅ running   PID 12345   ~/.spn/daemon.sock   Uptime 2h 15m      │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  🔑 7/13 Keys    🔌 7/8 MCPs    🦙 2 Models    📡 Daemon OK
+```
+
+**Dashboard sections:**
+
+| Section | Shows |
+|:--------|:------|
+| 🦙 LOCAL MODELS | Ollama status, memory usage, installed/loaded models |
+| 🔑 CREDENTIALS | All LLM + MCP credentials, their sources (keychain/env/.env/local) |
+| 🔌 MCP SERVERS | Configured servers, their status, transport, and linked credentials |
+| 📡 DAEMON | spn daemon status, PID, socket path, uptime |
+
+**Use cases:**
+- Quick health check before starting work
+- Verify API keys are configured correctly
+- Debug "why isn't X working" issues
+- Confirm local models are loaded
+
+<br>
+
+---
 
 ### 📦 Package Management
 
@@ -2256,7 +2329,7 @@ Resolved package versions (committed to git).
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818cf8', 'lineColor': '#a5b4fc', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#312e81'}}}%%
 flowchart TB
-    subgraph SPN["🌟 spn — Package Manager v0.14.2"]
+    subgraph SPN["🌟 spn — The Agentic AI Toolkit v0.14.3"]
         direction LR
         subgraph OWNED["We Own"]
             W["📋 workflows/<br/>YAML DAGs"]
@@ -2314,7 +2387,7 @@ flowchart TB
 
 | Mascot | Role | Description |
 |--------|------|-------------|
-| **spn** 🌟 | CLI | One config. Every AI tool — MCP servers, providers, packages, secrets |
+| **spn** 🌟 | CLI | The Agentic AI Toolkit — models, MCP servers, providers, secrets |
 | **Nika** 🦋 | Runtime | Orchestrates workflows via 5 semantic verbs: `infer`, `exec`, `fetch`, `invoke`, `agent` |
 | **NovaNet** 🧠 | Brain | Knowledge graph for localization, entities, and semantic relationships |
 
@@ -2670,9 +2743,9 @@ src/
 </td>
 <td align="center">
 <a href="https://github.com/supernovae-st/supernovae-cli">
-<img src="https://img.shields.io/badge/🌟_spn-Package_Manager-6366f1?style=for-the-badge" alt="spn">
+<img src="https://img.shields.io/badge/🌟_spn-Agentic_Toolkit-6366f1?style=for-the-badge" alt="spn">
 </a>
-<br><sub>Manager: Universal Package CLI</sub>
+<br><sub>Manager: The Agentic AI Toolkit</sub>
 </td>
 </tr>
 </table>

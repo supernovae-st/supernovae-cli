@@ -1,12 +1,12 @@
 # supernovae-cli
 
-**SuperNovae CLI (`spn`)** v0.14.3 — Unified package manager for the SuperNovae AI workflow ecosystem.
+**SuperNovae CLI (`spn`)** v0.14.3 — The Agentic AI Toolkit for the SuperNovae ecosystem.
 
 ## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  spn — SuperNovae Package Manager v0.14.3                                       │
+│  spn — The Agentic AI Toolkit v0.14.3                                           │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │  Package Commands:                                                              │
@@ -43,7 +43,8 @@
 │  ├── spn setup nika             Install and configure Nika workflow engine      │
 │  └── spn setup novanet          Install and configure NovaNet knowledge graph   │
 │                                                                                 │
-│  Integration:                                                                   │
+│  Status & Integration:                                                          │
+│  ├── spn status [--json]        System status dashboard                         │
 │  ├── spn nk <args>              Proxy to nika CLI                               │
 │  ├── spn nv <args>              Proxy to novanet CLI                            │
 │  ├── spn sync                   Sync packages to editor configs                 │
