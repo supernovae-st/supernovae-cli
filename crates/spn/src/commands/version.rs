@@ -6,6 +6,7 @@ use std::env;
 
 use crate::error::{CliError, Result};
 use crate::manifest::SpnManifest;
+use crate::ux::design_system as ds;
 
 pub async fn run(bump: &str) -> Result<()> {
     let cwd = env::current_dir()?;
@@ -91,15 +92,29 @@ async fn bump_version(manifest_path: &std::path::Path, bump: &str) -> Result<()>
     // Write updated manifest
     manifest.write_to_file(manifest_path)?;
 
-    println!("🔢 Version bumped: {} → {}", old_version, manifest.version);
-    println!();
-    println!("   Next steps:");
-    println!("   • git add spn.yaml");
     println!(
-        "   • git commit -m \"chore: bump version to {}\"",
-        manifest.version
+        "{} Version bumped: {} {} {}",
+        ds::success(ds::icon::SUCCESS),
+        ds::muted(&old_version),
+        ds::primary("→"),
+        ds::version(&manifest.version)
     );
-    println!("   • git tag v{}", manifest.version);
+    println!();
+    println!("  {}", ds::highlight("Next steps:"));
+    println!("  {} {}", ds::bullet_icon(), ds::command("git add spn.yaml"));
+    println!(
+        "  {} {}",
+        ds::bullet_icon(),
+        ds::command(format!(
+            "git commit -m \"chore: bump version to {}\"",
+            manifest.version
+        ))
+    );
+    println!(
+        "  {} {}",
+        ds::bullet_icon(),
+        ds::command(format!("git tag v{}", manifest.version))
+    );
 
     Ok(())
 }

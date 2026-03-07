@@ -9,6 +9,7 @@ use serde::Serialize;
 use crate::error::Result;
 use crate::manifest::SpnManifest;
 use crate::storage::LocalStorage;
+use crate::ux::design_system as ds;
 
 /// Package list for JSON output.
 #[derive(Debug, Serialize)]
@@ -80,29 +81,39 @@ pub async fn run(json: bool) -> Result<()> {
     }
 
     // Human-readable output
-    println!("📦 Installed packages:\n");
+    println!("{}", ds::primary("Installed packages:"));
+    println!();
 
     if installed.is_empty() && manifest.as_ref().is_none_or(|m| m.dependencies.is_empty()) {
-        println!("   No packages installed.");
+        println!("  {}", ds::muted("No packages installed."));
         println!();
-        println!("   Get started:");
-        println!("   • spn add @workflows/dev-productivity/code-review");
-        println!("   • spn skill add brainstorming");
+        println!("  {}", ds::highlight("Get started:"));
+        println!(
+            "  {} {}",
+            ds::bullet_icon(),
+            ds::command("spn add @workflows/dev-productivity/code-review")
+        );
+        println!("  {} {}", ds::bullet_icon(), ds::command("spn skill add brainstorming"));
         return Ok(());
     }
 
     // Show manifest dependencies
     if let Some(ref m) = manifest {
         if !m.dependencies.is_empty() {
-            println!("   From spn.yaml:");
+            println!("  {}", ds::muted("From spn.yaml:"));
             for (name, dep) in &m.dependencies {
                 let version = dep.version();
                 let status = if installed.iter().any(|p| &p.name == name) {
-                    "✓"
+                    ds::success(ds::icon::SUCCESS)
                 } else {
-                    "○"
+                    ds::muted("○")
                 };
-                println!("   {} {} @ {}", status, name, version);
+                println!(
+                    "  {} {} @ {}",
+                    status,
+                    ds::package(name),
+                    ds::version(version)
+                );
             }
             println!();
         }
@@ -110,22 +121,35 @@ pub async fn run(json: bool) -> Result<()> {
 
     // Show installed packages from storage
     if !installed.is_empty() {
-        println!("   In ~/.spn/packages:");
+        println!("  {}", ds::muted("In ~/.spn/packages:"));
         for pkg in &installed {
             let in_manifest = manifest
                 .as_ref()
                 .is_some_and(|m| m.dependencies.contains_key(&pkg.name));
 
-            let status = if in_manifest { "✓" } else { "⚡" };
-            println!("   {} {} @ {}", status, pkg.name, pkg.version);
+            let status = if in_manifest {
+                ds::success(ds::icon::SUCCESS)
+            } else {
+                ds::warning("⚡")
+            };
+            println!(
+                "  {} {} @ {}",
+                status,
+                ds::package(&pkg.name),
+                ds::version(&pkg.version)
+            );
         }
         println!();
     }
 
     // Legend
-    println!("   ✓ = in manifest & installed");
-    println!("   ○ = in manifest, not installed");
-    println!("   ⚡ = installed directly (not in manifest)");
+    println!(
+        "  {} {} = in manifest & installed",
+        ds::success(ds::icon::SUCCESS),
+        ds::muted("")
+    );
+    println!("  {} = in manifest, not installed", ds::muted("○"));
+    println!("  {} = installed directly (not in manifest)", ds::warning("⚡"));
 
     Ok(())
 }

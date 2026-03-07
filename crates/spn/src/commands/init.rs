@@ -7,6 +7,7 @@ use std::path::Path;
 
 use crate::error::Result;
 use crate::manifest::SpnManifest;
+use crate::ux::design_system as ds;
 
 /// Template for local config (gitignored).
 const LOCAL_CONFIG_TEMPLATE: &str = r#"# Local overrides (gitignored)
@@ -88,7 +89,11 @@ async fn create_project(dir: &Path) -> Result<()> {
     let manifest_path = dir.join("spn.yaml");
 
     if manifest_path.exists() {
-        println!("⚠️  spn.yaml already exists");
+        println!(
+            "{} {}",
+            ds::warning(ds::icon::WARNING),
+            ds::warning("spn.yaml already exists")
+        );
         return Ok(());
     }
 
@@ -133,16 +138,28 @@ async fn create_project(dir: &Path) -> Result<()> {
         }
     }
 
-    println!("🚀 Initialized new SuperNovae project");
+    println!(
+        "{} {}",
+        ds::success(ds::icon::SUCCESS),
+        ds::success("Initialized new SuperNovae project")
+    );
     println!();
-    println!("   Created:");
-    println!("   ├── spn.yaml         (package manifest)");
-    println!("   └── .spn/            (local state)");
+    println!("  {}", ds::highlight("Created:"));
+    println!("  {} {}", ds::tree_branch(), ds::path("spn.yaml         (package manifest)"));
+    println!(
+        "  {} {}",
+        ds::tree_branch_last(),
+        ds::path(".spn/            (local state)")
+    );
     println!();
-    println!("   Next steps:");
-    println!("   • spn add @workflows/dev-productivity/code-review");
-    println!("   • spn skill add brainstorming");
-    println!("   • spn mcp add neo4j");
+    println!("  {}", ds::highlight("Next steps:"));
+    println!(
+        "  {} {}",
+        ds::bullet_icon(),
+        ds::command("spn add @workflows/dev-productivity/code-review")
+    );
+    println!("  {} {}", ds::bullet_icon(), ds::command("spn skill add brainstorming"));
+    println!("  {} {}", ds::bullet_icon(), ds::command("spn mcp add neo4j"));
     println!();
 
     Ok(())
@@ -153,14 +170,22 @@ async fn create_local_config(dir: &Path) -> Result<()> {
     let local_path = dir.join("spn.local.yaml");
 
     if local_path.exists() {
-        println!("⚠️  spn.local.yaml already exists");
+        println!(
+            "{} {}",
+            ds::warning(ds::icon::WARNING),
+            ds::warning("spn.local.yaml already exists")
+        );
         return Ok(());
     }
 
     std::fs::write(&local_path, LOCAL_CONFIG_TEMPLATE)?;
 
-    println!("📁 Created spn.local.yaml (gitignored)");
-    println!("   Use this for local overrides and secrets.");
+    println!(
+        "{} {}",
+        ds::success(ds::icon::SUCCESS),
+        ds::success("Created spn.local.yaml (gitignored)")
+    );
+    println!("  {}", ds::muted("Use this for local overrides and secrets."));
 
     Ok(())
 }
@@ -186,11 +211,19 @@ async fn create_mcp_config(dir: &Path) -> Result<()> {
     }
 
     if created.is_empty() {
-        println!("⚠️  MCP config files already exist");
+        println!(
+            "{} {}",
+            ds::warning(ds::icon::WARNING),
+            ds::warning("MCP config files already exist")
+        );
     } else {
-        println!("🔌 Created MCP configuration:");
+        println!(
+            "{} {}",
+            ds::success(ds::icon::SUCCESS),
+            ds::success("Created MCP configuration:")
+        );
         for file in created {
-            println!("   • {}", file);
+            println!("  {} {}", ds::bullet_icon(), ds::path(file));
         }
     }
 
@@ -203,11 +236,15 @@ async fn create_from_template(dir: &Path, template: &str) -> Result<()> {
         "nika" => create_nika_project(dir).await,
         "novanet" => create_novanet_project(dir).await,
         _ => {
-            println!("❌ Unknown template: {}", template);
+            println!(
+                "{} Unknown template: {}",
+                ds::error(ds::icon::ERROR),
+                ds::error(template)
+            );
             println!();
-            println!("Available templates:");
-            println!("  • nika       - Workflow engine project");
-            println!("  • novanet    - Knowledge graph project");
+            println!("{}", ds::highlight("Available templates:"));
+            println!("  {} {}", ds::bullet_icon(), ds::muted("nika       - Workflow engine project"));
+            println!("  {} {}", ds::bullet_icon(), ds::muted("novanet    - Knowledge graph project"));
             Err(crate::error::SpnError::InvalidInput(format!(
                 "Unknown template: {}",
                 template
@@ -265,18 +302,51 @@ steps:
         )?;
     }
 
-    println!("🚀 Initialized Nika workflow project");
+    println!(
+        "{} {}",
+        ds::success(ds::icon::SUCCESS),
+        ds::success("Initialized Nika workflow project")
+    );
     println!();
-    println!("   Created:");
-    println!("   ├── spn.yaml                (package manifest)");
-    println!("   ├── .nika/config.toml       (nika config)");
-    println!("   ├── workflows/hello.yaml    (example workflow)");
-    println!("   └── .spn/                   (local state)");
+    println!("  {}", ds::highlight("Created:"));
+    println!(
+        "  {} {}",
+        ds::tree_branch(),
+        ds::path("spn.yaml                (package manifest)")
+    );
+    println!(
+        "  {} {}",
+        ds::tree_branch(),
+        ds::path(".nika/config.toml       (nika config)")
+    );
+    println!(
+        "  {} {}",
+        ds::tree_branch(),
+        ds::path("workflows/hello.yaml    (example workflow)")
+    );
+    println!(
+        "  {} {}",
+        ds::tree_branch_last(),
+        ds::path(".spn/                   (local state)")
+    );
     println!();
-    println!("   Next steps:");
-    println!("   • spn provider set anthropic    # Configure API keys");
-    println!("   • spn add @workflows/dev/code-review");
-    println!("   • nika run workflows/hello.yaml");
+    println!("  {}", ds::highlight("Next steps:"));
+    println!(
+        "  {} {} {}",
+        ds::bullet_icon(),
+        ds::command("spn provider set anthropic"),
+        ds::muted("# Configure API keys")
+    );
+    println!(
+        "  {} {}",
+        ds::bullet_icon(),
+        ds::command("spn add @workflows/dev/code-review")
+    );
+    println!(
+        "  {} {}",
+        ds::bullet_icon(),
+        ds::command("nika run workflows/hello.yaml")
+    );
     println!();
 
     Ok(())
@@ -308,19 +378,58 @@ node_classes:
 "#;
     std::fs::write(&example_model, model_content)?;
 
-    println!("🚀 Initialized NovaNet knowledge graph project");
+    println!(
+        "{} {}",
+        ds::success(ds::icon::SUCCESS),
+        ds::success("Initialized NovaNet knowledge graph project")
+    );
     println!();
-    println!("   Created:");
-    println!("   ├── spn.yaml                (package manifest)");
-    println!("   ├── brain/models/           (schema definitions)");
-    println!("   ├── brain/seed/             (seed data)");
-    println!("   ├── brain/data/             (graph data)");
-    println!("   └── .spn/                   (local state)");
+    println!("  {}", ds::highlight("Created:"));
+    println!(
+        "  {} {}",
+        ds::tree_branch(),
+        ds::path("spn.yaml                (package manifest)")
+    );
+    println!(
+        "  {} {}",
+        ds::tree_branch(),
+        ds::path("brain/models/           (schema definitions)")
+    );
+    println!(
+        "  {} {}",
+        ds::tree_branch(),
+        ds::path("brain/seed/             (seed data)")
+    );
+    println!(
+        "  {} {}",
+        ds::tree_branch(),
+        ds::path("brain/data/             (graph data)")
+    );
+    println!(
+        "  {} {}",
+        ds::tree_branch_last(),
+        ds::path(".spn/                   (local state)")
+    );
     println!();
-    println!("   Next steps:");
-    println!("   • spn mcp add neo4j         # Add Neo4j MCP server");
-    println!("   • spn provider set neo4j    # Configure Neo4j credentials");
-    println!("   • novanet schema validate   # Validate schema");
+    println!("  {}", ds::highlight("Next steps:"));
+    println!(
+        "  {} {} {}",
+        ds::bullet_icon(),
+        ds::command("spn mcp add neo4j"),
+        ds::muted("# Add Neo4j MCP server")
+    );
+    println!(
+        "  {} {} {}",
+        ds::bullet_icon(),
+        ds::command("spn provider set neo4j"),
+        ds::muted("# Configure Neo4j credentials")
+    );
+    println!(
+        "  {} {} {}",
+        ds::bullet_icon(),
+        ds::command("novanet schema validate"),
+        ds::muted("# Validate schema")
+    );
     println!();
 
     Ok(())

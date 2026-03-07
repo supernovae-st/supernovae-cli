@@ -15,6 +15,7 @@ use walkdir::WalkDir;
 
 use crate::error::{CliError, Result, SpnError};
 use crate::manifest::SpnManifest;
+use crate::ux::design_system as ds;
 
 /// Files/directories to always exclude from tarball.
 const EXCLUDE_DIRS: &[&str] = &[
@@ -68,7 +69,11 @@ pub async fn run(dry_run: bool) -> Result<()> {
 }
 
 async fn validate_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
-    println!("🔍 Validating package (dry run)...\n");
+    println!(
+        "{} {}\n",
+        ds::primary(ds::icon::INFO),
+        ds::primary("Validating package (dry run)...")
+    );
 
     let mut errors = Vec::new();
     let mut warnings = Vec::new();
@@ -104,33 +109,49 @@ async fn validate_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
     }
 
     // Display results
-    println!("   Package: {}", manifest.name);
-    println!("   Version: {}", manifest.version);
+    println!(
+        "  {} {}",
+        ds::label("Package:"),
+        ds::package(&manifest.name)
+    );
+    println!(
+        "  {} {}",
+        ds::label("Version:"),
+        ds::version(&manifest.version)
+    );
     if let Some(ref desc) = manifest.description {
-        println!("   Description: {}", desc);
+        println!("  {} {}", ds::label("Description:"), ds::muted(desc));
     }
     println!();
 
     if !errors.is_empty() {
-        println!("   ❌ Errors:");
+        println!("  {} {}", ds::error(ds::icon::ERROR), ds::error("Errors:"));
         for err in &errors {
-            println!("      • {}", err);
+            println!("    {} {}", ds::bullet_icon(), ds::error(err));
         }
         println!();
     }
 
     if !warnings.is_empty() {
-        println!("   ⚠️  Warnings:");
+        println!(
+            "  {} {}",
+            ds::warning(ds::icon::WARNING),
+            ds::warning("Warnings:")
+        );
         for warn in &warnings {
-            println!("      • {}", warn);
+            println!("    {} {}", ds::bullet_icon(), ds::warning(warn));
         }
         println!();
     }
 
     if errors.is_empty() {
-        println!("   ✅ Package is valid for publishing");
+        println!(
+            "  {} {}",
+            ds::success(ds::icon::SUCCESS),
+            ds::success("Package is valid for publishing")
+        );
         println!();
-        println!("   To publish: spn publish");
+        println!("  To publish: {}", ds::command("spn publish"));
     } else {
         return Err(CliError::InvalidInput(format!(
             "Package validation failed with {} error(s)",
@@ -142,10 +163,15 @@ async fn validate_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
 }
 
 async fn publish_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
-    println!("📤 Publishing {}@{}...\n", manifest.name, manifest.version);
+    println!(
+        "{} Publishing {}@{}...\n",
+        ds::primary(ds::icon::ARROW),
+        ds::package(&manifest.name),
+        ds::version(&manifest.version)
+    );
 
     // Validate first
-    println!("   Validating package...");
+    println!("  {}", ds::muted("Validating package..."));
 
     if manifest.name.is_empty() || manifest.version.is_empty() {
         return Err(CliError::InvalidInput(
@@ -169,43 +195,73 @@ async fn publish_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
 
     if !valid_scopes.contains(&scope) {
         println!(
-            "   ⚠️  Scope '{}' is not a standard SuperNovae scope",
-            scope
+            "  {} {} Scope '{}' is not a standard SuperNovae scope",
+            ds::warning(ds::icon::WARNING),
+            ds::warning(""),
+            ds::highlight(scope)
         );
-        println!("   Standard scopes: @nika, @novanet, @workflows, @shared");
+        println!(
+            "  {} Standard scopes: @nika, @novanet, @workflows, @shared",
+            ds::muted("")
+        );
     }
 
     // Step 1: Create tarball
-    println!("   Creating tarball...");
+    println!("  {}", ds::muted("Creating tarball..."));
     let tarball = create_tarball(dir, manifest)?;
     println!(
-        "   ✓ Tarball created ({} files, {} bytes)",
-        tarball.file_count, tarball.size
+        "  {} Tarball created ({} files, {} bytes)",
+        ds::success(ds::icon::SUCCESS),
+        ds::highlight(tarball.file_count.to_string()),
+        ds::muted(tarball.size.to_string())
     );
-    println!("   ✓ Checksum: sha256:{}", &tarball.checksum[..16]);
+    println!(
+        "  {} Checksum: sha256:{}",
+        ds::success(ds::icon::SUCCESS),
+        ds::muted(&tarball.checksum[..16])
+    );
 
     // Step 2: Git-based publishing workflow
     println!();
-    println!("   📋 Git workflow:");
+    println!("  {} {}", ds::primary(ds::icon::INFO), ds::primary("Git workflow:"));
 
     // Check for gh CLI
     if which::which("gh").is_err() {
         println!();
-        println!("   ❌ GitHub CLI not found.");
-        println!();
-        println!("   Install it with: brew install gh");
-        println!("   Then authenticate: gh auth login");
-        println!();
-        println!("   Manual workflow:");
-        println!("   1. Fork supernovae-registry");
         println!(
-            "   2. Copy tarball to releases/{}/",
+            "  {} {}",
+            ds::error(ds::icon::ERROR),
+            ds::error("GitHub CLI not found.")
+        );
+        println!();
+        println!(
+            "  Install it with: {}",
+            ds::command("brew install gh")
+        );
+        println!(
+            "  Then authenticate: {}",
+            ds::command("gh auth login")
+        );
+        println!();
+        println!("  {}", ds::highlight("Manual workflow:"));
+        println!("  {} Fork supernovae-registry", ds::step_indicator(1, 4));
+        println!(
+            "  {} Copy tarball to releases/{}/",
+            ds::step_indicator(2, 4),
             get_index_path(&manifest.name)
         );
-        println!("   3. Update index/{}", get_index_path(&manifest.name));
-        println!("   4. Submit a pull request");
+        println!(
+            "  {} Update index/{}",
+            ds::step_indicator(3, 4),
+            get_index_path(&manifest.name)
+        );
+        println!("  {} Submit a pull request", ds::step_indicator(4, 4));
         println!();
-        println!("   Tarball location: {}", tarball.path.display());
+        println!(
+            "  {} {}",
+            ds::label("Tarball location:"),
+            ds::path(tarball.path.display())
+        );
         return Ok(());
     }
 
@@ -213,38 +269,81 @@ async fn publish_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
     match git_publish_workflow(dir, manifest, &tarball).await {
         Ok(pr_url) => {
             println!();
-            println!("   🎉 Pull request created!");
-            println!("   🔗 {}", pr_url);
+            println!(
+                "  {} {}",
+                ds::success(ds::icon::SUCCESS),
+                ds::success("Pull request created!")
+            );
+            println!("  {} {}", ds::primary(ds::icon::ARROW), ds::primary(&pr_url));
         }
         Err(e) => {
             // Fall back to manual instructions
             println!();
-            println!("   ⚠️  Automated workflow failed: {}", e);
+            println!(
+                "  {} Automated workflow failed: {}",
+                ds::warning(ds::icon::WARNING),
+                ds::warning(e.to_string())
+            );
             println!();
-            println!("   Manual steps:");
-            println!("   1. cd ~/path/to/supernovae-registry");
+            println!("  {}", ds::highlight("Manual steps:"));
             println!(
-                "   2. git checkout -b publish/{}/{}",
-                manifest.name.replace('@', ""),
-                manifest.version
+                "  {} {}",
+                ds::step_indicator(1, 7),
+                ds::command("cd ~/path/to/supernovae-registry")
             );
-            println!("   3. mkdir -p releases/{}", get_index_path(&manifest.name));
             println!(
-                "   4. cp {} releases/{}/{}.tar.gz",
-                tarball.path.display(),
-                get_index_path(&manifest.name),
-                manifest.version
+                "  {} {}",
+                ds::step_indicator(2, 7),
+                ds::command(format!(
+                    "git checkout -b publish/{}/{}",
+                    manifest.name.replace('@', ""),
+                    manifest.version
+                ))
             );
-            println!("   5. Update index/{}", get_index_path(&manifest.name));
             println!(
-                "   6. git add . && git commit -m 'feat: publish {}@{}'",
-                manifest.name, manifest.version
+                "  {} {}",
+                ds::step_indicator(3, 7),
+                ds::command(format!(
+                    "mkdir -p releases/{}",
+                    get_index_path(&manifest.name)
+                ))
             );
-            println!("   7. git push && gh pr create");
+            println!(
+                "  {} {}",
+                ds::step_indicator(4, 7),
+                ds::command(format!(
+                    "cp {} releases/{}/{}.tar.gz",
+                    tarball.path.display(),
+                    get_index_path(&manifest.name),
+                    manifest.version
+                ))
+            );
+            println!(
+                "  {} Update index/{}",
+                ds::step_indicator(5, 7),
+                get_index_path(&manifest.name)
+            );
+            println!(
+                "  {} {}",
+                ds::step_indicator(6, 7),
+                ds::command(format!(
+                    "git add . && git commit -m 'feat: publish {}@{}'",
+                    manifest.name, manifest.version
+                ))
+            );
+            println!(
+                "  {} {}",
+                ds::step_indicator(7, 7),
+                ds::command("git push && gh pr create")
+            );
         }
     }
     println!();
-    println!("   Tarball: {}", tarball.path.display());
+    println!(
+        "  {} {}",
+        ds::label("Tarball:"),
+        ds::path(tarball.path.display())
+    );
 
     Ok(())
 }
@@ -280,10 +379,14 @@ async fn git_publish_workflow(
             )
         })?;
 
-    println!("   ✓ Found registry at {}", registry_path.display());
+    println!(
+        "  {} Found registry at {}",
+        ds::success(ds::icon::SUCCESS),
+        ds::path(registry_path.display())
+    );
 
     // Ensure we're on main/master and pull latest
-    println!("   Updating registry...");
+    println!("  {}", ds::muted("Updating registry..."));
     let status = Command::new("git")
         .args(["checkout", "main"])
         .current_dir(registry_path)
@@ -311,7 +414,11 @@ async fn git_publish_workflow(
         manifest.name.replace('@', "").replace('/', "-"),
         manifest.version
     );
-    println!("   Creating branch {}...", branch_name);
+    println!(
+        "  {} Creating branch {}...",
+        ds::muted(ds::icon::ARROW),
+        ds::highlight(&branch_name)
+    );
 
     let status = Command::new("git")
         .args(["checkout", "-b", &branch_name])
@@ -339,7 +446,7 @@ async fn git_publish_workflow(
         .to_path_buf();
     let index_file = registry_path.join("index").join(&index_path);
 
-    println!("   Creating directories...");
+    println!("  {}", ds::muted("Creating directories..."));
     std::fs::create_dir_all(&releases_dir)
         .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to create releases dir: {}", e)))?;
     std::fs::create_dir_all(&index_dir)
@@ -347,12 +454,12 @@ async fn git_publish_workflow(
 
     // Copy tarball
     let tarball_dest = releases_dir.join(format!("{}.tar.gz", manifest.version));
-    println!("   Copying tarball...");
+    println!("  {}", ds::muted("Copying tarball..."));
     std::fs::copy(&tarball.path, &tarball_dest)
         .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to copy tarball: {}", e)))?;
 
     // Update index file (NDJSON format)
-    println!("   Updating index...");
+    println!("  {}", ds::muted("Updating index..."));
     let index_entry = serde_json::json!({
         "name": manifest.name,
         "version": manifest.version,
@@ -379,11 +486,11 @@ async fn git_publish_workflow(
         .map_err(|e| SpnError::Other(anyhow::anyhow!("Failed to write index: {}", e)))?;
 
     // Update registry.json (package catalog for search)
-    println!("   Updating registry.json...");
+    println!("  {}", ds::muted("Updating registry.json..."));
     update_registry_json(registry_path, manifest)?;
 
     // Git add and commit
-    println!("   Committing changes...");
+    println!("  {}", ds::muted("Committing changes..."));
     Command::new("git")
         .args(["add", "."])
         .current_dir(registry_path)
@@ -402,7 +509,7 @@ async fn git_publish_workflow(
         .map_err(|e| SpnError::CommandFailed(format!("git commit: {}", e)))?;
 
     // Push to origin
-    println!("   Pushing to origin...");
+    println!("  {}", ds::muted("Pushing to origin..."));
     let push_status = Command::new("git")
         .args(["push", "-u", "origin", &branch_name])
         .current_dir(registry_path)
@@ -418,7 +525,7 @@ async fn git_publish_workflow(
     }
 
     // Create PR via gh CLI
-    println!("   Creating pull request...");
+    println!("  {}", ds::muted("Creating pull request..."));
     let pr_body = format!(
         "## Package Publish\n\n- **Package:** {}\n- **Version:** {}\n- **Checksum:** sha256:{}\n\n---\nCreated by `spn publish`",
         manifest.name, manifest.version, &tarball.checksum[..16]

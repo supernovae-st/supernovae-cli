@@ -248,6 +248,11 @@ pub fn bullet<D: std::fmt::Display>(text: D) -> String {
     format!("  {} {}", style(icon::BULLET).dim(), text)
 }
 
+/// Just the bullet icon (for manual formatting)
+pub fn bullet_icon() -> StyledObject<&'static str> {
+    style(icon::BULLET).dim()
+}
+
 // ============================================================================
 // FORMATTING HELPERS
 // ============================================================================
