@@ -476,7 +476,9 @@ mod tests {
         let mcp = McpConfig {
             command: "node".to_string(),
             args: vec!["${PACKAGE_PATH}/dist/mcp.js".to_string()],
-            env: [("API_KEY".to_string(), "secret".to_string())].into_iter().collect(),
+            env: [("API_KEY".to_string(), "secret".to_string())]
+                .into_iter()
+                .collect(),
         };
 
         let config = build_mcp_config(&package_path, &mcp);

@@ -337,7 +337,9 @@ mod tests {
                     "-y".to_string(),
                     "@modelcontextprotocol/server-github".to_string(),
                 ],
-                env: [("GITHUB_TOKEN".to_string(), "${GITHUB_TOKEN}".to_string())].into_iter().collect(),
+                env: [("GITHUB_TOKEN".to_string(), "${GITHUB_TOKEN}".to_string())]
+                    .into_iter()
+                    .collect(),
                 description: None,
                 enabled: true,
                 source: None,
@@ -362,8 +364,13 @@ mod tests {
                 env: [
                     ("NEO4J_URI".to_string(), "bolt://localhost:7687".to_string()),
                     ("NEO4J_USER".to_string(), "neo4j".to_string()),
-                    ("NEO4J_PASSWORD".to_string(), "${NEO4J_PASSWORD}".to_string()),
-                ].into_iter().collect(),
+                    (
+                        "NEO4J_PASSWORD".to_string(),
+                        "${NEO4J_PASSWORD}".to_string(),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
                 description: Some("Neo4j knowledge graph".to_string()),
                 enabled: true,
                 source: None,
@@ -375,7 +382,12 @@ mod tests {
             McpServer {
                 command: "npx".to_string(),
                 args: vec!["-y".to_string(), "@anthropic/mcp-perplexity".to_string()],
-                env: [("PERPLEXITY_API_KEY".to_string(), "${PERPLEXITY_API_KEY}".to_string())].into_iter().collect(),
+                env: [(
+                    "PERPLEXITY_API_KEY".to_string(),
+                    "${PERPLEXITY_API_KEY}".to_string(),
+                )]
+                .into_iter()
+                .collect(),
                 description: Some("Web search".to_string()),
                 enabled: true,
                 source: None,
@@ -387,7 +399,12 @@ mod tests {
             McpServer {
                 command: "npx".to_string(),
                 args: vec!["-y".to_string(), "@anthropic/mcp-firecrawl".to_string()],
-                env: [("FIRECRAWL_API_KEY".to_string(), "${FIRECRAWL_API_KEY}".to_string())].into_iter().collect(),
+                env: [(
+                    "FIRECRAWL_API_KEY".to_string(),
+                    "${FIRECRAWL_API_KEY}".to_string(),
+                )]
+                .into_iter()
+                .collect(),
                 description: None,
                 enabled: true,
                 source: None,
@@ -432,7 +449,9 @@ mod tests {
                     ("API_KEY".to_string(), "${API_KEY}".to_string()),
                     ("SECRET_TOKEN".to_string(), "${SECRET_TOKEN}".to_string()),
                     ("DB_PASSWORD".to_string(), "${DB_PASSWORD}".to_string()),
-                ].into_iter().collect(),
+                ]
+                .into_iter()
+                .collect(),
                 description: None,
                 enabled: true,
                 source: None,
