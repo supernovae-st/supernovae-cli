@@ -54,8 +54,9 @@ changelog_include = ["spn-core", "spn-keyring", "spn-ollama", "spn-client"]
 
 [[package]]
 name = "spn-core"
-# Library crate - no GitHub release, just crates.io publish
+# Library crate - no GitHub release or tags, just crates.io publish
 git_release_enable = false
+git_tag_enable = false
 # Per-crate changelog (optional)
 changelog_path = "crates/spn-core/CHANGELOG.md"
 changelog_update = false
@@ -63,17 +64,20 @@ changelog_update = false
 [[package]]
 name = "spn-keyring"
 git_release_enable = false
+git_tag_enable = false
 changelog_path = "crates/spn-keyring/CHANGELOG.md"
 changelog_update = false
 
 [[package]]
 name = "spn-client"
 git_release_enable = false
+git_tag_enable = false
 changelog_path = "crates/spn-client/CHANGELOG.md"
 changelog_update = false
 
 [[package]]
 name = "spn-ollama"
 git_release_enable = false
+git_tag_enable = false
 changelog_path = "crates/spn-ollama/CHANGELOG.md"
 changelog_update = false
