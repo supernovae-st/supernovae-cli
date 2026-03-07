@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.3](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.3) - 2026-03-07
+
+### Documentation
+
+- Sync versions to v0.14.2 and improve DX
+
+
 ## [0.14.2](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.2) - 2026-03-07
 
 ### Added
