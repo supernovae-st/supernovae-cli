@@ -292,6 +292,10 @@ impl DaemonServer {
         let drain_timeout = Duration::from_secs(5);
         let deadline = tokio::time::Instant::now() + drain_timeout;
 
+        // Pin the sleep future once, avoid recreating on each loop iteration
+        let sleep = tokio::time::sleep_until(deadline);
+        tokio::pin!(sleep);
+
         loop {
             tokio::select! {
                 result = tasks.join_next() => {
@@ -306,7 +310,7 @@ impl DaemonServer {
                         }
                     }
                 }
-                _ = tokio::time::sleep_until(deadline) => {
+                _ = &mut sleep => {
                     let remaining = tasks.len();
                     if remaining > 0 {
                         warn!(
@@ -353,9 +357,14 @@ async fn handle_connection(
     stream: UnixStream,
     handler: Arc<RequestHandler>,
 ) -> Result<(), DaemonError> {
-    // Verify peer credentials
+    // Verify peer credentials using spawn_blocking for the getsockopt syscall
     let std_stream = stream.into_std()?;
-    verify_peer_credentials(&std_stream)?;
+    let std_stream = tokio::task::spawn_blocking(move || {
+        verify_peer_credentials(&std_stream)?;
+        Ok::<_, DaemonError>(std_stream)
+    })
+    .await
+    .map_err(|e| DaemonError::IoError(std::io::Error::other(format!("task join failed: {e}"))))??;
 
     // Convert back to async
     let mut stream = UnixStream::from_std(std_stream)?;
