@@ -89,9 +89,9 @@ struct Cli {
     #[command(subcommand)]
     command: Commands,
 
-    /// Verbose output
-    #[arg(short, long, global = true)]
-    verbose: bool,
+    /// Verbose output (-v = info, -vv = debug, -vvv = trace)
+    #[arg(short, long, global = true, action = clap::ArgAction::Count)]
+    verbose: u8,
 }
 
 #[derive(Subcommand)]
@@ -311,6 +311,20 @@ enum Commands {
     Model {
         #[command(subcommand)]
         command: ModelCommands,
+    },
+
+    /// Generate shell completions
+    #[command(visible_alias = "comp")]
+    #[command(
+        after_help = "Examples:\n  spn completion bash >> ~/.bashrc\n  spn completion zsh >> ~/.zshrc\n  spn completion fish > ~/.config/fish/completions/spn.fish"
+    )]
+    Completion {
+        /// Shell (bash, zsh, fish, powershell, elvish)
+        shell: String,
+
+        /// Output to file instead of stdout
+        #[arg(short, long)]
+        output: Option<std::path::PathBuf>,
     },
 }
 
@@ -1036,8 +1050,23 @@ async fn handle_first_run() -> error::Result<()> {
 
 #[tokio::main]
 async fn main() {
-    // Initialize logging early (quiet by default)
-    tracing_subscriber::fmt().with_env_filter("spn=warn").init();
+    // Check for verbose flag early (before full CLI parsing) to set correct log level
+    // This allows debug output during first-run and error handling
+    let verbose_count = std::env::args()
+        .filter(|arg| arg == "-v" || arg == "--verbose")
+        .count();
+
+    // Initialize logging with appropriate level based on verbose flags
+    // -v = info, -v -v = debug, -v -v -v = trace
+    let log_level = match verbose_count {
+        0 => "warn",
+        1 => "info",
+        2 => "debug",
+        _ => "trace",
+    };
+    tracing_subscriber::fmt()
+        .with_env_filter(format!("spn={}", log_level))
+        .init();
 
     // Check for first-run experience BEFORE parsing CLI
     // This allows us to show welcome screen when user just types "spn"
@@ -1088,9 +1117,8 @@ async fn main() {
         }
     };
 
-    // Re-initialize logging with correct verbosity
-    // Note: tracing only allows one global subscriber, so we use the early one
-    let _ = cli.verbose; // Acknowledge the flag (logging already initialized)
+    // Verbose flag was already processed during early logging initialization
+    // (tracing only allows one global subscriber, so we check args before parsing)
 
     let result = match cli.command {
         Commands::Add { package, r#type } => commands::add::run(&package, r#type.as_deref()).await,
@@ -1134,6 +1162,7 @@ async fn main() {
         Commands::Setup { quick, command } => commands::setup::run(command, quick).await,
         Commands::Daemon { command } => commands::daemon::run(command).await,
         Commands::Model { command } => commands::model::run(command).await,
+        Commands::Completion { shell, output } => commands::completion::run(&shell, output).await,
     };
 
     // Handle errors with helpful messages
