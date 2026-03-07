@@ -26,10 +26,9 @@ publish_timeout = "10m"
 # Don't allow dirty working directory
 allow_dirty = false
 
-# Publish packages in dependency order
-# DISABLED: versions out of sync with crates.io (0.12.2 local vs 0.11.0 on crates.io)
-# To catch up: `cargo publish -p spn-core && cargo publish -p spn-keyring && ...`
-publish = false
+# Publish packages in dependency order to crates.io
+# All crates are now aligned (manually published 2026-03-07)
+publish = true
 
 # Git tag format (v prefix)
 git_tag_name = "v{{ version }}"

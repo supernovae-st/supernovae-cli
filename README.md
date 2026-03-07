@@ -159,7 +159,7 @@ docker run --rm \
 ### Verify Installation
 
 ```bash
-spn --version  # spn-cli 0.12.2
+spn --version  # spn-cli 0.14.0
 spn doctor     # System diagnostic
 ```
 
@@ -1981,7 +1981,7 @@ spn doctor
 🏥 SuperNovae System Diagnostic
 
 Installation:
-  ✅ spn v0.8.1 installed
+  ✅ spn v0.14.0 installed
   ✅ nika v0.17.5 available
   ✅ novanet v0.14.0 available
 
@@ -2251,7 +2251,7 @@ Resolved package versions (committed to git).
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818cf8', 'lineColor': '#a5b4fc', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#312e81'}}}%%
 flowchart TB
-    subgraph SPN["🌟 spn — Package Manager v0.8.1"]
+    subgraph SPN["🌟 spn — Package Manager v0.14.0"]
         direction LR
         subgraph OWNED["We Own"]
             W["📋 workflows/<br/>YAML DAGs"]
@@ -2551,7 +2551,7 @@ cd supernovae-cli
 # Build the project
 cargo build
 
-# Run tests (796 tests)
+# Run tests (914 tests)
 cargo test
 
 # Run linter
