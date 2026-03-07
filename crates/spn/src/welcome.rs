@@ -171,11 +171,7 @@ pub fn show_tour() {
             "Sync packages to Claude Code, VS Code",
             "spn sync",
         ),
-        (
-            "Diagnostics",
-            "Check your setup is working",
-            "spn doctor",
-        ),
+        ("Diagnostics", "Check your setup is working", "spn doctor"),
     ];
 
     for (i, (name, desc, cmd)) in features.iter().enumerate() {
@@ -185,11 +181,7 @@ pub fn show_tour() {
             ds::highlight(*name)
         );
         println!("     {}", ds::muted(*desc));
-        println!(
-            "     {} {}",
-            ds::muted("$"),
-            ds::command(*cmd)
-        );
+        println!("     {} {}", ds::muted("$"), ds::command(*cmd));
         println!();
     }
 
@@ -203,11 +195,7 @@ pub fn show_tour() {
 /// Display post-setup success message
 pub fn show_setup_complete() {
     println!();
-    println!(
-        "{} {}",
-        ds::highlight("✨"),
-        ds::success("Setup complete!")
-    );
+    println!("{} {}", ds::highlight("✨"), ds::success("Setup complete!"));
     println!();
     println!("{}", ds::highlight("What's next?"));
     println!();

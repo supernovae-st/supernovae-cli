@@ -5,8 +5,8 @@
 
 use crate::error::{Result, SpnError};
 use crate::interop::model_registry::ModelRegistry;
-use crate::ModelCommands;
 use crate::ux::design_system as ds;
+use crate::ModelCommands;
 use dialoguer::Confirm;
 use spn_client::{LoadConfig, Request, Response, SpnClient};
 
@@ -126,7 +126,11 @@ async fn list(json: bool, running_only: bool) -> Result<()> {
 async fn pull(name: &str) -> Result<()> {
     let mut client = connect_to_daemon().await?;
 
-    println!("{} Pulling model: {}", ds::primary("->"), ds::highlight(name));
+    println!(
+        "{} Pulling model: {}",
+        ds::primary("->"),
+        ds::highlight(name)
+    );
     println!("   This may take a while...");
 
     let response = client
@@ -163,7 +167,11 @@ async fn pull(name: &str) -> Result<()> {
 async fn load(name: &str, keep_alive: bool) -> Result<()> {
     let mut client = connect_to_daemon().await?;
 
-    println!("{} Loading model: {}", ds::primary("->"), ds::highlight(name));
+    println!(
+        "{} Loading model: {}",
+        ds::primary("->"),
+        ds::highlight(name)
+    );
 
     let config = if keep_alive {
         Some(LoadConfig {
@@ -211,7 +219,11 @@ async fn load(name: &str, keep_alive: bool) -> Result<()> {
 async fn unload(name: &str) -> Result<()> {
     let mut client = connect_to_daemon().await?;
 
-    println!("{} Unloading model: {}", ds::primary("->"), ds::highlight(name));
+    println!(
+        "{} Unloading model: {}",
+        ds::primary("->"),
+        ds::highlight(name)
+    );
 
     let response = client
         .send_request(Request::ModelUnload {
@@ -257,7 +269,11 @@ async fn delete(name: &str, skip_confirm: bool) -> Result<()> {
 
     let mut client = connect_to_daemon().await?;
 
-    println!("{} Deleting model: {}", ds::primary("->"), ds::highlight(name));
+    println!(
+        "{} Deleting model: {}",
+        ds::primary("->"),
+        ds::highlight(name)
+    );
 
     let response = client
         .send_request(Request::ModelDelete {
@@ -389,7 +405,11 @@ fn format_size(bytes: u64) -> String {
 async fn search(query: &str, category: Option<&str>) -> Result<()> {
     let registry = ModelRegistry::new();
 
-    println!("{} Searching for: {}", ds::primary("->"), ds::highlight(query));
+    println!(
+        "{} Searching for: {}",
+        ds::primary("->"),
+        ds::highlight(query)
+    );
     println!();
 
     let results = if let Some(cat) = category {
@@ -554,7 +574,11 @@ async fn info(name: &str, json_output: bool) -> Result<()> {
         println!("{}", ds::highlight("Model Information"));
         println!();
         println!("  {} {}", ds::muted("Name:"), ds::highlight(&model.name));
-        println!("  {} {}", ds::muted("Ollama:"), ds::primary(&model.ollama_model));
+        println!(
+            "  {} {}",
+            ds::muted("Ollama:"),
+            ds::primary(&model.ollama_model)
+        );
         println!("  {} {}", ds::muted("Category:"), model.category);
 
         if let Some(desc) = &model.description {
@@ -609,7 +633,11 @@ async fn info(name: &str, json_output: bool) -> Result<()> {
             model.ollama_model
         );
     } else {
-        println!("{} Model '{}' not found in registry", ds::warning("!"), name);
+        println!(
+            "{} Model '{}' not found in registry",
+            ds::warning("!"),
+            name
+        );
         println!();
         println!("Try:");
         println!("  {} spn model search {}", ds::primary("•"), name);
@@ -669,7 +697,10 @@ async fn recommend(use_case: Option<&str>) -> Result<()> {
         println!();
     }
 
-    println!("  Pull a model: {} spn model pull <model>", ds::primary("->"));
+    println!(
+        "  Pull a model: {} spn model pull <model>",
+        ds::primary("->")
+    );
     println!("  More info: {} spn model info <model>", ds::primary("->"));
 
     Ok(())

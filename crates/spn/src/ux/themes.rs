@@ -49,12 +49,7 @@ impl Theme for SpnTheme {
             Some(false) => "[y/N]",
             None => "[y/n]",
         };
-        write!(
-            f,
-            "{} {} ",
-            style(prompt).bold(),
-            style(hint).dim()
-        )
+        write!(f, "{} {} ", style(prompt).bold(), style(hint).dim())
     }
 
     /// Formats a confirm prompt after selection.
@@ -111,12 +106,7 @@ impl Theme for SpnTheme {
         f: &mut dyn fmt::Write,
         prompt: &str,
     ) -> fmt::Result {
-        write!(
-            f,
-            "{}: {}",
-            style(prompt).bold(),
-            style("********").dim()
-        )
+        write!(f, "{}: {}", style(prompt).bold(), style("********").dim())
     }
 
     /// Formats a select prompt.
@@ -145,12 +135,7 @@ impl Theme for SpnTheme {
         prompt: &str,
         sel: &str,
     ) -> fmt::Result {
-        write!(
-            f,
-            "{}: {}",
-            style(prompt).bold(),
-            style(sel).cyan()
-        )
+        write!(f, "{}: {}", style(prompt).bold(), style(sel).cyan())
     }
 
     /// Formats a multi-select prompt.
@@ -242,7 +227,6 @@ impl Theme for SpnTheme {
             style(selections.join(", ")).cyan()
         )
     }
-
 }
 
 // ============================================================================

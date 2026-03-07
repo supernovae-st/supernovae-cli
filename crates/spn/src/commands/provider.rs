@@ -74,9 +74,17 @@ async fn run_list(show_source: bool) -> Result<()> {
 
     if total > 0 {
         println!("{}", ds::highlight("Security Summary:"));
-        println!("  {} {} in OS Keychain (secure)", ds::success(ds::icon::LOCK), in_keychain);
+        println!(
+            "  {} {} in OS Keychain (secure)",
+            ds::success(ds::icon::LOCK),
+            in_keychain
+        );
         if in_env > 0 {
-            println!("  {} {} in environment variables", ds::warning(ds::icon::PACKAGE), in_env);
+            println!(
+                "  {} {} in environment variables",
+                ds::warning(ds::icon::PACKAGE),
+                in_env
+            );
         }
         if in_dotenv > 0 {
             println!("  {} {} in .env files", ds::warning("📄"), in_dotenv);
@@ -109,13 +117,20 @@ async fn run_list(show_source: bool) -> Result<()> {
 
         if in_env > 0 || in_dotenv > 0 {
             println!();
-            println!("{}", ds::hint_line("Run `spn provider migrate` to move keys to OS Keychain"));
+            println!(
+                "{}",
+                ds::hint_line("Run `spn provider migrate` to move keys to OS Keychain")
+            );
         }
     } else {
         println!("{}", ds::warning("No API keys configured."));
         println!();
         println!("Set a key with:");
-        println!("  {} {}", ds::command("spn provider set"), ds::muted("<provider>"));
+        println!(
+            "  {} {}",
+            ds::command("spn provider set"),
+            ds::muted("<provider>")
+        );
         println!();
         println!("Or migrate from environment variables:");
         println!("  {}", ds::command("spn provider migrate"));
@@ -270,25 +285,51 @@ async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result
         StorageBackend::Keychain => {
             SpnKeyring::set(provider, &api_key)
                 .map_err(|e| SpnError::CommandFailed(format!("Failed to store key: {}", e)))?;
-            println!("{}", ds::success_line(format!("API key stored in {} for {}", "OS Keychain", provider)));
-            println!("  {} {}", ds::label("Key:"), ds::muted(mask_api_key(&api_key)));
+            println!(
+                "{}",
+                ds::success_line(format!(
+                    "API key stored in {} for {}",
+                    "OS Keychain", provider
+                ))
+            );
+            println!(
+                "  {} {}",
+                ds::label("Key:"),
+                ds::muted(mask_api_key(&api_key))
+            );
             println!();
-            println!("{}", ds::muted("Key is now securely stored and will be used automatically."));
+            println!(
+                "{}",
+                ds::muted("Key is now securely stored and will be used automatically.")
+            );
         }
         StorageBackend::Env => {
             let path = project_env_path();
 
             // Warn if not gitignored
             if !is_gitignored(&path) {
-                eprintln!("{}", ds::warning_line("Warning: .env is not in .gitignore!"));
-                eprintln!("  {}", ds::muted("Add '.env' to .gitignore to avoid committing secrets."));
+                eprintln!(
+                    "{}",
+                    ds::warning_line("Warning: .env is not in .gitignore!")
+                );
+                eprintln!(
+                    "  {}",
+                    ds::muted("Add '.env' to .gitignore to avoid committing secrets.")
+                );
                 eprintln!();
             }
 
             store_in_dotenv(provider, &api_key, &path)
                 .map_err(|e| SpnError::CommandFailed(format!("Failed to store key: {}", e)))?;
-            println!("{}", ds::success_line(format!("API key stored in {} for {}", ".env", provider)));
-            println!("  {} {}", ds::label("Key:"), ds::muted(mask_api_key(&api_key)));
+            println!(
+                "{}",
+                ds::success_line(format!("API key stored in {} for {}", ".env", provider))
+            );
+            println!(
+                "  {} {}",
+                ds::label("Key:"),
+                ds::muted(mask_api_key(&api_key))
+            );
             println!("  {} {}", ds::label("File:"), ds::path(path.display()));
         }
         StorageBackend::Global => {
@@ -297,8 +338,18 @@ async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result
             })?;
             store_in_global(provider, &api_key)
                 .map_err(|e| SpnError::CommandFailed(format!("Failed to store key: {}", e)))?;
-            println!("{}", ds::success_line(format!("API key stored in {} for {}", "~/.spn/secrets.env", provider)));
-            println!("  {} {}", ds::label("Key:"), ds::muted(mask_api_key(&api_key)));
+            println!(
+                "{}",
+                ds::success_line(format!(
+                    "API key stored in {} for {}",
+                    "~/.spn/secrets.env", provider
+                ))
+            );
+            println!(
+                "  {} {}",
+                ds::label("Key:"),
+                ds::muted(mask_api_key(&api_key))
+            );
             println!("  {} {}", ds::label("File:"), ds::path(path.display()));
         }
         StorageBackend::Shell => {
@@ -308,19 +359,40 @@ async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result
                 ds::warning(format!("{} SECURITY WARNING:", ds::icon::WARNING)),
                 ds::warning("Full API key will be displayed below")
             );
-            println!("  {}", ds::muted("• Key may appear in terminal scrollback history"));
-            println!("  {}", ds::muted("• May be visible in screen recordings/sharing"));
-            println!("  {}", ds::muted("• Will NOT be stored by spn - you must copy it"));
+            println!(
+                "  {}",
+                ds::muted("• Key may appear in terminal scrollback history")
+            );
+            println!(
+                "  {}",
+                ds::muted("• May be visible in screen recordings/sharing")
+            );
+            println!(
+                "  {}",
+                ds::muted("• Will NOT be stored by spn - you must copy it")
+            );
             println!();
 
-            println!("{}", ds::success_line(format!("Key validated for {}", provider)));
+            println!(
+                "{}",
+                ds::success_line(format!("Key validated for {}", provider))
+            );
             println!();
             println!("{}", ds::highlight("Export command (copy this):"));
             println!();
-            println!("  {}", ds::command(format!("export {}='{}'", env_var, *api_key)));
+            println!(
+                "  {}",
+                ds::command(format!("export {}='{}'", env_var, *api_key))
+            );
             println!();
-            println!("{}", ds::muted("Add this to your ~/.zshrc or ~/.bashrc to persist."));
-            println!("{}", ds::hint_line("Use --storage keychain for more secure storage."));
+            println!(
+                "{}",
+                ds::muted("Add this to your ~/.zshrc or ~/.bashrc to persist.")
+            );
+            println!(
+                "{}",
+                ds::hint_line("Use --storage keychain for more secure storage.")
+            );
         }
     }
 
@@ -333,7 +405,10 @@ async fn run_get(provider: &str, unmask: bool) -> Result<()> {
         Some((key, source)) => {
             if unmask {
                 // DANGEROUS: Print full key
-                eprintln!("{}", ds::warning_line("Exposing full API key - use only for scripts!"));
+                eprintln!(
+                    "{}",
+                    ds::warning_line("Exposing full API key - use only for scripts!")
+                );
                 // Key is printed to stdout for scripting
                 println!("{}", *key);
                 // key is automatically zeroized when it goes out of scope
@@ -360,7 +435,10 @@ async fn run_get(provider: &str, unmask: bool) -> Result<()> {
 /// Delete an API key for a provider.
 async fn run_delete(provider: &str) -> Result<()> {
     if !SpnKeyring::exists(provider) {
-        println!("{}", ds::warning_line(format!("No key in keychain for: {}", provider)));
+        println!(
+            "{}",
+            ds::warning_line(format!("No key in keychain for: {}", provider))
+        );
         return Ok(());
     }
 
@@ -383,7 +461,10 @@ async fn run_delete(provider: &str) -> Result<()> {
 
     SpnKeyring::delete(provider)
         .map_err(|e| SpnError::CommandFailed(format!("Failed to delete: {}", e)))?;
-    println!("{}", ds::success_line(format!("Deleted key for {}", provider)));
+    println!(
+        "{}",
+        ds::success_line(format!("Deleted key for {}", provider))
+    );
 
     Ok(())
 }
@@ -392,16 +473,34 @@ async fn run_delete(provider: &str) -> Result<()> {
 async fn run_migrate(skip_confirm: bool) -> Result<()> {
     println!("{}", ds::primary("Migrate API Keys to OS Keychain"));
     println!();
-    println!("{}", ds::muted("This will copy API keys from environment variables to the secure OS keychain."));
-    println!("{}", ds::muted("Your environment variables will NOT be modified."));
+    println!(
+        "{}",
+        ds::muted("This will copy API keys from environment variables to the secure OS keychain.")
+    );
+    println!(
+        "{}",
+        ds::muted("Your environment variables will NOT be modified.")
+    );
     println!();
 
     // Show security benefits
     println!("{}", ds::highlight("Benefits of OS Keychain:"));
-    println!("  {} Encrypted storage managed by your OS", ds::success(ds::icon::LOCK));
-    println!("  {} Protected by your login password/biometrics", ds::success(ds::icon::LOCK));
-    println!("  {} Not readable by other processes", ds::success(ds::icon::LOCK));
-    println!("  {} Not exposed in process listings", ds::success(ds::icon::LOCK));
+    println!(
+        "  {} Encrypted storage managed by your OS",
+        ds::success(ds::icon::LOCK)
+    );
+    println!(
+        "  {} Protected by your login password/biometrics",
+        ds::success(ds::icon::LOCK)
+    );
+    println!(
+        "  {} Not readable by other processes",
+        ds::success(ds::icon::LOCK)
+    );
+    println!(
+        "  {} Not exposed in process listings",
+        ds::success(ds::icon::LOCK)
+    );
     println!();
 
     if !skip_confirm {
@@ -423,7 +522,10 @@ async fn run_migrate(skip_confirm: bool) -> Result<()> {
 
     // Summary
     if report.migrated > 0 {
-        println!("{}", ds::success_line(format!("{} keys migrated to OS Keychain", report.migrated)));
+        println!(
+            "{}",
+            ds::success_line(format!("{} keys migrated to OS Keychain", report.migrated))
+        );
     }
 
     if report.skipped > 0 {
@@ -446,7 +548,10 @@ async fn run_migrate(skip_confirm: bool) -> Result<()> {
     if report.migrated > 0 {
         println!();
         println!("{}", ds::highlight("Next steps:"));
-        println!("  1. Verify keys work: {}", ds::command("spn provider test all"));
+        println!(
+            "  1. Verify keys work: {}",
+            ds::command("spn provider test all")
+        );
         println!("  2. Remove keys from .env files for better security");
         println!("  3. Keys are now automatically used by spn and Nika");
     }
@@ -479,7 +584,11 @@ async fn run_test(provider: &str) -> Result<()> {
 
 /// Test a single provider.
 async fn test_single_provider(provider: &str) {
-    print!("  {} {}... ", ds::primary("Testing"), ds::highlight(provider));
+    print!(
+        "  {} {}... ",
+        ds::primary("Testing"),
+        ds::highlight(provider)
+    );
 
     match resolve_api_key(provider) {
         None => {
@@ -489,7 +598,11 @@ async fn test_single_provider(provider: &str) {
             // Basic validation
             let validation = validate_key_format(provider, &key);
             if !validation.is_valid() {
-                println!("{} {}", ds::error(format!("{} Invalid format:", ds::icon::ERROR)), validation);
+                println!(
+                    "{} {}",
+                    ds::error(format!("{} Invalid format:", ds::icon::ERROR)),
+                    validation
+                );
                 return;
             }
 
@@ -514,15 +627,21 @@ async fn run_status(json: bool) -> Result<()> {
     println!();
     println!(
         "{}",
-        ds::primary("╔═══════════════════════════════════════════════════════════════════════════════╗")
+        ds::primary(
+            "╔═══════════════════════════════════════════════════════════════════════════════╗"
+        )
     );
     println!(
         "{}",
-        ds::primary("║  🔐 SECRETS & PROVIDERS DIAGNOSTIC REPORT                                     ║")
+        ds::primary(
+            "║  🔐 SECRETS & PROVIDERS DIAGNOSTIC REPORT                                     ║"
+        )
     );
     println!(
         "{}",
-        ds::primary("╚═══════════════════════════════════════════════════════════════════════════════╝")
+        ds::primary(
+            "╚═══════════════════════════════════════════════════════════════════════════════╝"
+        )
     );
     println!();
 
@@ -656,7 +775,11 @@ async fn run_status(json: bool) -> Result<()> {
             ds::muted("Secrets are locked in memory and won't be swapped to disk.")
         );
     } else {
-        println!("│    {} {}", ds::error(ds::icon::ERROR), ds::error("mlock() unavailable"));
+        println!(
+            "│    {} {}",
+            ds::error(ds::icon::ERROR),
+            ds::error("mlock() unavailable")
+        );
         println!(
             "│      {}",
             ds::muted("Secrets may be swapped to disk. Consider increasing RLIMIT_MEMLOCK.")
@@ -774,7 +897,10 @@ async fn run_status(json: bool) -> Result<()> {
         }
     } else if configured == 0 {
         println!("│    {}", ds::highlight("Get started:"));
-        println!("│      {} Set up your first API key:", ds::primary(ds::icon::ARROW));
+        println!(
+            "│      {} Set up your first API key:",
+            ds::primary(ds::icon::ARROW)
+        );
         println!("│        {}", ds::command("spn provider set anthropic"));
     } else {
         println!(

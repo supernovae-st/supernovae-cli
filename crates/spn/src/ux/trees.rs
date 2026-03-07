@@ -176,7 +176,12 @@ pub fn status_tree(title: &str, items: &[(&str, &str, &str)]) -> String {
     let mut tree = TreeNode::new(style(title).bold().to_string());
 
     for (icon_char, name, detail) in items {
-        let content = format!("{} {} {}", icon_char, style(*name).bold(), style(format!("({})", detail)).dim());
+        let content = format!(
+            "{} {} {}",
+            icon_char,
+            style(*name).bold(),
+            style(format!("({})", detail)).dim()
+        );
         tree.add_child(TreeNode::new(content));
     }
 
@@ -242,7 +247,11 @@ mod tests {
 
     #[test]
     fn test_package_tree() {
-        let output = package_tree("@test/pkg", "1.0.0", &[("dep1", "0.1.0"), ("dep2", "0.2.0")]);
+        let output = package_tree(
+            "@test/pkg",
+            "1.0.0",
+            &[("dep1", "0.1.0"), ("dep2", "0.2.0")],
+        );
         assert!(output.contains("@test/pkg"));
         assert!(output.contains("1.0.0"));
         assert!(output.contains("dep1"));

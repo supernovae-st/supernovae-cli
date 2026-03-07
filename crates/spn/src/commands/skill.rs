@@ -19,7 +19,11 @@ pub async fn run(command: SkillCommands) -> Result<()> {
             let path = client
                 .install(&name)
                 .map_err(|e| SpnError::CommandFailed(format!("Failed to install skill: {}", e)))?;
-            println!("{} {}", ds::success("✓"), ds::success("Skill installed successfully"));
+            println!(
+                "{} {}",
+                ds::success("✓"),
+                ds::success("Skill installed successfully")
+            );
             println!("  Location: {}", path.display());
         }
         SkillCommands::Remove { name } => {
@@ -28,7 +32,11 @@ pub async fn run(command: SkillCommands) -> Result<()> {
             client
                 .remove(&name)
                 .map_err(|e| SpnError::CommandFailed(format!("Failed to remove skill: {}", e)))?;
-            println!("{} {}", ds::success("✓"), ds::success("Skill removed successfully"));
+            println!(
+                "{} {}",
+                ds::success("✓"),
+                ds::success("Skill removed successfully")
+            );
         }
         SkillCommands::List => {
             let skills = client

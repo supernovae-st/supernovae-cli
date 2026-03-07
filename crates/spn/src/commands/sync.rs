@@ -168,7 +168,10 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
     }
 
     if dry_run {
-        println!("{}", ds::primary("🔍 Dry run - showing what would be synced:"));
+        println!(
+            "{}",
+            ds::primary("🔍 Dry run - showing what would be synced:")
+        );
         println!();
     } else {
         println!("{}", ds::primary("🔄 Syncing to IDE configurations..."));
@@ -197,7 +200,12 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
             }
             mcp_synced += result.servers_synced;
         } else if let Some(err) = &result.error {
-            println!("  {} {}: {}", ds::error("✗"), result.target.display_name(), err);
+            println!(
+                "  {} {}: {}",
+                ds::error("✗"),
+                result.target.display_name(),
+                err
+            );
             mcp_errors.push(err.clone());
         }
     }

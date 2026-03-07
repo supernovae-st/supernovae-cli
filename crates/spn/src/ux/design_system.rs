@@ -216,7 +216,11 @@ pub fn value<D: std::fmt::Display>(text: D) -> StyledObject<String> {
 
 /// Success line with icon
 pub fn success_line<D: std::fmt::Display>(text: D) -> String {
-    format!("  {} {}", style(icon::SUCCESS).green().bold(), success(text))
+    format!(
+        "  {} {}",
+        style(icon::SUCCESS).green().bold(),
+        success(text)
+    )
 }
 
 /// Error line with icon
@@ -327,11 +331,7 @@ pub fn provider_missing<D: std::fmt::Display>(name: D) -> String {
 
 /// Step indicator with count [1/5].
 pub fn step_indicator(current: usize, total: usize) -> String {
-    format!(
-        "[{}/{}]",
-        style(current).cyan().bold(),
-        style(total).dim()
-    )
+    format!("[{}/{}]", style(current).cyan().bold(), style(total).dim())
 }
 
 /// Step with icon (completed).

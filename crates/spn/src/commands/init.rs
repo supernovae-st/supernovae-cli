@@ -145,7 +145,11 @@ async fn create_project(dir: &Path) -> Result<()> {
     );
     println!();
     println!("  {}", ds::highlight("Created:"));
-    println!("  {} {}", ds::tree_branch(), ds::path("spn.yaml         (package manifest)"));
+    println!(
+        "  {} {}",
+        ds::tree_branch(),
+        ds::path("spn.yaml         (package manifest)")
+    );
     println!(
         "  {} {}",
         ds::tree_branch_last(),
@@ -158,8 +162,16 @@ async fn create_project(dir: &Path) -> Result<()> {
         ds::bullet_icon(),
         ds::command("spn add @workflows/dev-productivity/code-review")
     );
-    println!("  {} {}", ds::bullet_icon(), ds::command("spn skill add brainstorming"));
-    println!("  {} {}", ds::bullet_icon(), ds::command("spn mcp add neo4j"));
+    println!(
+        "  {} {}",
+        ds::bullet_icon(),
+        ds::command("spn skill add brainstorming")
+    );
+    println!(
+        "  {} {}",
+        ds::bullet_icon(),
+        ds::command("spn mcp add neo4j")
+    );
     println!();
 
     Ok(())
@@ -185,7 +197,10 @@ async fn create_local_config(dir: &Path) -> Result<()> {
         ds::success(ds::icon::SUCCESS),
         ds::success("Created spn.local.yaml (gitignored)")
     );
-    println!("  {}", ds::muted("Use this for local overrides and secrets."));
+    println!(
+        "  {}",
+        ds::muted("Use this for local overrides and secrets.")
+    );
 
     Ok(())
 }
@@ -243,8 +258,16 @@ async fn create_from_template(dir: &Path, template: &str) -> Result<()> {
             );
             println!();
             println!("{}", ds::highlight("Available templates:"));
-            println!("  {} {}", ds::bullet_icon(), ds::muted("nika       - Workflow engine project"));
-            println!("  {} {}", ds::bullet_icon(), ds::muted("novanet    - Knowledge graph project"));
+            println!(
+                "  {} {}",
+                ds::bullet_icon(),
+                ds::muted("nika       - Workflow engine project")
+            );
+            println!(
+                "  {} {}",
+                ds::bullet_icon(),
+                ds::muted("novanet    - Knowledge graph project")
+            );
             Err(crate::error::SpnError::InvalidInput(format!(
                 "Unknown template: {}",
                 template

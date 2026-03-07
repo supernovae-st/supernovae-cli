@@ -113,11 +113,7 @@ pub fn select_provider() -> PromptResult<String> {
     items.push(ds::highlight("MCP Secrets").to_string());
 
     for p in MCP_PROVIDERS {
-        items.push(format!(
-            "{:<12} {}",
-            p.id,
-            ds::muted(p.description)
-        ));
+        items.push(format!("{:<12} {}", p.id, ds::muted(p.description)));
     }
 
     let selection = FuzzySelect::with_theme(&ColorfulTheme::default())
@@ -148,7 +144,10 @@ pub fn select_provider() -> PromptResult<String> {
             MCP_PROVIDERS[mcp_index].id
         } else {
             // Out of bounds - fallback to first LLM provider
-            tracing::warn!("Invalid selection index {} - falling back to anthropic", selection);
+            tracing::warn!(
+                "Invalid selection index {} - falling back to anthropic",
+                selection
+            );
             LLM_PROVIDERS[0].id
         }
     };
@@ -241,10 +240,7 @@ pub fn select_mcp_server() -> PromptResult<String> {
         .collect();
 
     println!();
-    println!(
-        "  {} recommended",
-        ds::primary("*")
-    );
+    println!("  {} recommended", ds::primary("*"));
 
     let selection = FuzzySelect::with_theme(&ColorfulTheme::default())
         .with_prompt("Which MCP server would you like to add?")

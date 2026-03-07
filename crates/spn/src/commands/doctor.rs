@@ -209,7 +209,8 @@ pub async fn run() -> Result<()> {
             ds::error(format!(
                 "{} error(s), {} warning(s) found",
                 errors, warnings
-            )).bold(),
+            ))
+            .bold(),
             ds::muted(format!("({} checks in {:?})", total, elapsed))
         );
     }

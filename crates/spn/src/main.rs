@@ -988,10 +988,7 @@ async fn handle_first_run() -> error::Result<()> {
             WelcomeAction::QuickSetup => {
                 // Run the setup wizard
                 println!();
-                println!(
-                    "  {} Starting setup...",
-                    ds::primary("→")
-                );
+                println!("  {} Starting setup...", ds::primary("→"));
                 println!();
 
                 // Run setup command
@@ -1034,9 +1031,7 @@ async fn handle_first_run() -> error::Result<()> {
 #[tokio::main]
 async fn main() {
     // Initialize logging early (quiet by default)
-    tracing_subscriber::fmt()
-        .with_env_filter("spn=warn")
-        .init();
+    tracing_subscriber::fmt().with_env_filter("spn=warn").init();
 
     // Check for first-run experience BEFORE parsing CLI
     // This allows us to show welcome screen when user just types "spn"

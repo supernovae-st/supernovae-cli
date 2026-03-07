@@ -59,15 +59,21 @@ async fn run_doctor(fix: bool) -> Result<()> {
     println!();
     println!(
         "{}",
-        ds::primary("╔═══════════════════════════════════════════════════════════════════════════════╗")
+        ds::primary(
+            "╔═══════════════════════════════════════════════════════════════════════════════╗"
+        )
     );
     println!(
         "{}",
-        ds::primary("║  🩺 SECRETS DOCTOR                                                            ║")
+        ds::primary(
+            "║  🩺 SECRETS DOCTOR                                                            ║"
+        )
     );
     println!(
         "{}",
-        ds::primary("╚═══════════════════════════════════════════════════════════════════════════════╝")
+        ds::primary(
+            "╚═══════════════════════════════════════════════════════════════════════════════╝"
+        )
     );
     println!();
 
@@ -383,43 +389,63 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
         println!();
         println!(
             "{}",
-            ds::error("╭─────────────────────────────────────────────────────────────────────────────╮")
+            ds::error(
+                "╭─────────────────────────────────────────────────────────────────────────────╮"
+            )
         );
         println!(
             "{}",
-            ds::error("│  ⚠️  WARNING: PLAINTEXT EXPORT                                              │")
+            ds::error(
+                "│  ⚠️  WARNING: PLAINTEXT EXPORT                                              │"
+            )
         );
         println!(
             "{}",
-            ds::error("│                                                                             │")
+            ds::error(
+                "│                                                                             │"
+            )
         );
         println!(
             "{}",
-            ds::error("│  You are about to export secrets in PLAINTEXT. This is dangerous!          │")
+            ds::error(
+                "│  You are about to export secrets in PLAINTEXT. This is dangerous!          │"
+            )
         );
         println!(
             "{}",
-            ds::error("│  The output will contain unencrypted API keys.                             │")
+            ds::error(
+                "│  The output will contain unencrypted API keys.                             │"
+            )
         );
         println!(
             "{}",
-            ds::error("│                                                                             │")
+            ds::error(
+                "│                                                                             │"
+            )
         );
         println!(
             "{}",
-            ds::error("│  Only use this for:                                                        │")
+            ds::error(
+                "│  Only use this for:                                                        │"
+            )
         );
         println!(
             "{}",
-            ds::error("│    • Migrating to another machine you control                              │")
+            ds::error(
+                "│    • Migrating to another machine you control                              │"
+            )
         );
         println!(
             "{}",
-            ds::error("│    • Backup to encrypted storage                                           │")
+            ds::error(
+                "│    • Backup to encrypted storage                                           │"
+            )
         );
         println!(
             "{}",
-            ds::error("╰─────────────────────────────────────────────────────────────────────────────╯")
+            ds::error(
+                "╰─────────────────────────────────────────────────────────────────────────────╯"
+            )
         );
         println!();
     }
@@ -483,7 +509,10 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
         // SOPS encryption
         println!("{}", ds::warning("SOPS encryption not yet implemented."));
         println!();
-        println!("For now, use {} to export plaintext:", ds::primary("--plaintext"));
+        println!(
+            "For now, use {} to export plaintext:",
+            ds::primary("--plaintext")
+        );
         println!(
             "  {} {}",
             ds::primary("spn secrets export --plaintext -o"),
@@ -529,15 +558,21 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
     println!();
     println!(
         "{}",
-        ds::primary("╭─────────────────────────────────────────────────────────────────────────────╮")
+        ds::primary(
+            "╭─────────────────────────────────────────────────────────────────────────────╮"
+        )
     );
     println!(
         "{}",
-        ds::primary("│  📥 SECRETS IMPORT                                                          │")
+        ds::primary(
+            "│  📥 SECRETS IMPORT                                                          │"
+        )
     );
     println!(
         "{}",
-        ds::primary("├─────────────────────────────────────────────────────────────────────────────┤")
+        ds::primary(
+            "├─────────────────────────────────────────────────────────────────────────────┤"
+        )
     );
 
     println!("│  Found {} secrets to import:", providers.len());
@@ -549,7 +584,12 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
         } else {
             ds::success("plaintext")
         };
-        println!("│    {} {} ({})", ds::muted("•"), ds::highlight(provider), status);
+        println!(
+            "│    {} {} ({})",
+            ds::muted("•"),
+            ds::highlight(provider),
+            status
+        );
     }
 
     println!("╰─────────────────────────────────────────────────────────────────────────────╯");
@@ -597,7 +637,12 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
                 imported += 1;
             }
             Err(e) => {
-                println!("  {} {}: Failed - {}", ds::error("✗"), ds::highlight(provider), e);
+                println!(
+                    "  {} {}: Failed - {}",
+                    ds::error("✗"),
+                    ds::highlight(provider),
+                    e
+                );
             }
         }
     }

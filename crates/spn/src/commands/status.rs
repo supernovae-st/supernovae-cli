@@ -78,7 +78,12 @@ async fn run_display() -> Result<()> {
     } else {
         for (name, path) in &packages {
             let version = path.file_name().and_then(|s| s.to_str()).unwrap_or("?");
-            println!("  {} {} {}", ds::success("✓"), ds::highlight(name), ds::muted(version));
+            println!(
+                "  {} {} {}",
+                ds::success("✓"),
+                ds::highlight(name),
+                ds::muted(version)
+            );
         }
     }
 

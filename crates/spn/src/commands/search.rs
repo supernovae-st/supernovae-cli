@@ -153,7 +153,12 @@ pub async fn run(query: &str, json: bool) -> Result<()> {
             _ => "📦",
         };
 
-        println!("   {} {}@{}", type_emoji, ds::success(name), ds::muted(version));
+        println!(
+            "   {} {}@{}",
+            type_emoji,
+            ds::success(name),
+            ds::muted(version)
+        );
 
         if !description.is_empty() {
             // Truncate description if too long

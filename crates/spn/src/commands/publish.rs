@@ -223,7 +223,11 @@ async fn publish_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
 
     // Step 2: Git-based publishing workflow
     println!();
-    println!("  {} {}", ds::primary(ds::icon::INFO), ds::primary("Git workflow:"));
+    println!(
+        "  {} {}",
+        ds::primary(ds::icon::INFO),
+        ds::primary("Git workflow:")
+    );
 
     // Check for gh CLI
     if which::which("gh").is_err() {
@@ -234,14 +238,8 @@ async fn publish_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
             ds::error("GitHub CLI not found.")
         );
         println!();
-        println!(
-            "  Install it with: {}",
-            ds::command("brew install gh")
-        );
-        println!(
-            "  Then authenticate: {}",
-            ds::command("gh auth login")
-        );
+        println!("  Install it with: {}", ds::command("brew install gh"));
+        println!("  Then authenticate: {}", ds::command("gh auth login"));
         println!();
         println!("  {}", ds::highlight("Manual workflow:"));
         println!("  {} Fork supernovae-registry", ds::step_indicator(1, 4));
@@ -274,7 +272,11 @@ async fn publish_package(dir: &Path, manifest: &SpnManifest) -> Result<()> {
                 ds::success(ds::icon::SUCCESS),
                 ds::success("Pull request created!")
             );
-            println!("  {} {}", ds::primary(ds::icon::ARROW), ds::primary(&pr_url));
+            println!(
+                "  {} {}",
+                ds::primary(ds::icon::ARROW),
+                ds::primary(&pr_url)
+            );
         }
         Err(e) => {
             // Fall back to manual instructions

@@ -101,11 +101,7 @@ impl Table {
         }
 
         // Bottom border
-        output.push_str(&self.render_border(
-            chars::BOTTOM_LEFT,
-            chars::T_UP,
-            chars::BOTTOM_RIGHT,
-        ));
+        output.push_str(&self.render_border(chars::BOTTOM_LEFT, chars::T_UP, chars::BOTTOM_RIGHT));
 
         output
     }

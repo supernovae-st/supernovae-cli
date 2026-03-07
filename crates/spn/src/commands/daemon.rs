@@ -4,8 +4,8 @@
 
 use crate::daemon::{paths, DaemonConfig, DaemonServer, ServiceManager};
 use crate::error::Result;
-use crate::DaemonCommands;
 use crate::ux::design_system as ds;
+use crate::DaemonCommands;
 use std::fs;
 use std::process::Command;
 
@@ -235,7 +235,10 @@ fn get_daemon_pid() -> Option<i32> {
 
 /// Install daemon as a system service.
 async fn install() -> Result<()> {
-    println!("{} Installing daemon as system service...", ds::primary("🔧"));
+    println!(
+        "{} Installing daemon as system service...",
+        ds::primary("🔧")
+    );
 
     let manager =
         ServiceManager::detect().map_err(|e| anyhow::anyhow!("Service management: {}", e))?;
@@ -253,12 +256,21 @@ async fn install() -> Result<()> {
             println!("The daemon will now start automatically at login.");
             println!();
             println!("To check status:     {}", ds::primary("spn daemon status"));
-            println!("To uninstall:        {}", ds::primary("spn daemon uninstall"));
+            println!(
+                "To uninstall:        {}",
+                ds::primary("spn daemon uninstall")
+            );
         }
         Err(crate::daemon::ServiceError::AlreadyInstalled) => {
-            println!("{} Daemon is already installed as a service", ds::warning("⚠"));
+            println!(
+                "{} Daemon is already installed as a service",
+                ds::warning("⚠")
+            );
             println!();
-            println!("To reinstall, first run: {}", ds::primary("spn daemon uninstall"));
+            println!(
+                "To reinstall, first run: {}",
+                ds::primary("spn daemon uninstall")
+            );
         }
         Err(e) => {
             println!("{} Installation failed: {}", ds::error("✗"), e);

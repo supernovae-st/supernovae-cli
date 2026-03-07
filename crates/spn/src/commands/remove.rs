@@ -79,7 +79,11 @@ pub async fn run_with_options(options: RemoveOptions) -> Result<()> {
                 println!("   {} Removed from local storage", ds::success("✓"));
             }
             Err(e) => {
-                println!("   {} Could not remove from storage: {}", ds::warning("⚠"), e);
+                println!(
+                    "   {} Could not remove from storage: {}",
+                    ds::warning("⚠"),
+                    e
+                );
             }
         }
     }

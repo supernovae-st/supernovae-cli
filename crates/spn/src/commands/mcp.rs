@@ -50,7 +50,10 @@ async fn run_add(
     // Check npm availability
     if !npm.is_available() {
         eprintln!("{}", ds::error("Error: npm not found"));
-        eprintln!("Install Node.js from: {}", ds::primary("https://nodejs.org"));
+        eprintln!(
+            "Install Node.js from: {}",
+            ds::primary("https://nodejs.org")
+        );
         return Ok(());
     }
 
@@ -73,7 +76,11 @@ async fn run_add(
     // Install via npm (globally)
     npm.install(name)
         .map_err(|e| SpnError::CommandFailed(format!("Failed to install npm package: {}", e)))?;
-    println!("{} {}", ds::success("✓"), ds::success("npm package installed"));
+    println!(
+        "{} {}",
+        ds::success("✓"),
+        ds::success("npm package installed")
+    );
 
     // Create MCP server config
     let server = create_server_from_alias(name, npm);
@@ -122,7 +129,11 @@ async fn run_remove(mcp: &McpConfigManager, name: &str, global: bool, project: b
 
     match mcp.remove_server(name, scope) {
         Ok(true) => {
-            println!("{} {}", ds::success("✓"), ds::success("Server removed from config"));
+            println!(
+                "{} {}",
+                ds::success("✓"),
+                ds::success("Server removed from config")
+            );
 
             // Note: we don't uninstall from npm as other projects might use it
             println!(

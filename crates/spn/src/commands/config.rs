@@ -62,7 +62,12 @@ async fn show_config(_section: Option<String>) -> Result<()> {
         println!("{}", ds::highlight("MCP Servers:"));
         for (name, server) in &config.servers {
             let status = if server.disabled { "(disabled)" } else { "" };
-            println!("  {} {} {}", ds::primary(name), server.command, ds::muted(status));
+            println!(
+                "  {} {} {}",
+                ds::primary(name),
+                server.command,
+                ds::muted(status)
+            );
         }
         println!();
     }
@@ -110,7 +115,11 @@ async fn show_locations() -> Result<()> {
     }
 
     println!();
-    println!("   {} = exists, {} = not found", ds::success("✓"), ds::muted("○"));
+    println!(
+        "   {} = exists, {} = not found",
+        ds::success("✓"),
+        ds::muted("○")
+    );
 
     Ok(())
 }
@@ -167,11 +176,18 @@ async fn get_value(key: &str, show_origin: bool) -> Result<()> {
 
     // TODO: Implement key path resolution
     // For now, just show a message
-    println!("{} Getting value for key: {}", ds::primary("🔍"), ds::highlight(key));
+    println!(
+        "{} Getting value for key: {}",
+        ds::primary("🔍"),
+        ds::highlight(key)
+    );
 
     if show_origin {
         println!();
-        println!("   {} Origin tracking not yet implemented", ds::warning("⚠️"));
+        println!(
+            "   {} Origin tracking not yet implemented",
+            ds::warning("⚠️")
+        );
         println!(
             "   {} This will show which scope defined this value",
             ds::muted("→")
@@ -339,7 +355,12 @@ async fn import_config(file: &str, scope: &str, skip_confirm: bool) -> Result<()
     // Show what will be imported
     println!("{}", ds::highlight("MCP Servers to import:"));
     for (name, server) in &mcp_servers {
-        println!("  {} {} {}", ds::primary("•"), ds::highlight(name), server.command);
+        println!(
+            "  {} {} {}",
+            ds::primary("•"),
+            ds::highlight(name),
+            server.command
+        );
         if !server.args.is_empty() {
             println!("    args: {:?}", server.args);
         }

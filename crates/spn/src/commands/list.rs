@@ -93,7 +93,11 @@ pub async fn run(json: bool) -> Result<()> {
             ds::bullet_icon(),
             ds::command("spn add @workflows/dev-productivity/code-review")
         );
-        println!("  {} {}", ds::bullet_icon(), ds::command("spn skill add brainstorming"));
+        println!(
+            "  {} {}",
+            ds::bullet_icon(),
+            ds::command("spn skill add brainstorming")
+        );
         return Ok(());
     }
 
@@ -149,7 +153,10 @@ pub async fn run(json: bool) -> Result<()> {
         ds::muted("")
     );
     println!("  {} = in manifest, not installed", ds::muted("○"));
-    println!("  {} = installed directly (not in manifest)", ds::warning("⚡"));
+    println!(
+        "  {} = installed directly (not in manifest)",
+        ds::warning("⚡")
+    );
 
     Ok(())
 }

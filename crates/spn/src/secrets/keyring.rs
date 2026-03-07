@@ -205,7 +205,12 @@ pub fn migrate_env_to_keyring() -> MigrationReport {
                 // key is automatically zeroized when it goes out of scope
             }
             _ => {
-                println!("  {} {}: {}", ds::muted("├──"), env_var, ds::muted("Not found"));
+                println!(
+                    "  {} {}: {}",
+                    ds::muted("├──"),
+                    env_var,
+                    ds::muted("Not found")
+                );
                 report.not_found.push(provider.to_string());
             }
         }

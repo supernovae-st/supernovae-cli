@@ -101,15 +101,21 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     println!();
     println!(
         "{}",
-        ds::primary("╔═══════════════════════════════════════════════════════════════════════════════╗")
+        ds::primary(
+            "╔═══════════════════════════════════════════════════════════════════════════════╗"
+        )
     );
     println!(
         "{}",
-        ds::primary("║  🔑 API KEY SETUP WIZARD                                                      ║")
+        ds::primary(
+            "║  🔑 API KEY SETUP WIZARD                                                      ║"
+        )
     );
     println!(
         "{}",
-        ds::primary("╠═══════════════════════════════════════════════════════════════════════════════╣")
+        ds::primary(
+            "╠═══════════════════════════════════════════════════════════════════════════════╣"
+        )
     );
     println!(
         "{}",
@@ -121,17 +127,15 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     );
     println!(
         "{}",
-        ds::primary("╚═══════════════════════════════════════════════════════════════════════════════╝")
+        ds::primary(
+            "╚═══════════════════════════════════════════════════════════════════════════════╝"
+        )
     );
     println!();
 
     // Show API key URL if available
     if let Some(url) = get_api_key_url(provider) {
-        println!(
-            "  {} {}",
-            ds::muted("Get your API key at:"),
-            ds::url(url)
-        );
+        println!("  {} {}", ds::muted("Get your API key at:"), ds::url(url));
         println!();
     }
 
@@ -140,7 +144,9 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     println!();
     println!(
         "{}",
-        ds::muted("Where should this API key be stored? Each option has different security tradeoffs:")
+        ds::muted(
+            "Where should this API key be stored? Each option has different security tradeoffs:"
+        )
     );
     println!();
 
@@ -307,7 +313,11 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
             println!("  {} Key format valid", ds::success(ds::icon::SUCCESS));
             break key;
         } else {
-            println!("  {} Invalid format: {}", ds::error(ds::icon::ERROR), validation);
+            println!(
+                "  {} Invalid format: {}",
+                ds::error(ds::icon::ERROR),
+                validation
+            );
             println!();
 
             let retry = Confirm::with_theme(&theme)
@@ -341,15 +351,21 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
 
     println!(
         "{}",
-        ds::primary("╭─────────────────────────────────────────────────────────────────────────────╮")
+        ds::primary(
+            "╭─────────────────────────────────────────────────────────────────────────────╮"
+        )
     );
     println!(
         "{}",
-        ds::primary("│  📋 SUMMARY                                                                 │")
+        ds::primary(
+            "│  📋 SUMMARY                                                                 │"
+        )
     );
     println!(
         "{}",
-        ds::primary("├─────────────────────────────────────────────────────────────────────────────┤")
+        ds::primary(
+            "├─────────────────────────────────────────────────────────────────────────────┤"
+        )
     );
     println!(
         "{}",
@@ -361,7 +377,11 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     );
     println!(
         "{}",
-        ds::primary(format!("│  Storage:   {} {:<58} │", storage.emoji(), storage))
+        ds::primary(format!(
+            "│  Storage:   {} {:<58} │",
+            storage.emoji(),
+            storage
+        ))
     );
     println!(
         "{}",
@@ -376,7 +396,9 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     );
     println!(
         "{}",
-        ds::primary("╰─────────────────────────────────────────────────────────────────────────────╯")
+        ds::primary(
+            "╰─────────────────────────────────────────────────────────────────────────────╯"
+        )
     );
     println!();
 
@@ -407,7 +429,10 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
             println!();
             println!("{}", ds::highlight("Export command:"));
             println!();
-            println!("  {}", ds::command(format!("export {}='{}'", env_var, *api_key)));
+            println!(
+                "  {}",
+                ds::command(format!("export {}='{}'", env_var, *api_key))
+            );
             println!();
             println!(
                 "{}",

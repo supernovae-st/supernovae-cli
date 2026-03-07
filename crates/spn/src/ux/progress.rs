@@ -67,7 +67,9 @@ pub mod frames {
     pub const ARC: &[&str] = &["◜", "◠", "◝", "◞", "◡", "◟"];
 
     /// Download wave
-    pub const WAVE: &[&str] = &["    ", "=   ", "==  ", "=== ", " ===", "  ==", "   =", "    "];
+    pub const WAVE: &[&str] = &[
+        "    ", "=   ", "==  ", "=== ", " ===", "  ==", "   =", "    ",
+    ];
 
     /// Install blocks
     pub const BLOCKS: &[&str] = &["▱▱▱", "▰▱▱", "▰▰▱", "▰▰▰", "▱▰▰", "▱▱▰"];

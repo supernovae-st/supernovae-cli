@@ -52,7 +52,11 @@ pub async fn run() -> Result<()> {
         println!("   {} All packages up to date!", ds::success("✓"));
     } else {
         println!();
-        println!("   {} Run {} to update", ds::primary("ℹ️"), ds::primary("spn update"));
+        println!(
+            "   {} Run {} to update",
+            ds::primary("ℹ️"),
+            ds::primary("spn update")
+        );
     }
 
     Ok(())

@@ -101,7 +101,11 @@ async fn bump_version(manifest_path: &std::path::Path, bump: &str) -> Result<()>
     );
     println!();
     println!("  {}", ds::highlight("Next steps:"));
-    println!("  {} {}", ds::bullet_icon(), ds::command("git add spn.yaml"));
+    println!(
+        "  {} {}",
+        ds::bullet_icon(),
+        ds::command("git add spn.yaml")
+    );
     println!(
         "  {} {}",
         ds::bullet_icon(),

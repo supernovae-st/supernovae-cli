@@ -10,8 +10,8 @@
 //! - cypher-validate: Validate Cypher seed files
 
 use crate::error::{CliError, Result};
-use crate::SchemaCommands;
 use crate::ux::design_system as ds;
+use crate::SchemaCommands;
 
 pub async fn run(command: SchemaCommands) -> Result<()> {
     // Check if novanet is available
