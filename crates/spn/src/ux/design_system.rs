@@ -416,6 +416,174 @@ pub fn hr(width: usize) -> String {
 }
 
 // ============================================================================
+// HUMAN-READABLE FORMATTERS
+// ============================================================================
+
+/// Format bytes in human-readable form (KB, MB, GB)
+pub fn human_bytes(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
+
+    if bytes >= GB {
+        format!("{:.1} GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.1} MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.1} KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{} B", bytes)
+    }
+}
+
+/// Format duration in human-readable form
+pub fn human_duration(secs: u64) -> String {
+    if secs < 60 {
+        format!("{}s", secs)
+    } else if secs < 3600 {
+        let mins = secs / 60;
+        let remaining = secs % 60;
+        if remaining == 0 {
+            format!("{}m", mins)
+        } else {
+            format!("{}m {}s", mins, remaining)
+        }
+    } else {
+        let hours = secs / 3600;
+        let mins = (secs % 3600) / 60;
+        if mins == 0 {
+            format!("{}h", hours)
+        } else {
+            format!("{}h {}m", hours, mins)
+        }
+    }
+}
+
+/// Format count with thousands separator
+pub fn human_count(count: u64) -> String {
+    if count < 1000 {
+        count.to_string()
+    } else if count < 1_000_000 {
+        format!("{:.1}K", count as f64 / 1000.0)
+    } else {
+        format!("{:.1}M", count as f64 / 1_000_000.0)
+    }
+}
+
+/// Format a relative time (e.g., "2 minutes ago")
+pub fn human_ago(secs: u64) -> String {
+    if secs < 60 {
+        "just now".to_string()
+    } else if secs < 3600 {
+        let mins = secs / 60;
+        if mins == 1 {
+            "1 minute ago".to_string()
+        } else {
+            format!("{} minutes ago", mins)
+        }
+    } else if secs < 86400 {
+        let hours = secs / 3600;
+        if hours == 1 {
+            "1 hour ago".to_string()
+        } else {
+            format!("{} hours ago", hours)
+        }
+    } else {
+        let days = secs / 86400;
+        if days == 1 {
+            "1 day ago".to_string()
+        } else {
+            format!("{} days ago", days)
+        }
+    }
+}
+
+// ============================================================================
+// COMMAND OUTPUT HELPERS
+// ============================================================================
+
+/// Standard command success header
+pub fn cmd_success<D: std::fmt::Display>(action: &str, target: D) -> String {
+    format!(
+        "\n  {} {} {}\n",
+        style(icon::SUCCESS).green().bold(),
+        success(action),
+        highlight(target)
+    )
+}
+
+/// Standard command error header
+pub fn cmd_error<D: std::fmt::Display>(action: &str, target: D) -> String {
+    format!(
+        "\n  {} {} {}\n",
+        style(icon::ERROR).red().bold(),
+        error(action),
+        highlight(target)
+    )
+}
+
+/// Print a "related commands" section
+pub fn related_commands(commands: &[(&str, &str)]) {
+    println!();
+    println!("  {}", muted("Related commands:"));
+    for (cmd, desc) in commands {
+        println!(
+            "    {} {}  {}",
+            style("$").dim(),
+            primary(*cmd),
+            muted(*desc)
+        );
+    }
+}
+
+/// Print a tip/suggestion
+pub fn tip<D: std::fmt::Display>(text: D) -> String {
+    format!("  {} {}", style("💡").dim(), muted(text))
+}
+
+/// Print a "Pro tip" with highlight
+pub fn pro_tip<D: std::fmt::Display>(text: D) {
+    println!();
+    println!("  {} {}", style("💡 Pro tip:").cyan().bold(), text);
+}
+
+// ============================================================================
+// STATUS BADGES
+// ============================================================================
+
+/// Status badge: OK/PASS
+pub fn badge_ok() -> String {
+    format!("{}", style(" OK ").on_green().black().bold())
+}
+
+/// Status badge: FAIL
+pub fn badge_fail() -> String {
+    format!("{}", style("FAIL").on_red().white().bold())
+}
+
+/// Status badge: WARN
+pub fn badge_warn() -> String {
+    format!("{}", style("WARN").on_yellow().black().bold())
+}
+
+/// Status badge: SKIP
+pub fn badge_skip() -> String {
+    format!("{}", style("SKIP").on_black().white())
+}
+
+/// Status badge with custom text
+pub fn badge<D: std::fmt::Display>(text: D, color: &str) -> String {
+    match color {
+        "green" => format!("{}", style(format!(" {} ", text)).on_green().black().bold()),
+        "red" => format!("{}", style(format!(" {} ", text)).on_red().white().bold()),
+        "yellow" => format!("{}", style(format!(" {} ", text)).on_yellow().black().bold()),
+        "blue" => format!("{}", style(format!(" {} ", text)).on_blue().white().bold()),
+        "cyan" => format!("{}", style(format!(" {} ", text)).on_cyan().black().bold()),
+        _ => format!("{}", style(format!(" {} ", text)).on_black().white()),
+    }
+}
+
+// ============================================================================
 // TESTS
 // ============================================================================
 
@@ -471,5 +639,53 @@ mod tests {
 
         let i2 = indent2("text");
         assert!(i2.starts_with("    "));
+    }
+
+    #[test]
+    fn test_human_bytes() {
+        assert_eq!(human_bytes(500), "500 B");
+        assert_eq!(human_bytes(1024), "1.0 KB");
+        assert_eq!(human_bytes(1536), "1.5 KB");
+        assert_eq!(human_bytes(1048576), "1.0 MB");
+        assert_eq!(human_bytes(1073741824), "1.0 GB");
+    }
+
+    #[test]
+    fn test_human_duration() {
+        assert_eq!(human_duration(30), "30s");
+        assert_eq!(human_duration(60), "1m");
+        assert_eq!(human_duration(90), "1m 30s");
+        assert_eq!(human_duration(3600), "1h");
+        assert_eq!(human_duration(3660), "1h 1m");
+    }
+
+    #[test]
+    fn test_human_count() {
+        assert_eq!(human_count(500), "500");
+        assert_eq!(human_count(1500), "1.5K");
+        assert_eq!(human_count(1500000), "1.5M");
+    }
+
+    #[test]
+    fn test_human_ago() {
+        assert_eq!(human_ago(30), "just now");
+        assert_eq!(human_ago(60), "1 minute ago");
+        assert_eq!(human_ago(120), "2 minutes ago");
+        assert_eq!(human_ago(3600), "1 hour ago");
+        assert_eq!(human_ago(7200), "2 hours ago");
+        assert_eq!(human_ago(86400), "1 day ago");
+        assert_eq!(human_ago(172800), "2 days ago");
+    }
+
+    #[test]
+    fn test_badges() {
+        let ok = badge_ok();
+        assert!(ok.contains("OK"));
+
+        let fail = badge_fail();
+        assert!(fail.contains("FAIL"));
+
+        let custom = badge("TEST", "green");
+        assert!(custom.contains("TEST"));
     }
 }

@@ -97,6 +97,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Add a package to the project
+    #[command(after_help = "Related: spn remove, spn list, spn search, spn info")]
     Add {
         /// Package name (e.g., @nika/generate-page)
         package: String,
@@ -176,6 +177,7 @@ enum Commands {
 
     /// Manage MCP servers
     #[command(visible_alias = "mc")]
+    #[command(after_help = "Related: spn sync, spn provider list, spn doctor")]
     Mcp {
         #[command(subcommand)]
         command: McpCommands,
@@ -243,6 +245,7 @@ enum Commands {
 
     /// Manage API keys and secrets for providers
     #[command(visible_alias = "p")]
+    #[command(after_help = "Related: spn daemon start, spn secrets doctor, spn mcp add")]
     Provider {
         #[command(subcommand)]
         command: ProviderCommands,
@@ -302,6 +305,7 @@ enum Commands {
 
     /// Manage local LLM models (Ollama)
     #[command(visible_alias = "m")]
+    #[command(after_help = "Requires: Ollama must be running (ollama serve)\nRelated: spn provider list, spn nk studio")]
     Model {
         #[command(subcommand)]
         command: ModelCommands,
