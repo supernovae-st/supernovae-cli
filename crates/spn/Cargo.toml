@@ -1,6 +1,6 @@
 [package]
 name = "spn-cli"
-version = "0.12.5"
+version = "0.14.0"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "SuperNovae Package Manager - unified CLI for AI workflows, secrets, MCP servers, and daemon management"
@@ -86,7 +86,7 @@ walkdir = "2.5"
 urlencoding = "2.1"
 indicatif = "0.17"
 console = "0.15"
-dialoguer = "0.11"
+dialoguer = { version = "0.11", features = ["fuzzy-select"] }
 colored = "3.0"
 similar = { version = "2.6", features = ["inline"] }
 

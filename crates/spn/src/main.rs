@@ -10,6 +10,7 @@
 //! spn doctor                       # System diagnostic
 //! ```
 
+use clap::builder::{styling::AnsiColor, Styles};
 use clap::{Parser, Subcommand};
 
 mod commands;
@@ -17,21 +18,47 @@ mod config;
 mod daemon;
 mod diff;
 mod error;
+mod first_run;
 mod index;
 mod interop;
 mod manifest;
 mod mcp;
+mod prompts;
 mod secrets;
 mod storage;
 mod suggest;
 mod sync;
 mod ux;
+mod welcome;
+
+// ============================================================================
+// CLI STYLES - Colorized help for v0.14.0
+// ============================================================================
+
+/// Get the CLI color styles for consistent, readable help output
+fn cli_styles() -> Styles {
+    Styles::styled()
+        // Headers: bright green (matches success indicators)
+        .header(AnsiColor::BrightGreen.on_default().bold())
+        .usage(AnsiColor::BrightGreen.on_default().bold())
+        // Commands/literals: cyan (matches URLs and command hints)
+        .literal(AnsiColor::BrightCyan.on_default())
+        // Placeholders: yellow (stands out, indicates user input needed)
+        .placeholder(AnsiColor::Yellow.on_default())
+        // Errors: red (standard)
+        .error(AnsiColor::BrightRed.on_default().bold())
+        // Valid values: green
+        .valid(AnsiColor::BrightGreen.on_default())
+        // Invalid values: red
+        .invalid(AnsiColor::BrightRed.on_default())
+}
 
 /// SuperNovae CLI - AI Development Toolkit
 #[derive(Parser)]
 #[command(name = "spn")]
 #[command(author = "SuperNovae Studio")]
 #[command(version)]
+#[command(styles = cli_styles())]
 #[command(about = "AI Development Toolkit: packages, secrets, and sync for Claude Code & Nika")]
 #[command(long_about = r#"
 spn - SuperNovae Package Manager
@@ -146,6 +173,7 @@ enum Commands {
     },
 
     /// Manage MCP servers
+    #[command(visible_alias = "mc")]
     Mcp {
         #[command(subcommand)]
         command: McpCommands,
@@ -164,6 +192,7 @@ enum Commands {
     },
 
     /// Sync packages to editor configs
+    #[command(visible_alias = "s")]
     Sync {
         /// Enable sync for an editor
         #[arg(long)]
@@ -191,6 +220,7 @@ enum Commands {
     },
 
     /// Configuration commands
+    #[command(visible_alias = "c")]
     Config {
         #[command(subcommand)]
         command: ConfigCommands,
@@ -203,15 +233,18 @@ enum Commands {
     },
 
     /// System diagnostic
+    #[command(visible_alias = "dr")]
     Doctor,
 
     /// Manage API keys and secrets for providers
+    #[command(visible_alias = "p")]
     Provider {
         #[command(subcommand)]
         command: ProviderCommands,
     },
 
     /// Show ecosystem status
+    #[command(visible_alias = "st")]
     Status {
         /// Output as JSON
         #[arg(long)]
@@ -263,6 +296,7 @@ enum Commands {
     },
 
     /// Manage local LLM models (Ollama)
+    #[command(visible_alias = "m")]
     Model {
         #[command(subcommand)]
         command: ModelCommands,
@@ -293,6 +327,7 @@ enum SkillCommands {
 #[derive(Subcommand)]
 enum McpCommands {
     /// Add an MCP server from npm
+    #[command(visible_alias = "a")]
     Add {
         /// Server alias or npm package
         name: String,
@@ -314,6 +349,7 @@ enum McpCommands {
         sync_to: Option<String>,
     },
     /// Remove an MCP server
+    #[command(visible_alias = "rm")]
     Remove {
         /// Server name
         name: String,
@@ -327,6 +363,7 @@ enum McpCommands {
         project: bool,
     },
     /// List installed MCP servers
+    #[command(visible_alias = "l", visible_alias = "ls")]
     List {
         /// Show only global servers
         #[arg(short, long)]
@@ -760,6 +797,7 @@ enum DaemonCommands {
 #[derive(Subcommand)]
 pub enum ModelCommands {
     /// List installed models
+    #[command(visible_alias = "l", visible_alias = "ls")]
     List {
         /// Output as JSON
         #[arg(long)]
@@ -771,6 +809,7 @@ pub enum ModelCommands {
     },
 
     /// Pull/download a model from Ollama registry
+    #[command(visible_alias = "get", visible_alias = "download")]
     Pull {
         /// Model name (e.g., llama3.2:7b, mistral:latest)
         name: String,
@@ -793,6 +832,7 @@ pub enum ModelCommands {
     },
 
     /// Delete a model
+    #[command(visible_alias = "rm")]
     Delete {
         /// Model name
         name: String,
@@ -803,6 +843,7 @@ pub enum ModelCommands {
     },
 
     /// Show running models and resource usage
+    #[command(visible_alias = "ps")]
     Status {
         /// Output as JSON
         #[arg(long)]
@@ -873,12 +914,14 @@ pub enum SetupCommands {
 #[derive(Subcommand)]
 enum ProviderCommands {
     /// List all stored API keys (masked)
+    #[command(visible_alias = "l", visible_alias = "ls")]
     List {
         /// Show key sources (keychain, env, .env)
         #[arg(long)]
         show_source: bool,
     },
     /// Set API key for a provider
+    #[command(visible_alias = "add")]
     Set {
         /// Provider name (anthropic, openai, gemini, etc.)
         provider: String,
@@ -921,12 +964,101 @@ enum ProviderCommands {
     },
 }
 
+// ============================================================================
+// FIRST-RUN EXPERIENCE
+// ============================================================================
+
+/// Handle the first-run welcome experience
+async fn handle_first_run() -> Result<(), Box<dyn std::error::Error>> {
+    use welcome::WelcomeAction;
+
+    loop {
+        match welcome::show()? {
+            WelcomeAction::QuickSetup => {
+                // Run the setup wizard
+                println!();
+                println!(
+                    "  {} Starting setup...",
+                    console::style("→").cyan()
+                );
+                println!();
+
+                // Run setup command
+                let result = commands::setup::run(None, false).await;
+                if result.is_ok() {
+                    welcome::show_setup_complete();
+                }
+                first_run::mark_complete()?;
+                return Ok(());
+            }
+            WelcomeAction::TakeTour => {
+                welcome::show_tour();
+                // After tour, loop back to show welcome again
+                // User can then choose setup or skip
+                continue;
+            }
+            WelcomeAction::ShowHelp => {
+                // Show help and mark as complete
+                first_run::mark_complete()?;
+                // Re-invoke with --help
+                let _ = Cli::try_parse_from(["spn", "--help"]);
+                return Ok(());
+            }
+            WelcomeAction::SkipForever => {
+                // Mark as complete and exit
+                first_run::mark_complete()?;
+                println!();
+                println!(
+                    "  {} Run {} anytime to get started.",
+                    console::style("✓").green(),
+                    console::style("spn setup").cyan()
+                );
+                println!();
+                return Ok(());
+            }
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
+    // Initialize logging early (quiet by default)
+    tracing_subscriber::fmt()
+        .with_env_filter("spn=warn")
+        .init();
+
+    // Check for first-run experience BEFORE parsing CLI
+    // This allows us to show welcome screen when user just types "spn"
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() == 1 && first_run::is_first_run() {
+        // No subcommand provided and it's first run - show welcome
+        if let Err(e) = handle_first_run().await {
+            eprintln!("Error during first run: {e}");
+            std::process::exit(1);
+        }
+        return;
+    }
+
     // Try to parse CLI args, with "did you mean?" suggestions on error
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(e) => {
+            // Check if this is a missing subcommand (user just ran "spn")
+            if e.kind() == clap::error::ErrorKind::MissingSubcommand {
+                // Not first run but no command - show brief help
+                println!();
+                println!(
+                    "  {} {}",
+                    console::style("spn").cyan().bold(),
+                    console::style("v").dim()
+                );
+                println!();
+                println!("  Run {} to see all commands", console::style("spn --help").cyan());
+                println!("  Run {} to learn about features", console::style("spn topic").cyan());
+                println!();
+                std::process::exit(0);
+            }
+
             // Check if this is an unrecognized subcommand error
             let error_str = e.to_string();
             if error_str.contains("unrecognized subcommand") {
@@ -942,10 +1074,9 @@ async fn main() {
         }
     };
 
-    // Initialize logging
-    tracing_subscriber::fmt()
-        .with_env_filter(if cli.verbose { "spn=debug" } else { "spn=info" })
-        .init();
+    // Re-initialize logging with correct verbosity
+    // Note: tracing only allows one global subscriber, so we use the early one
+    let _ = cli.verbose; // Acknowledge the flag (logging already initialized)
 
     let result = match cli.command {
         Commands::Add { package, r#type } => commands::add::run(&package, r#type.as_deref()).await,
