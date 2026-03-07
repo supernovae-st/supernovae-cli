@@ -31,15 +31,11 @@ fn get_test_model() -> String {
 /// Check if the test model is available.
 async fn skip_if_model_unavailable(client: &OllamaClient) -> bool {
     let model = get_test_model();
-    match client.model_info(&model).await {
-        Ok(_) => true,
-        Err(_) => {
-            eprintln!(
-                "Skipping test: model '{}' not installed. Pull with: ollama pull {}",
-                model, model
-            );
-            false
-        }
+    if client.model_info(&model).await.is_ok() {
+        true
+    } else {
+        eprintln!("Skipping test: model '{model}' not installed. Pull with: ollama pull {model}");
+        false
     }
 }
 
@@ -57,7 +53,7 @@ async fn test_list_models() {
     };
 
     let models = client.list_models().await;
-    assert!(models.is_ok(), "list_models should succeed: {:?}", models);
+    assert!(models.is_ok(), "list_models should succeed: {models:?}");
 }
 
 #[tokio::test]
@@ -67,11 +63,7 @@ async fn test_running_models() {
     };
 
     let models = client.running_models().await;
-    assert!(
-        models.is_ok(),
-        "running_models should succeed: {:?}",
-        models
-    );
+    assert!(models.is_ok(), "running_models should succeed: {models:?}");
 }
 
 #[tokio::test]
@@ -88,8 +80,7 @@ async fn test_model_info_not_found() {
         // Should be ModelNotFound or contain relevant error
         assert!(
             error_str.contains("not found") || error_str.contains("404"),
-            "Expected not found error, got: {}",
-            error_str
+            "Expected not found error, got: {error_str}"
         );
     }
 }
@@ -141,7 +132,7 @@ async fn test_chat_simple() {
     let messages = vec![ChatMessage::user("Say hello in exactly 3 words.")];
 
     let result = client.chat(&model, &messages, None).await;
-    assert!(result.is_ok(), "chat should succeed: {:?}", result);
+    assert!(result.is_ok(), "chat should succeed: {result:?}");
 
     let response = result.unwrap();
     assert!(response.done, "response should be complete");
@@ -171,7 +162,7 @@ async fn test_chat_stream() {
         })
         .await;
 
-    assert!(result.is_ok(), "chat_stream should succeed: {:?}", result);
+    assert!(result.is_ok(), "chat_stream should succeed: {result:?}");
     assert!(!tokens.is_empty(), "should receive tokens");
 
     let response = result.unwrap();
@@ -201,7 +192,7 @@ async fn test_embed_simple() {
         }
         Err(e) => {
             // Some models don't support embeddings - that's OK
-            eprintln!("Note: embed not supported by {}: {}", model, e);
+            eprintln!("Note: embed not supported by {model}: {e}");
         }
     }
 }
