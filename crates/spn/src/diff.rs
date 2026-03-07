@@ -6,7 +6,7 @@
 
 #![allow(dead_code)]
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 use dialoguer::Confirm;
 use similar::{ChangeTag, TextDiff};
 use std::path::Path;
@@ -15,7 +15,11 @@ use std::path::Path;
 pub fn display_diff(path: &Path, old_content: &str, new_content: &str) {
     let diff = TextDiff::from_lines(old_content, new_content);
 
-    println!("{} {}", "📄".cyan(), path.display().to_string().bold());
+    println!(
+        "{} {}",
+        ds::primary("📄"),
+        ds::highlight(path.display().to_string())
+    );
     println!();
 
     let mut additions = 0;
@@ -25,11 +29,11 @@ pub fn display_diff(path: &Path, old_content: &str, new_content: &str) {
         let line = change.to_string_lossy();
         match change.tag() {
             ChangeTag::Delete => {
-                print!("{}", format!("- {}", line).red());
+                print!("{}", ds::error(format!("- {}", line)));
                 deletions += 1;
             }
             ChangeTag::Insert => {
-                print!("{}", format!("+ {}", line).green());
+                print!("{}", ds::success(format!("+ {}", line)));
                 additions += 1;
             }
             ChangeTag::Equal => {
@@ -41,9 +45,9 @@ pub fn display_diff(path: &Path, old_content: &str, new_content: &str) {
     println!();
     println!(
         "  {} +{} additions, {} deletions",
-        "📊".dimmed(),
-        additions.to_string().green(),
-        deletions.to_string().red()
+        ds::muted("📊"),
+        ds::success(additions),
+        ds::error(deletions)
     );
     println!();
 }
@@ -88,7 +92,7 @@ impl DiffBatch {
     }
 
     pub fn display(&self) {
-        println!("{} Files to be changed:", "📋".cyan().bold());
+        println!("{} Files to be changed:", ds::primary("📋"));
         println!();
 
         for diff in &self.diffs {
@@ -106,7 +110,7 @@ impl DiffBatch {
 
         println!(
             "{} {} file(s) will be modified",
-            "⚠️".yellow(),
+            ds::warning("⚠️"),
             self.diffs.len()
         );
 

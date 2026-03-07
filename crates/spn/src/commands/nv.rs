@@ -9,21 +9,21 @@ use crate::{
     NovaNetCommands,
 };
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 /// Run a novanet command via the binary proxy.
 pub async fn run(command: NovaNetCommands) -> Result<()> {
     let runner = BinaryRunner::new(BinaryType::NovaNet);
 
     if !runner.is_available() {
-        eprintln!("{}", "Error: novanet not found".red());
+        eprintln!("{}", ds::error("Error: novanet not found"));
         eprintln!(
             "Install with: {}",
-            "brew install supernovae-st/tap/novanet".cyan()
+            ds::primary("brew install supernovae-st/tap/novanet")
         );
         eprintln!(
             "Or download from: {}",
-            "https://github.com/supernovae-st/novanet/releases".cyan()
+            ds::primary("https://github.com/supernovae-st/novanet/releases")
         );
         return Ok(());
     }
@@ -202,7 +202,7 @@ pub async fn run(command: NovaNetCommands) -> Result<()> {
             }
         }
         Err(e) => {
-            eprintln!("{}: {}", "Error running novanet".red(), e);
+            eprintln!("{}: {}", ds::error("Error running novanet"), e);
             std::process::exit(1);
         }
     }

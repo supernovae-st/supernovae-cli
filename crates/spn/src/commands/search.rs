@@ -2,7 +2,7 @@
 //!
 //! Searches for packages in the registry.
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -38,7 +38,7 @@ struct SearchResult {
 /// Run the search command.
 pub async fn run(query: &str, json: bool) -> Result<()> {
     if !json {
-        println!("{} Searching SuperNovae Registry...\n", "🔍".cyan());
+        println!("{} Searching SuperNovae Registry...\n", ds::primary("🔍"));
     }
 
     let client = IndexClient::new();
@@ -128,7 +128,7 @@ pub async fn run(query: &str, json: bool) -> Result<()> {
     if results.is_empty() {
         println!(
             "   {} No packages found matching '{}'",
-            "ℹ️".yellow(),
+            ds::warning("ℹ️"),
             query
         );
         println!();
@@ -153,7 +153,7 @@ pub async fn run(query: &str, json: bool) -> Result<()> {
             _ => "📦",
         };
 
-        println!("   {} {}@{}", type_emoji, name.green(), version.dimmed());
+        println!("   {} {}@{}", type_emoji, ds::success(name), ds::muted(version));
 
         if !description.is_empty() {
             // Truncate description if too long
@@ -162,7 +162,7 @@ pub async fn run(query: &str, json: bool) -> Result<()> {
             } else {
                 description.clone()
             };
-            println!("     {}", desc.dimmed());
+            println!("     {}", ds::muted(desc));
         }
         println!();
     }
@@ -170,13 +170,13 @@ pub async fn run(query: &str, json: bool) -> Result<()> {
     if results.len() > 20 {
         println!(
             "   {} {} more results not shown",
-            "ℹ️".yellow(),
+            ds::warning("ℹ️"),
             results.len() - 20
         );
         println!();
     }
 
-    println!("   Use {} to install.", "spn add <package>".cyan());
+    println!("   Use {} to install.", ds::primary("spn add <package>"));
     println!();
 
     Ok(())

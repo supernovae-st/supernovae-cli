@@ -2,7 +2,7 @@
 //!
 //! Removes a package from the project's spn.yaml manifest and local storage.
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 use crate::error::{Result, SpnError};
 use crate::manifest::{SpnLockfile, SpnManifest};
@@ -31,8 +31,8 @@ pub async fn run(package: &str) -> Result<()> {
 pub async fn run_with_options(options: RemoveOptions) -> Result<()> {
     println!(
         "{} Removing package: {}",
-        "🗑️".cyan(),
-        options.package.yellow()
+        ds::primary("🗑️"),
+        ds::warning(&options.package)
     );
 
     // 1. Find and load manifest
@@ -51,7 +51,7 @@ pub async fn run_with_options(options: RemoveOptions) -> Result<()> {
     if !was_dep && !was_dev_dep {
         println!(
             "   {} Package {} not found in manifest",
-            "⚠".yellow(),
+            ds::warning("⚠"),
             options.package
         );
         return Ok(());
@@ -67,7 +67,7 @@ pub async fn run_with_options(options: RemoveOptions) -> Result<()> {
     } else {
         "dev-dependencies"
     };
-    println!("   {} Removed from {}", "✓".green(), dep_type);
+    println!("   {} Removed from {}", ds::success("✓"), dep_type);
 
     // 4. Remove from local storage (unless manifest-only)
     if !options.manifest_only {
@@ -76,10 +76,10 @@ pub async fn run_with_options(options: RemoveOptions) -> Result<()> {
 
         match storage.uninstall(&options.package) {
             Ok(()) => {
-                println!("   {} Removed from local storage", "✓".green());
+                println!("   {} Removed from local storage", ds::success("✓"));
             }
             Err(e) => {
-                println!("   {} Could not remove from storage: {}", "⚠".yellow(), e);
+                println!("   {} Could not remove from storage: {}", ds::warning("⚠"), e);
             }
         }
     }
@@ -101,14 +101,14 @@ pub async fn run_with_options(options: RemoveOptions) -> Result<()> {
             lockfile
                 .write_to_file(&lockfile_path)
                 .map_err(|e| SpnError::ConfigError(format!("Failed to save lockfile: {}", e)))?;
-            println!("   {} Updated spn.lock", "✓".green());
+            println!("   {} Updated spn.lock", ds::success("✓"));
         }
     }
 
     println!(
         "{} Successfully removed {}",
-        "✨".yellow(),
-        options.package.green()
+        ds::warning("✨"),
+        ds::success(&options.package)
     );
     Ok(())
 }

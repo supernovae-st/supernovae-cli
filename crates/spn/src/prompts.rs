@@ -9,6 +9,7 @@
 #![allow(dead_code)] // Functions prepared for upcoming command integration
 
 use crate::ux;
+use crate::ux::design_system as ds;
 use dialoguer::{theme::ColorfulTheme, FuzzySelect, Password};
 
 /// Result type for prompt operations
@@ -101,21 +102,21 @@ const MCP_PROVIDERS: &[ProviderOption] = &[
 /// Prompt user to select a provider when not specified
 pub fn select_provider() -> PromptResult<String> {
     println!();
-    println!("  {}", console::style("LLM Providers").bold());
+    println!("  {}", ds::highlight("LLM Providers"));
 
     let mut items: Vec<String> = LLM_PROVIDERS
         .iter()
-        .map(|p| format!("{:<12} {}", p.id, console::style(p.description).dim()))
+        .map(|p| format!("{:<12} {}", p.id, ds::muted(p.description)))
         .collect();
 
     items.push(String::new()); // Separator
-    items.push(console::style("MCP Secrets").bold().to_string());
+    items.push(ds::highlight("MCP Secrets").to_string());
 
     for p in MCP_PROVIDERS {
         items.push(format!(
             "{:<12} {}",
             p.id,
-            console::style(p.description).dim()
+            ds::muted(p.description)
         ));
     }
 
@@ -233,8 +234,8 @@ pub fn select_mcp_server() -> PromptResult<String> {
             format!(
                 "{:<20} {}{}",
                 s.id,
-                console::style(s.description).dim(),
-                console::style(rec).cyan()
+                ds::muted(s.description),
+                ds::primary(rec)
             )
         })
         .collect();
@@ -242,7 +243,7 @@ pub fn select_mcp_server() -> PromptResult<String> {
     println!();
     println!(
         "  {} recommended",
-        console::style("*").cyan()
+        ds::primary("*")
     );
 
     let selection = FuzzySelect::with_theme(&ColorfulTheme::default())
@@ -306,8 +307,8 @@ pub fn select_model() -> PromptResult<String> {
             format!(
                 "{:<18} {:>8}  {}",
                 m.name,
-                console::style(m.size).dim(),
-                console::style(m.description).dim()
+                ds::muted(m.size),
+                ds::muted(m.description)
             )
         })
         .collect();

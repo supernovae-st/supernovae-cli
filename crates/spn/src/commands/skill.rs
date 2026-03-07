@@ -6,7 +6,7 @@ use crate::error::{Result, SpnError};
 use crate::interop::skills::SkillsClient;
 use crate::SkillCommands;
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 /// Run a skill management command.
 pub async fn run(command: SkillCommands) -> Result<()> {
@@ -14,41 +14,41 @@ pub async fn run(command: SkillCommands) -> Result<()> {
 
     match command {
         SkillCommands::Add { name } => {
-            println!("{} {}", "Installing skill:".cyan(), name);
+            println!("{} {}", ds::primary("Installing skill:"), name);
 
             let path = client
                 .install(&name)
                 .map_err(|e| SpnError::CommandFailed(format!("Failed to install skill: {}", e)))?;
-            println!("{} {}", "✓".green(), "Skill installed successfully".green());
+            println!("{} {}", ds::success("✓"), ds::success("Skill installed successfully"));
             println!("  Location: {}", path.display());
         }
         SkillCommands::Remove { name } => {
-            println!("{} {}", "Removing skill:".cyan(), name);
+            println!("{} {}", ds::primary("Removing skill:"), name);
 
             client
                 .remove(&name)
                 .map_err(|e| SpnError::CommandFailed(format!("Failed to remove skill: {}", e)))?;
-            println!("{} {}", "✓".green(), "Skill removed successfully".green());
+            println!("{} {}", ds::success("✓"), ds::success("Skill removed successfully"));
         }
         SkillCommands::List => {
             let skills = client
                 .list_installed()
                 .map_err(|e| SpnError::CommandFailed(format!("Failed to list skills: {}", e)))?;
             if skills.is_empty() {
-                println!("{}", "No skills installed".yellow());
-                println!("Install with: {}", "spn skill add <name>".cyan());
+                println!("{}", ds::warning("No skills installed"));
+                println!("Install with: {}", ds::primary("spn skill add <name>"));
             } else {
-                println!("{}", "Installed skills:".cyan());
+                println!("{}", ds::primary("Installed skills:"));
                 for skill in &skills {
                     println!("  • {}", skill);
                 }
-                println!("\n{} {} skill(s)", "Total:".dimmed(), skills.len());
+                println!("\n{} {} skill(s)", ds::muted("Total:"), skills.len());
             }
         }
         SkillCommands::Search { query } => {
             let url = client.search_url(&query);
-            println!("{} {}", "Search on skills.sh:".cyan(), query);
-            println!("\nOpen in browser: {}", url.cyan());
+            println!("{} {}", ds::primary("Search on skills.sh:"), query);
+            println!("\nOpen in browser: {}", ds::primary(&url));
 
             // Try to open the URL in the default browser
             #[cfg(target_os = "macos")]

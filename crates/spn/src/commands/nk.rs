@@ -6,21 +6,21 @@ use crate::error::Result;
 use crate::interop::binary::{BinaryRunner, BinaryType};
 use crate::{JobCommands, NikaCommands, NikaConfigCommands, TraceCommands};
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 /// Run a nika command via the binary proxy.
 pub async fn run(command: NikaCommands) -> Result<()> {
     let runner = BinaryRunner::new(BinaryType::Nika);
 
     if !runner.is_available() {
-        eprintln!("{}", "Error: nika not found".red());
+        eprintln!("{}", ds::error("Error: nika not found"));
         eprintln!(
             "Install with: {}",
-            "brew install supernovae-st/tap/nika".cyan()
+            ds::primary("brew install supernovae-st/tap/nika")
         );
         eprintln!(
             "Or download from: {}",
-            "https://github.com/supernovae-st/nika/releases".cyan()
+            ds::primary("https://github.com/supernovae-st/nika/releases")
         );
         return Ok(());
     }
@@ -88,7 +88,7 @@ pub async fn run(command: NikaCommands) -> Result<()> {
             }
         }
         Err(e) => {
-            eprintln!("{}: {}", "Error running nika".red(), e);
+            eprintln!("{}: {}", ds::error("Error running nika"), e);
             std::process::exit(1);
         }
     }

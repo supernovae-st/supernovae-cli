@@ -2,13 +2,54 @@
 //!
 //! Provides themed spinners, progress bars, messages, and visual elements
 //! with a subtle cosmic/supernova aesthetic that's developer-friendly.
+//!
+//! # Modules
+//!
+//! - `design_system`: Semantic color system and styling primitives
+//! - `progress`: Enhanced progress bars with multi-column support
+//! - `tables`: ASCII tables for structured data display
+//! - `trees`: Tree visualization for hierarchical data
+//! - `themes`: Custom themes for dialoguer prompts
+//!
+//! # Usage
+//!
+//! ```rust,ignore
+//! use crate::ux::{design_system as ds, progress, tables, trees};
+//!
+//! // Semantic styling
+//! println!("{}", ds::success_line("Package installed"));
+//! println!("{}", ds::key_value("Version", "1.2.3"));
+//!
+//! // Progress bars
+//! let spinner = progress::transforming_spinner("Installing...");
+//! spinner.finish_success("Installed!");
+//!
+//! // Tables
+//! let table = tables::provider_table(&providers);
+//! println!("{}", table);
+//!
+//! // Trees
+//! let tree = trees::package_tree("@nika/workflow", "1.2.3", &deps);
+//! println!("{}", tree);
+//! ```
 
 #![allow(dead_code)]
 
-use colored::Colorize;
+pub mod design_system;
+pub mod progress;
+pub mod tables;
+pub mod themes;
+pub mod trees;
+
 use console::{style, Emoji, Term};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
+
+// Note: For icons, use `ds::icon::SUCCESS` etc. via `use crate::ux::design_system as ds;`
+
+// Note: design_system provides styling functions that return StyledObject
+// This module (ux) provides print functions that output to stdout
+// Use `use crate::ux::design_system as ds` for direct styling access
 
 // ============================================================================
 // EMOJI & SYMBOLS (with fallbacks for terminals without emoji support)
@@ -28,28 +69,6 @@ pub static SYNC: Emoji<'_, '_> = Emoji("🔄 ", "~ ");
 pub static ANCHOR: Emoji<'_, '_> = Emoji("⚓ ", "@ ");
 pub static COMPASS: Emoji<'_, '_> = Emoji("🧭 ", "> ");
 pub static SPARKLE: Emoji<'_, '_> = Emoji("✨ ", "~ ");
-
-// ============================================================================
-// COLORS - Cosmic palette (works well on both light and dark terminals)
-// ============================================================================
-
-/// Brand colors for consistent styling
-pub mod colors {
-    use colored::Color;
-
-    /// Primary accent (cyan/teal - like a nebula)
-    pub const PRIMARY: Color = Color::Cyan;
-    /// Secondary accent (magenta - stellar)
-    pub const SECONDARY: Color = Color::Magenta;
-    /// Success (green)
-    pub const SUCCESS: Color = Color::Green;
-    /// Warning (yellow)
-    pub const WARNING: Color = Color::Yellow;
-    /// Error (red)
-    pub const ERROR: Color = Color::Red;
-    /// Muted/dimmed
-    pub const MUTED: Color = Color::BrightBlack;
-}
 
 // ============================================================================
 // SPINNERS - Cosmic themed spinners for async operations
@@ -197,9 +216,9 @@ pub fn banner() {
     println!();
     println!(
         "  {}{}{}",
-        "spn".cyan().bold(),
-        " · ".dimmed(),
-        "SuperNovae Package Manager".dimmed()
+        style("spn").cyan().bold(),
+        style(" · ").dim(),
+        style("SuperNovae Package Manager").dim()
     );
     println!();
 }

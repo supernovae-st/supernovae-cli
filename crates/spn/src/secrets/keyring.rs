@@ -19,7 +19,7 @@
 
 #![allow(dead_code)]
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 use zeroize::Zeroizing;
 
 use super::types::{provider_env_var, SecretSource, MCP_SECRET_TYPES, SUPPORTED_PROVIDERS};
@@ -176,10 +176,10 @@ pub fn migrate_env_to_keyring() -> MigrationReport {
                 if SpnKeyring::exists(provider) {
                     println!(
                         "  {} {}: Found {} {}",
-                        "├──".dimmed(),
+                        ds::muted("├──"),
                         env_var,
-                        "→".dimmed(),
-                        "Already in keychain (skipped)".yellow()
+                        ds::muted(ds::icon::ARROW),
+                        ds::warning("Already in keychain (skipped)")
                     );
                     report.skipped += 1;
                     continue;
@@ -188,24 +188,24 @@ pub fn migrate_env_to_keyring() -> MigrationReport {
                 // Migrate to keyring
                 print!(
                     "  {} {}: Found {} Migrating... ",
-                    "├──".dimmed(),
+                    ds::muted("├──"),
                     env_var,
-                    "→".dimmed()
+                    ds::muted(ds::icon::ARROW)
                 );
                 match SpnKeyring::set(provider, &key) {
                     Ok(()) => {
-                        println!("{}", "✓".green());
+                        println!("{}", ds::success(ds::icon::SUCCESS));
                         report.migrated += 1;
                     }
                     Err(e) => {
-                        println!("{} ({})", "✗".red(), e);
+                        println!("{} ({})", ds::error(ds::icon::ERROR), e);
                         report.errors.push((provider.to_string(), e.to_string()));
                     }
                 }
                 // key is automatically zeroized when it goes out of scope
             }
             _ => {
-                println!("  {} {}: {}", "├──".dimmed(), env_var, "Not found".dimmed());
+                println!("  {} {}: {}", ds::muted("├──"), env_var, ds::muted("Not found"));
                 report.not_found.push(provider.to_string());
             }
         }
@@ -219,8 +219,8 @@ pub fn migrate_env_to_keyring() -> MigrationReport {
 pub fn migrate_env_to_keyring() -> MigrationReport {
     println!(
         "  {} {}",
-        "⚠".yellow(),
-        "Keychain unavailable (Docker build). Use environment variables.".yellow()
+        ds::warning(ds::icon::WARNING),
+        ds::warning("Keychain unavailable (Docker build). Use environment variables.")
     );
     let mut report = MigrationReport::default();
     report.errors.push((

@@ -9,7 +9,7 @@
 
 use std::path::PathBuf;
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 use crate::diff::DiffBatch;
 use crate::error::{Result, SpnError};
@@ -161,22 +161,22 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
     if targets.is_empty() {
         println!(
             "{}",
-            "⚠️  No IDE configurations found in current directory.".yellow()
+            ds::warning("⚠️  No IDE configurations found in current directory.")
         );
         println!("   Create .claude/, .cursor/, .vscode/, or .windsurf/ to enable sync.");
         return Ok(());
     }
 
     if dry_run {
-        println!("{}", "🔍 Dry run - showing what would be synced:".cyan());
+        println!("{}", ds::primary("🔍 Dry run - showing what would be synced:"));
         println!();
     } else {
-        println!("{}", "🔄 Syncing to IDE configurations...".cyan());
+        println!("{}", ds::primary("🔄 Syncing to IDE configurations..."));
         println!();
     }
 
     // PHASE 1: Sync MCP servers from ~/.spn/mcp.yaml
-    println!("{}", "MCP Servers".cyan().bold());
+    println!("{}", ds::primary("MCP Servers"));
     let mcp_results = sync_mcp_to_editors(&targets, Some(&cwd));
     let mut mcp_synced = 0;
     let mut mcp_errors = Vec::new();
@@ -185,26 +185,26 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
         if result.success && result.servers_synced > 0 {
             println!(
                 "  {} {} → {} servers",
-                "✓".green(),
-                result.target.display_name().bold(),
+                ds::success("✓"),
+                ds::highlight(result.target.display_name()),
                 result.servers_synced
             );
             if !dry_run {
                 println!(
                     "    {}",
-                    format!("({})", result.config_path.display()).dimmed()
+                    ds::muted(format!("({})", result.config_path.display()))
                 );
             }
             mcp_synced += result.servers_synced;
         } else if let Some(err) = &result.error {
-            println!("  {} {}: {}", "✗".red(), result.target.display_name(), err);
+            println!("  {} {}: {}", ds::error("✗"), result.target.display_name(), err);
             mcp_errors.push(err.clone());
         }
     }
 
     if mcp_synced == 0 && mcp_errors.is_empty() {
-        println!("  {} No MCP servers configured", "→".dimmed());
-        println!("    Add with: {}", "spn mcp add <name>".cyan());
+        println!("  {} No MCP servers configured", ds::muted("→"));
+        println!("    Add with: {}", ds::primary("spn mcp add <name>"));
     }
 
     // PHASE 2: Sync packages (skills, hooks)
@@ -216,7 +216,7 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
 
     if !packages.is_empty() {
         println!();
-        println!("{}", "Packages".cyan().bold());
+        println!("{}", ds::primary("Packages"));
 
         for target in &targets {
             let adapter = get_adapter(*target);
@@ -249,7 +249,7 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
                     if dry_run {
                         println!(
                             "  {} Skipping {} (type: {:?}, no sync required)",
-                            "→".dimmed(),
+                            ds::muted("→"),
                             name,
                             package_type
                         );
@@ -283,21 +283,21 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
                                     // MCP handled in phase 1
                                 }
                                 SyncedItem::Skills(path) => {
-                                    println!("  {} Skills: {}", "✓".green(), path.display());
+                                    println!("  {} Skills: {}", ds::success("✓"), path.display());
                                     total_synced += 1;
                                 }
                                 SyncedItem::Hooks(path) => {
-                                    println!("  {} Hooks: {}", "✓".green(), path.display());
+                                    println!("  {} Hooks: {}", ds::success("✓"), path.display());
                                     total_synced += 1;
                                 }
                                 SyncedItem::Command(name) => {
-                                    println!("  {} Command: {}", "✓".green(), name);
+                                    println!("  {} Command: {}", ds::success("✓"), name);
                                     total_synced += 1;
                                 }
                             }
                         }
                     } else if let Some(err) = result.error {
-                        println!("  {} {}: {}", "✗".red(), name, err);
+                        println!("  {} {}: {}", ds::error("✗"), name, err);
                         errors.push((name.clone(), err));
                     }
                 }
@@ -308,13 +308,13 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
     // Summary
     println!();
     if dry_run {
-        println!("Run without {} to apply changes.", "--dry-run".cyan());
+        println!("Run without {} to apply changes.", ds::primary("--dry-run"));
     } else if errors.is_empty() && mcp_errors.is_empty() {
         let total = mcp_synced + total_synced;
         if total > 0 {
-            println!("{} Synced {} items successfully.", "✓".green(), total);
+            println!("{} Synced {} items successfully.", ds::success("✓"), total);
         } else {
-            println!("{}", "Nothing to sync.".dimmed());
+            println!("{}", ds::muted("Nothing to sync."));
         }
 
         // Update last sync time
@@ -324,7 +324,7 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
     } else {
         println!(
             "{} Synced with {} errors.",
-            "⚠".yellow(),
+            ds::warning("⚠"),
             errors.len() + mcp_errors.len()
         );
     }
@@ -336,8 +336,8 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
 async fn run_interactive_sync(config: &SyncConfig, target_filter: Option<&str>) -> Result<()> {
     let cwd = std::env::current_dir().map_err(|e| SpnError::ConfigError(e.to_string()))?;
 
-    println!("{}", "🔍 Interactive Sync Mode".cyan().bold());
-    println!("{}", "Analyzing changes...".dimmed());
+    println!("{}", ds::primary("🔍 Interactive Sync Mode"));
+    println!("{}", ds::muted("Analyzing changes..."));
     println!();
 
     // Determine targets
@@ -354,7 +354,7 @@ async fn run_interactive_sync(config: &SyncConfig, target_filter: Option<&str>) 
     if targets.is_empty() {
         println!(
             "{}",
-            "⚠️  No IDE configurations found in current directory.".yellow()
+            ds::warning("⚠️  No IDE configurations found in current directory.")
         );
         return Ok(());
     }
@@ -398,19 +398,19 @@ async fn run_interactive_sync(config: &SyncConfig, target_filter: Option<&str>) 
 
     // If no changes, just inform the user
     if diff_batch.is_empty() {
-        println!("{}", "✓ No changes detected".green());
+        println!("{}", ds::success("✓ No changes detected"));
         println!("   All configurations are already up to date.");
         return Ok(());
     }
 
     // Show diffs and ask for confirmation
     if !diff_batch.confirm() {
-        println!("{}", "❌ Sync cancelled".yellow());
+        println!("{}", ds::warning("❌ Sync cancelled"));
         return Ok(());
     }
 
     println!();
-    println!("{}", "✅ Confirmed, applying changes...".green());
+    println!("{}", ds::success("✅ Confirmed, applying changes..."));
     println!();
 
     // Now run the actual sync

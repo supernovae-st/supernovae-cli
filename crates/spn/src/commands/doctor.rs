@@ -10,7 +10,7 @@ use crate::interop::binary::{BinaryRunner, BinaryType};
 use crate::interop::npm::NpmClient;
 use crate::ux;
 
-use console::style;
+use crate::ux::design_system as ds;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -86,19 +86,19 @@ impl Check {
 
     fn print(&self) {
         let (icon, name_style) = match self.status {
-            Status::Ok => (style("✓").green().bold(), style(&self.name).green()),
-            Status::Warning => (style("!").yellow().bold(), style(&self.name).yellow()),
-            Status::Error => (style("✗").red().bold(), style(&self.name).red()),
+            Status::Ok => (ds::success("✓").bold(), ds::success(&self.name)),
+            Status::Warning => (ds::warning("!").bold(), ds::warning(&self.name)),
+            Status::Error => (ds::error("✗").bold(), ds::error(&self.name)),
         };
 
         if let Some(detail) = &self.detail {
-            println!("  {} {} {}", icon, name_style, style(detail).dim());
+            println!("  {} {} {}", icon, name_style, ds::muted(detail));
         } else {
             println!("  {} {}", icon, name_style);
         }
 
         if let Some(hint) = &self.hint {
-            println!("    {} {}", style("→").cyan(), style(hint).cyan());
+            println!("    {} {}", ds::primary("→"), ds::primary(hint));
         }
     }
 }
@@ -111,9 +111,9 @@ pub async fn run() -> Result<()> {
     println!();
     println!(
         "  {}{}{}",
-        style("spn doctor").cyan().bold(),
-        style(" · ").dim(),
-        style("System Health Check").dim()
+        ds::primary("spn doctor"),
+        ds::muted(" · "),
+        ds::muted("System Health Check")
     );
     println!();
 
@@ -122,8 +122,8 @@ pub async fn run() -> Result<()> {
     let mut ok_count = 0;
 
     // ─── TOOLS ───────────────────────────────────────────────────────────────
-    println!("{}", style("  Tools").bold());
-    println!("  {}", style("─".repeat(50)).dim());
+    println!("{}", ds::highlight("  Tools"));
+    println!("  {}", ds::muted("─".repeat(50)));
 
     let tool_checks = check_tools();
     for check in &tool_checks {
@@ -137,8 +137,8 @@ pub async fn run() -> Result<()> {
     println!();
 
     // ─── ECOSYSTEM ───────────────────────────────────────────────────────────
-    println!("{}", style("  Ecosystem").bold());
-    println!("  {}", style("─".repeat(50)).dim());
+    println!("{}", ds::highlight("  Ecosystem"));
+    println!("  {}", ds::muted("─".repeat(50)));
 
     let ecosystem_checks = check_ecosystem();
     for check in &ecosystem_checks {
@@ -152,8 +152,8 @@ pub async fn run() -> Result<()> {
     println!();
 
     // ─── STORAGE ─────────────────────────────────────────────────────────────
-    println!("{}", style("  Storage").bold());
-    println!("  {}", style("─".repeat(50)).dim());
+    println!("{}", ds::highlight("  Storage"));
+    println!("  {}", ds::muted("─".repeat(50)));
 
     let storage_checks = check_storage();
     for check in &storage_checks {
@@ -167,8 +167,8 @@ pub async fn run() -> Result<()> {
     println!();
 
     // ─── PROJECT ─────────────────────────────────────────────────────────────
-    println!("{}", style("  Project").bold());
-    println!("  {}", style("─".repeat(50)).dim());
+    println!("{}", ds::highlight("  Project"));
+    println!("  {}", ds::muted("─".repeat(50)));
 
     let project_checks = check_project();
     for check in &project_checks {
@@ -185,34 +185,32 @@ pub async fn run() -> Result<()> {
     let elapsed = start.elapsed();
     let total = ok_count + warnings + errors;
 
-    println!("  {}", style("─".repeat(50)).dim());
+    println!("  {}", ds::muted("─".repeat(50)));
 
     if errors == 0 && warnings == 0 {
         println!(
             "  {} {} {} {}",
-            style("✓").green().bold(),
-            style("All systems operational").green().bold(),
-            style(format!("({} checks in {:?})", total, elapsed)).dim(),
-            style("✦").cyan()
+            ds::success("✓").bold(),
+            ds::success("All systems operational").bold(),
+            ds::muted(format!("({} checks in {:?})", total, elapsed)),
+            ds::primary("✦")
         );
     } else if errors == 0 {
         println!(
             "  {} {} {}",
-            style("!").yellow().bold(),
-            style(format!("System ready with {} warning(s)", warnings)).yellow(),
-            style(format!("({} checks in {:?})", total, elapsed)).dim()
+            ds::warning("!").bold(),
+            ds::warning(format!("System ready with {} warning(s)", warnings)),
+            ds::muted(format!("({} checks in {:?})", total, elapsed))
         );
     } else {
         println!(
             "  {} {} {}",
-            style("✗").red().bold(),
-            style(format!(
+            ds::error("✗").bold(),
+            ds::error(format!(
                 "{} error(s), {} warning(s) found",
                 errors, warnings
-            ))
-            .red()
-            .bold(),
-            style(format!("({} checks in {:?})", total, elapsed)).dim()
+            )).bold(),
+            ds::muted(format!("({} checks in {:?})", total, elapsed))
         );
     }
 

@@ -31,6 +31,8 @@ mod sync;
 mod ux;
 mod welcome;
 
+use crate::ux::design_system as ds;
+
 // ============================================================================
 // CLI STYLES - Colorized help for v0.14.0
 // ============================================================================
@@ -988,7 +990,7 @@ async fn handle_first_run() -> error::Result<()> {
                 println!();
                 println!(
                     "  {} Starting setup...",
-                    console::style("→").cyan()
+                    ds::primary("→")
                 );
                 println!();
 
@@ -1019,8 +1021,8 @@ async fn handle_first_run() -> error::Result<()> {
                 println!();
                 println!(
                     "  {} Run {} anytime to get started.",
-                    console::style("✓").green(),
-                    console::style("spn setup").cyan()
+                    ds::success("✓"),
+                    ds::primary("spn setup")
                 );
                 println!();
                 return Ok(());
@@ -1060,12 +1062,12 @@ async fn main() {
                 println!();
                 println!(
                     "  {} {}",
-                    console::style("spn").cyan().bold(),
-                    console::style(format!("v{}", env!("CARGO_PKG_VERSION"))).dim()
+                    ds::primary("spn"),
+                    ds::muted(format!("v{}", env!("CARGO_PKG_VERSION")))
                 );
                 println!();
-                println!("  Run {} to see all commands", console::style("spn --help").cyan());
-                println!("  Run {} to learn about features", console::style("spn topic").cyan());
+                println!("  Run {} to see all commands", ds::primary("spn --help"));
+                println!("  Run {} to learn about features", ds::primary("spn topic"));
                 println!();
                 std::process::exit(0);
             }

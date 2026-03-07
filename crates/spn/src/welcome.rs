@@ -3,7 +3,7 @@
 //! Provides an engaging, helpful introduction to spn
 //! with guided options for getting started.
 
-use console::style;
+use crate::ux::design_system as ds;
 use dialoguer::{theme::ColorfulTheme, Select};
 
 /// Actions the user can take from the welcome screen
@@ -24,104 +24,104 @@ pub fn show() -> Result<WelcomeAction, dialoguer::Error> {
     println!();
     println!(
         "{}",
-        style("╭─────────────────────────────────────────────────────────────╮").cyan()
+        ds::primary("╭─────────────────────────────────────────────────────────────╮")
     );
     println!(
         "{}",
-        style("│                                                             │").cyan()
+        ds::primary("│                                                             │")
     );
     println!(
         "{}  {} {}                {}",
-        style("│").cyan(),
-        style("🚀").bold(),
-        style("Welcome to spn").cyan().bold(),
-        style("│").cyan()
+        ds::primary("│"),
+        ds::highlight("🚀"),
+        ds::primary("Welcome to spn"),
+        ds::primary("│")
     );
     println!(
         "{}     {}      {}",
-        style("│").cyan(),
-        style("SuperNovae Package Manager").dim(),
-        style("│").cyan()
+        ds::primary("│"),
+        ds::muted("SuperNovae Package Manager"),
+        ds::primary("│")
     );
     println!(
         "{}                                                             {}",
-        style("│").cyan(),
-        style("│").cyan()
+        ds::primary("│"),
+        ds::primary("│")
     );
     println!(
         "{}{}{}",
-        style("├").cyan(),
-        style("─────────────────────────────────────────────────────────────").cyan(),
-        style("┤").cyan()
+        ds::primary("├"),
+        ds::primary("─────────────────────────────────────────────────────────────"),
+        ds::primary("┤")
     );
     println!(
         "{}                                                             {}",
-        style("│").cyan(),
-        style("│").cyan()
+        ds::primary("│"),
+        ds::primary("│")
     );
     println!(
         "{}   Your AI development toolkit for:                         {}",
-        style("│").cyan(),
-        style("│").cyan()
+        ds::primary("│"),
+        ds::primary("│")
     );
     println!(
         "{}                                                             {}",
-        style("│").cyan(),
-        style("│").cyan()
+        ds::primary("│"),
+        ds::primary("│")
     );
     println!(
         "{}   {} Managing AI workflows and schemas                  {}",
-        style("│").cyan(),
-        style("📦").bold(),
-        style("│").cyan()
+        ds::primary("│"),
+        ds::highlight("📦"),
+        ds::primary("│")
     );
     println!(
         "{}   {} Securing API keys for LLM providers                {}",
-        style("│").cyan(),
-        style("🔐").bold(),
-        style("│").cyan()
+        ds::primary("│"),
+        ds::highlight("🔐"),
+        ds::primary("│")
     );
     println!(
         "{}   {} Syncing tools to your favorite editor              {}",
-        style("│").cyan(),
-        style("🔄").bold(),
-        style("│").cyan()
+        ds::primary("│"),
+        ds::highlight("🔄"),
+        ds::primary("│")
     );
     println!(
         "{}                                                             {}",
-        style("│").cyan(),
-        style("│").cyan()
+        ds::primary("│"),
+        ds::primary("│")
     );
     println!(
         "{}",
-        style("╰─────────────────────────────────────────────────────────────╯").cyan()
+        ds::primary("╰─────────────────────────────────────────────────────────────╯")
     );
     println!();
 
     let choices = vec![
         format!(
             "{} {} {}",
-            style("🎯").bold(),
-            style("Quick Setup").bold(),
-            style("(5 min) - Configure providers, add essential tools").dim()
+            ds::highlight("🎯"),
+            ds::highlight("Quick Setup"),
+            ds::muted("(5 min) - Configure providers, add essential tools")
         ),
         format!(
             "{} {} {}",
-            style("📖").bold(),
-            style("Take a Tour").bold(),
-            style("- Learn what spn can do").dim()
+            ds::highlight("📖"),
+            ds::highlight("Take a Tour"),
+            ds::muted("- Learn what spn can do")
         ),
         format!(
             "{} {} {}",
-            style("❔").bold(),
-            style("Show Help").bold(),
-            style("- See all commands").dim()
+            ds::highlight("❔"),
+            ds::highlight("Show Help"),
+            ds::muted("- See all commands")
         ),
         format!(
             "{} {} {}",
-            style("⏭️").bold(),
-            style("Skip").bold(),
-            style("- I'll explore on my own").dim()
+            ds::highlight("⏭️"),
+            ds::highlight("Skip"),
+            ds::muted("- I'll explore on my own")
         ),
     ];
 
@@ -142,7 +142,7 @@ pub fn show() -> Result<WelcomeAction, dialoguer::Error> {
 /// Display the feature tour
 pub fn show_tour() {
     println!();
-    println!("{}", style("🧭 spn Feature Tour").cyan().bold());
+    println!("{}", ds::primary("🧭 spn Feature Tour"));
     println!();
 
     let features = [
@@ -181,21 +181,21 @@ pub fn show_tour() {
     for (i, (name, desc, cmd)) in features.iter().enumerate() {
         println!(
             "  {} {}",
-            style(format!("{}.", i + 1)).cyan().bold(),
-            style(*name).bold()
+            ds::primary(format!("{}.", i + 1)),
+            ds::highlight(*name)
         );
-        println!("     {}", style(*desc).dim());
+        println!("     {}", ds::muted(*desc));
         println!(
             "     {} {}",
-            style("$").dim(),
-            style(*cmd).cyan()
+            ds::muted("$"),
+            ds::command(*cmd)
         );
         println!();
     }
 
     println!(
         "{}",
-        style("Run `spn topic` to explore any of these in detail.").dim()
+        ds::muted("Run `spn topic` to explore any of these in detail.")
     );
     println!();
 }
@@ -205,29 +205,29 @@ pub fn show_setup_complete() {
     println!();
     println!(
         "{} {}",
-        style("✨").bold(),
-        style("Setup complete!").green().bold()
+        ds::highlight("✨"),
+        ds::success("Setup complete!")
     );
     println!();
-    println!("{}", style("What's next?").bold());
+    println!("{}", ds::highlight("What's next?"));
     println!();
     println!(
         "  {} {}  {}",
-        style("$").dim(),
-        style("spn doctor").cyan(),
-        style("Verify your setup").dim()
+        ds::muted("$"),
+        ds::command("spn doctor"),
+        ds::muted("Verify your setup")
     );
     println!(
         "  {} {}  {}",
-        style("$").dim(),
-        style("spn mcp list").cyan(),
-        style("See installed MCP servers").dim()
+        ds::muted("$"),
+        ds::command("spn mcp list"),
+        ds::muted("See installed MCP servers")
     );
     println!(
         "  {} {}  {}",
-        style("$").dim(),
-        style("spn sync").cyan(),
-        style("Sync to your editor").dim()
+        ds::muted("$"),
+        ds::command("spn sync"),
+        ds::muted("Sync to your editor")
     );
     println!();
 }

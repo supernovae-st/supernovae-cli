@@ -5,7 +5,7 @@
 
 #![allow(dead_code)]
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 use crate::error::{Result, SpnError};
 use crate::index::{DependencyResolver, Downloader, IndexClient};
@@ -83,7 +83,7 @@ pub async fn run(package: &str, pkg_type: Option<&str>) -> Result<()> {
         .or_else(|| PackageType::from_scope(package));
 
     if let Some(ref pt) = package_type {
-        println!("   {} Type: {:?}", "→".blue(), pt);
+        println!("   {} Type: {:?}", ds::primary("→"), pt);
     }
 
     let options = AddOptions {
@@ -101,8 +101,8 @@ pub async fn run(package: &str, pkg_type: Option<&str>) -> Result<()> {
 pub async fn run_with_options(options: AddOptions) -> Result<()> {
     println!(
         "{} Adding package: {}",
-        "📦".cyan(),
-        options.package.green()
+        ds::primary("📦"),
+        ds::success(&options.package)
     );
 
     // 1. Load or create manifest
@@ -110,7 +110,7 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
     let mut manifest = if manifest_path.exists() {
         SpnManifest::from_file(&manifest_path).map_err(|_| SpnError::ManifestNotFound)?
     } else {
-        println!("   {} Creating new spn.yaml", "→".blue());
+        println!("   {} Creating new spn.yaml", ds::primary("→"));
         SpnManifest::default()
     };
 
@@ -118,7 +118,7 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
     let client = IndexClient::new();
     let mut resolver = DependencyResolver::new(client);
 
-    println!("   {} Resolving dependencies...", "→".blue());
+    println!("   {} Resolving dependencies...", ds::primary("→"));
 
     let packages = resolver
         .resolve(&options.package, options.version.as_deref())
@@ -131,15 +131,15 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
     println!();
     println!(
         "   {} {} package(s) to install:",
-        "→".blue(),
+        ds::primary("→"),
         packages.len()
     );
 
     for pkg in &packages {
         let marker = if pkg.is_direct {
-            "●".green()
+            ds::success("●")
         } else {
-            "○".blue()
+            ds::primary("○")
         };
         println!("     {} {}@{}", marker, pkg.name, pkg.version);
     }
@@ -147,7 +147,7 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
     if stats.transitive > 0 {
         println!(
             "   {} ({} direct, {} transitive)",
-            "ℹ".cyan(),
+            ds::primary("ℹ"),
             stats.direct,
             stats.transitive
         );
@@ -166,17 +166,17 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
             options.package.clone(),
             crate::manifest::Dependency::Simple(version_constraint.clone()),
         );
-        println!("   {} Added to dev-dependencies", "→".blue());
+        println!("   {} Added to dev-dependencies", ds::primary("→"));
     } else {
         manifest.add_dependency(&options.package, &version_constraint);
-        println!("   {} Added to dependencies", "→".blue());
+        println!("   {} Added to dependencies", ds::primary("→"));
     }
 
     // 5. Save manifest
     manifest
         .write_to_file(&manifest_path)
         .map_err(|e| SpnError::ConfigError(format!("Failed to save manifest: {}", e)))?;
-    println!("   {} Updated spn.yaml", "✓".green());
+    println!("   {} Updated spn.yaml", ds::success("✓"));
 
     // 6. Install all packages (unless manifest-only)
     if !options.manifest_only {
@@ -198,7 +198,7 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
         for (i, pkg) in packages.iter().enumerate() {
             println!(
                 "   {} [{}/{}] Installing {}@{}...",
-                "→".blue(),
+                ds::primary("→"),
                 i + 1,
                 packages.len(),
                 pkg.name,
@@ -228,13 +228,13 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
             .write_to_file(&lockfile_path)
             .map_err(|e| SpnError::ConfigError(format!("Failed to save lockfile: {}", e)))?;
 
-        println!("   {} Updated spn.lock", "✓".green());
+        println!("   {} Updated spn.lock", ds::success("✓"));
     }
 
     println!(
         "{} Successfully added {} ({} package(s))",
-        "✨".yellow(),
-        options.package.green(),
+        ds::warning("✨"),
+        ds::success(&options.package),
         packages.len()
     );
     Ok(())

@@ -9,9 +9,9 @@ use crate::secrets::{
     global_secrets_path, is_gitignored, mask_api_key, project_env_path, provider_env_var,
     store_in_dotenv, store_in_global, validate_key_format, SpnKeyring, StorageBackend,
 };
+use crate::ux::design_system as ds;
 
 use anyhow::Result;
-use colored::Colorize;
 use dialoguer::{theme::ColorfulTheme, Confirm, Password, Select};
 use zeroize::Zeroizing;
 
@@ -101,30 +101,27 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     println!();
     println!(
         "{}",
-        "╔═══════════════════════════════════════════════════════════════════════════════╗".cyan()
+        ds::primary("╔═══════════════════════════════════════════════════════════════════════════════╗")
     );
     println!(
         "{}",
-        "║  🔑 API KEY SETUP WIZARD                                                      ║"
-            .to_string()
-            .cyan()
+        ds::primary("║  🔑 API KEY SETUP WIZARD                                                      ║")
     );
     println!(
         "{}",
-        "╠═══════════════════════════════════════════════════════════════════════════════╣".cyan()
+        ds::primary("╠═══════════════════════════════════════════════════════════════════════════════╣")
     );
     println!(
         "{}",
-        format!(
+        ds::primary(format!(
             "║  Provider: {:<20}  Environment Variable: {:<20}  ║",
-            provider.bold(),
-            env_var.dimmed()
-        )
-        .cyan()
+            ds::highlight(provider),
+            ds::muted(env_var)
+        ))
     );
     println!(
         "{}",
-        "╚═══════════════════════════════════════════════════════════════════════════════╝".cyan()
+        ds::primary("╚═══════════════════════════════════════════════════════════════════════════════╝")
     );
     println!();
 
@@ -132,19 +129,18 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     if let Some(url) = get_api_key_url(provider) {
         println!(
             "  {} {}",
-            "Get your API key at:".dimmed(),
-            url.cyan().underline()
+            ds::muted("Get your API key at:"),
+            ds::url(url)
         );
         println!();
     }
 
     // Step 1: Storage Selection
-    println!("{}", "STEP 1/3: Choose Storage Location".bold().underline());
+    println!("{}", ds::highlight("STEP 1/3: Choose Storage Location"));
     println!();
     println!(
         "{}",
-        "Where should this API key be stored? Each option has different security tradeoffs:"
-            .dimmed()
+        ds::muted("Where should this API key be stored? Each option has different security tradeoffs:")
     );
     println!();
 
@@ -160,9 +156,9 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
             format!(
                 "{}{}\n      {}\n      {}",
                 opt.title,
-                rec.green().bold(),
-                opt.description.dimmed(),
-                opt.security_note.dimmed()
+                ds::success(rec),
+                ds::muted(opt.description),
+                ds::muted(opt.security_note)
             )
         })
         .collect();
@@ -176,7 +172,7 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     let storage = match selection {
         Some(idx) => STORAGE_OPTIONS[idx].backend,
         None => {
-            println!("{}", "Cancelled.".dimmed());
+            println!("{}", ds::muted("Cancelled."));
             return Ok(None);
         }
     };
@@ -184,9 +180,9 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     println!();
     println!(
         "  {} Selected: {} {}",
-        "✓".green(),
+        ds::success(ds::icon::SUCCESS),
         storage.emoji(),
-        storage.description().bold()
+        ds::highlight(storage.description())
     );
     println!();
 
@@ -197,33 +193,27 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
             if !is_gitignored(&path) {
                 println!(
                     "{}",
-                    "╭─────────────────────────────────────────────────────────────────────────────╮"
-                        .yellow()
+                    ds::warning("╭─────────────────────────────────────────────────────────────────────────────╮")
                 );
                 println!(
                     "{}",
-                    "│  ⚠️  WARNING: .env is NOT in .gitignore!                                    │"
-                        .yellow()
+                    ds::warning("│  ⚠️  WARNING: .env is NOT in .gitignore!                                    │")
                 );
                 println!(
                     "{}",
-                    "│                                                                             │"
-                        .yellow()
+                    ds::warning("│                                                                             │")
                 );
                 println!(
                     "{}",
-                    "│  Your API key could be accidentally committed to version control.          │"
-                        .yellow()
+                    ds::warning("│  Your API key could be accidentally committed to version control.          │")
                 );
                 println!(
                     "{}",
-                    "│  Add '.env' to .gitignore before proceeding, or choose a different option. │"
-                        .yellow()
+                    ds::warning("│  Add '.env' to .gitignore before proceeding, or choose a different option. │")
                 );
                 println!(
                     "{}",
-                    "╰─────────────────────────────────────────────────────────────────────────────╯"
-                        .yellow()
+                    ds::warning("╰─────────────────────────────────────────────────────────────────────────────╯")
                 );
                 println!();
 
@@ -240,48 +230,39 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
         StorageBackend::Shell => {
             println!(
                 "{}",
-                "╭─────────────────────────────────────────────────────────────────────────────╮"
-                    .yellow()
+                ds::warning("╭─────────────────────────────────────────────────────────────────────────────╮")
             );
             println!(
                 "{}",
-                "│  ⚠️  SHELL EXPORT MODE                                                      │"
-                    .yellow()
+                ds::warning("│  ⚠️  SHELL EXPORT MODE                                                      │")
             );
             println!(
                 "{}",
-                "│                                                                             │"
-                    .yellow()
+                ds::warning("│                                                                             │")
             );
             println!(
                 "{}",
-                "│  Your full API key will be displayed in the terminal.                      │"
-                    .yellow()
+                ds::warning("│  Your full API key will be displayed in the terminal.                      │")
             );
             println!(
                 "{}",
-                "│  This may be visible in:                                                   │"
-                    .yellow()
+                ds::warning("│  This may be visible in:                                                   │")
             );
             println!(
                 "{}",
-                "│    • Terminal scrollback history                                           │"
-                    .yellow()
+                ds::warning("│    • Terminal scrollback history                                           │")
             );
             println!(
                 "{}",
-                "│    • Screen recordings or screenshots                                      │"
-                    .yellow()
+                ds::warning("│    • Screen recordings or screenshots                                      │")
             );
             println!(
                 "{}",
-                "│    • Shared terminal sessions                                              │"
-                    .yellow()
+                ds::warning("│    • Shared terminal sessions                                              │")
             );
             println!(
                 "{}",
-                "╰─────────────────────────────────────────────────────────────────────────────╯"
-                    .yellow()
+                ds::warning("╰─────────────────────────────────────────────────────────────────────────────╯")
             );
             println!();
 
@@ -298,19 +279,18 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     }
 
     // Step 2: Key Input
-    println!("{}", "STEP 2/3: Enter API Key".bold().underline());
+    println!("{}", ds::highlight("STEP 2/3: Enter API Key"));
     println!();
     println!(
         "{}",
-        format!(
+        ds::muted(format!(
             "Enter your {} API key. It will be validated before storage.",
             provider
-        )
-        .dimmed()
+        ))
     );
     println!(
         "{}",
-        "Your input is hidden and will be securely handled.".dimmed()
+        ds::muted("Your input is hidden and will be securely handled.")
     );
     println!();
 
@@ -324,10 +304,10 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
         // Validate key format
         let validation = validate_key_format(provider, &key);
         if validation.is_valid() {
-            println!("  {} Key format valid", "✓".green());
+            println!("  {} Key format valid", ds::success(ds::icon::SUCCESS));
             break key;
         } else {
-            println!("  {} Invalid format: {}", "✗".red(), validation);
+            println!("  {} Invalid format: {}", ds::error(ds::icon::ERROR), validation);
             println!();
 
             let retry = Confirm::with_theme(&theme)
@@ -345,7 +325,7 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
     println!();
 
     // Step 3: Confirmation
-    println!("{}", "STEP 3/3: Confirm".bold().underline());
+    println!("{}", ds::highlight("STEP 3/3: Confirm"));
     println!();
 
     let location = match storage {
@@ -361,43 +341,42 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
 
     println!(
         "{}",
-        "╭─────────────────────────────────────────────────────────────────────────────╮".cyan()
+        ds::primary("╭─────────────────────────────────────────────────────────────────────────────╮")
     );
     println!(
         "{}",
-        "│  📋 SUMMARY                                                                 │".cyan()
+        ds::primary("│  📋 SUMMARY                                                                 │")
     );
     println!(
         "{}",
-        "├─────────────────────────────────────────────────────────────────────────────┤".cyan()
+        ds::primary("├─────────────────────────────────────────────────────────────────────────────┤")
     );
     println!(
         "{}",
-        format!("│  Provider:  {:<63} │", provider.bold()).cyan()
+        ds::primary(format!("│  Provider:  {:<63} │", ds::highlight(provider)))
     );
     println!(
         "{}",
-        format!("│  Key:       {:<63} │", masked.dimmed()).cyan()
+        ds::primary(format!("│  Key:       {:<63} │", ds::muted(&masked)))
     );
     println!(
         "{}",
-        format!("│  Storage:   {} {:<58} │", storage.emoji(), storage).cyan()
+        ds::primary(format!("│  Storage:   {} {:<58} │", storage.emoji(), storage))
     );
     println!(
         "{}",
-        format!("│  Location:  {:<63} │", location.dimmed()).cyan()
+        ds::primary(format!("│  Location:  {:<63} │", ds::muted(&location)))
     );
     println!(
         "{}",
-        format!(
+        ds::primary(format!(
             "│  Security:  {:<63} │",
             format!("Level {}/5", storage.security_level())
-        )
-        .cyan()
+        ))
     );
     println!(
         "{}",
-        "╰─────────────────────────────────────────────────────────────────────────────╯".cyan()
+        ds::primary("╰─────────────────────────────────────────────────────────────────────────────╯")
     );
     println!();
 
@@ -407,13 +386,13 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
         .interact()?;
 
     if !confirm {
-        println!("{}", "Cancelled.".dimmed());
+        println!("{}", ds::muted("Cancelled."));
         return Ok(None);
     }
 
     // Store the key
     println!();
-    print!("  {} Storing key... ", "→".cyan());
+    print!("  {} Storing key... ", ds::primary(ds::icon::ARROW));
 
     let result = match storage {
         StorageBackend::Keychain => SpnKeyring::set(provider, &api_key).map_err(|e| e.into()),
@@ -426,16 +405,16 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
             // Shell mode: just print the export command
             println!();
             println!();
-            println!("{}", "Export command:".bold());
+            println!("{}", ds::highlight("Export command:"));
             println!();
-            println!("  {}", format!("export {}='{}'", env_var, *api_key).cyan());
+            println!("  {}", ds::command(format!("export {}='{}'", env_var, *api_key)));
             println!();
             println!(
                 "{}",
-                "Copy this command and add it to your shell profile:".dimmed()
+                ds::muted("Copy this command and add it to your shell profile:")
             );
-            println!("  • {} for Zsh", "~/.zshrc".cyan());
-            println!("  • {} for Bash", "~/.bashrc".cyan());
+            println!("  • {} for Zsh", ds::primary("~/.zshrc"));
+            println!("  • {} for Bash", ds::primary("~/.bashrc"));
             println!();
             return Ok(Some(WizardResult {
                 provider: provider.to_string(),
@@ -448,64 +427,54 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
 
     match result {
         Ok(()) => {
-            println!("{}", "Done!".green().bold());
+            println!("{}", ds::success("Done!"));
             println!();
 
             // Success message with recommendations
             println!(
                 "{}",
-                "╭─────────────────────────────────────────────────────────────────────────────╮"
-                    .green()
+                ds::success("╭─────────────────────────────────────────────────────────────────────────────╮")
             );
             println!(
                 "{}",
-                "│  ✅ SUCCESS                                                                 │"
-                    .green()
+                ds::success("│  ✅ SUCCESS                                                                 │")
             );
             println!(
                 "{}",
-                "├─────────────────────────────────────────────────────────────────────────────┤"
-                    .green()
+                ds::success("├─────────────────────────────────────────────────────────────────────────────┤")
             );
             println!(
                 "{}",
-                format!(
+                ds::success(format!(
                     "│  Your {} API key is now stored securely.{:width$}│",
                     provider,
                     "",
                     width = 47 - provider.len()
-                )
-                .green()
+                ))
             );
             println!(
                 "{}",
-                "│                                                                             │"
-                    .green()
+                ds::success("│                                                                             │")
             );
             println!(
                 "{}",
-                "│  Next steps:                                                                │"
-                    .green()
+                ds::success("│  Next steps:                                                                │")
             );
             println!(
                 "{}",
-                "│    • Run 'spn provider test' to verify the key works                       │"
-                    .green()
+                ds::success("│    • Run 'spn provider test' to verify the key works                       │")
             );
             println!(
                 "{}",
-                "│    • Run 'spn provider list --show-source' to see all configured keys      │"
-                    .green()
+                ds::success("│    • Run 'spn provider list --show-source' to see all configured keys      │")
             );
             println!(
                 "{}",
-                "│    • Run 'spn provider status' for a full diagnostics report               │"
-                    .green()
+                ds::success("│    • Run 'spn provider status' for a full diagnostics report               │")
             );
             println!(
                 "{}",
-                "╰─────────────────────────────────────────────────────────────────────────────╯"
-                    .green()
+                ds::success("╰─────────────────────────────────────────────────────────────────────────────╯")
             );
             println!();
 
@@ -517,9 +486,9 @@ pub fn run_wizard(provider: &str) -> Result<Option<WizardResult>> {
             }))
         }
         Err(e) => {
-            println!("{}", "Failed!".red().bold());
+            println!("{}", ds::error("Failed!"));
             println!();
-            println!("  {} Error: {}", "✗".red(), e);
+            println!("  {} Error: {}", ds::error(ds::icon::ERROR), e);
             Err(e)
         }
     }

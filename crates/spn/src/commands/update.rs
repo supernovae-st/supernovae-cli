@@ -2,7 +2,7 @@
 //!
 //! Updates installed packages to their latest versions.
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 use crate::error::{Result, SpnError};
 use crate::index::{Downloader, IndexClient};
@@ -31,13 +31,13 @@ pub async fn run(package: Option<&str>) -> Result<()> {
     };
 
     if packages_to_update.is_empty() {
-        println!("   {} No packages to update", "ℹ️".yellow());
+        println!("   {} No packages to update", ds::warning("ℹ️"));
         return Ok(());
     }
 
     println!(
         "{} Updating {} package(s)...",
-        "🔄".cyan(),
+        ds::primary("🔄"),
         packages_to_update.len()
     );
 
@@ -53,7 +53,7 @@ pub async fn run(package: Option<&str>) -> Result<()> {
                 if latest.version == installed.version {
                     println!(
                         "   {} {} already at latest ({})",
-                        "✓".green(),
+                        ds::success("✓"),
                         name,
                         installed.version
                     );
@@ -62,7 +62,7 @@ pub async fn run(package: Option<&str>) -> Result<()> {
 
                 println!(
                     "   {} {} {} → {}",
-                    "↑".blue(),
+                    ds::primary("↑"),
                     name,
                     installed.version,
                     latest.version
@@ -81,13 +81,13 @@ pub async fn run(package: Option<&str>) -> Result<()> {
                 updated_count += 1;
             }
             Err(e) => {
-                println!("   {} {} failed: {}", "✗".red(), name, e);
+                println!("   {} {} failed: {}", ds::error("✗"), name, e);
             }
         }
     }
 
     println!();
-    println!("{} Updated {} package(s)", "✨".yellow(), updated_count);
+    println!("{} Updated {} package(s)", ds::warning("✨"), updated_count);
 
     Ok(())
 }

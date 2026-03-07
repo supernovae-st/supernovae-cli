@@ -2,7 +2,7 @@
 //!
 //! Displays detailed information about a package from the registry.
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 use serde::Serialize;
 
 use crate::error::{Result, SpnError};
@@ -28,7 +28,7 @@ struct VersionInfo {
 /// Run the info command.
 pub async fn run(package: &str, json: bool) -> Result<()> {
     if !json {
-        println!("{} Package: {}", "ℹ️".cyan(), package.green());
+        println!("{} Package: {}", ds::primary("ℹ️"), ds::success(package));
     }
 
     let client = IndexClient::new();
@@ -75,25 +75,25 @@ pub async fn run(package: &str, json: bool) -> Result<()> {
 
     // Human-readable output
     println!();
-    println!("   {}", "Versions:".bold());
+    println!("   {}", ds::highlight("Versions:"));
     for entry in entries.iter().rev().take(5) {
         let status = if entry.yanked {
-            "(yanked)".red().to_string()
+            ds::error("(yanked)").to_string()
         } else if Some(entry) == latest {
-            "(latest)".green().to_string()
+            ds::success("(latest)").to_string()
         } else {
             String::new()
         };
-        println!("   {} {} {}", "•".blue(), entry.version, status);
+        println!("   {} {} {}", ds::primary("•"), entry.version, status);
     }
 
     if entries.len() > 5 {
-        println!("   {} ... and {} more", "•".blue(), entries.len() - 5);
+        println!("   {} ... and {} more", ds::primary("•"), entries.len() - 5);
     }
 
     if let Some(ref version) = installed {
         println!();
-        println!("   {} Installed: {}", "✓".green(), version);
+        println!("   {} Installed: {}", ds::success("✓"), version);
     }
 
     Ok(())

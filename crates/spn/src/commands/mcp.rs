@@ -8,7 +8,7 @@ use crate::interop::npm::{mcp_aliases, NpmClient};
 use crate::mcp::{config_manager, McpConfigManager, McpScope, McpServer};
 use crate::McpCommands;
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 /// Run an MCP server management command.
 pub async fn run(command: McpCommands) -> Result<()> {
@@ -49,31 +49,31 @@ async fn run_add(
 ) -> Result<()> {
     // Check npm availability
     if !npm.is_available() {
-        eprintln!("{}", "Error: npm not found".red());
-        eprintln!("Install Node.js from: {}", "https://nodejs.org".cyan());
+        eprintln!("{}", ds::error("Error: npm not found"));
+        eprintln!("Install Node.js from: {}", ds::primary("https://nodejs.org"));
         return Ok(());
     }
 
     // Determine scope (default to global)
     let scope = determine_scope(global, project);
     let scope_display = match scope {
-        McpScope::Global => "~/.spn/mcp.yaml".dimmed(),
-        McpScope::Project => ".spn/mcp.yaml".dimmed(),
+        McpScope::Global => ds::muted("~/.spn/mcp.yaml"),
+        McpScope::Project => ds::muted(".spn/mcp.yaml"),
     };
 
     // Resolve alias to npm package
     let npm_package = npm.resolve_alias(name);
     println!(
         "{} {} {}",
-        "Installing MCP server:".cyan(),
-        name.bold(),
-        format!("({})", npm_package).dimmed()
+        ds::primary("Installing MCP server:"),
+        ds::highlight(name),
+        ds::muted(format!("({})", npm_package))
     );
 
     // Install via npm (globally)
     npm.install(name)
         .map_err(|e| SpnError::CommandFailed(format!("Failed to install npm package: {}", e)))?;
-    println!("{} {}", "✓".green(), "npm package installed".green());
+    println!("{} {}", ds::success("✓"), ds::success("npm package installed"));
 
     // Create MCP server config
     let server = create_server_from_alias(name, npm);
@@ -83,9 +83,9 @@ async fn run_add(
         .map_err(|e| SpnError::CommandFailed(format!("Failed to add to config: {}", e)))?;
     println!(
         "{} {} {} {}",
-        "✓".green(),
-        "Added to".green(),
-        scope.to_string().green().bold(),
+        ds::success("✓"),
+        ds::success("Added to"),
+        ds::success(scope.to_string()).bold(),
         scope_display
     );
 
@@ -95,13 +95,13 @@ async fn run_add(
     } else {
         println!(
             "{} {}",
-            "→".dimmed(),
-            "Skipped editor sync (--no-sync)".dimmed()
+            ds::muted("→"),
+            ds::muted("Skipped editor sync (--no-sync)")
         );
     }
 
     println!();
-    println!("{}", "Server ready! Usage:".cyan());
+    println!("{}", ds::primary("Server ready! Usage:"));
     println!("  • Nika workflows: automatically available via ~/.spn/mcp.yaml");
     println!("  • Editors: synced via spn sync");
 
@@ -114,29 +114,29 @@ async fn run_remove(mcp: &McpConfigManager, name: &str, global: bool, project: b
 
     println!(
         "{} {} {} {}",
-        "Removing MCP server:".cyan(),
-        name.bold(),
-        "from".dimmed(),
-        scope.to_string().dimmed()
+        ds::primary("Removing MCP server:"),
+        ds::highlight(name),
+        ds::muted("from"),
+        ds::muted(scope.to_string())
     );
 
     match mcp.remove_server(name, scope) {
         Ok(true) => {
-            println!("{} {}", "✓".green(), "Server removed from config".green());
+            println!("{} {}", ds::success("✓"), ds::success("Server removed from config"));
 
             // Note: we don't uninstall from npm as other projects might use it
             println!(
                 "{} {}",
-                "→".dimmed(),
-                "npm package kept (may be used by other projects)".dimmed()
+                ds::muted("→"),
+                ds::muted("npm package kept (may be used by other projects)")
             );
         }
         Ok(false) => {
             println!(
                 "{} {} {}",
-                "⚠".yellow(),
-                "Server not found in".yellow(),
-                scope.to_string().yellow()
+                ds::warning("⚠"),
+                ds::warning("Server not found in"),
+                ds::warning(scope.to_string())
             );
         }
         Err(e) => {
@@ -175,16 +175,16 @@ async fn run_list(mcp: &McpConfigManager, global: bool, project: bool, json: boo
     }
 
     if servers.is_empty() {
-        println!("{}", "No MCP servers configured".yellow());
+        println!("{}", ds::warning("No MCP servers configured"));
         println!();
         println!("Add servers with:");
-        println!("  {} {}", "spn mcp add".cyan(), "<name>".dimmed());
+        println!("  {} {}", ds::primary("spn mcp add"), ds::muted("<name>"));
         println!();
         println!("Available aliases:");
         for (alias, package) in mcp_aliases().iter().take(10) {
-            println!("  {} → {}", alias.cyan(), package.dimmed());
+            println!("  {} → {}", ds::primary(alias), ds::muted(package));
         }
-        println!("  {} more...", "...38".dimmed());
+        println!("  {} more...", ds::muted("...38"));
         return Ok(());
     }
 
@@ -198,49 +198,49 @@ async fn run_list(mcp: &McpConfigManager, global: bool, project: bool, json: boo
     };
     println!(
         "{} {} {}",
-        "MCP Servers".cyan().bold(),
-        format!("({} scope)", scope_label).dimmed(),
-        format!("[{} total]", servers.len()).dimmed()
+        ds::primary("MCP Servers"),
+        ds::muted(format!("({} scope)", scope_label)),
+        ds::muted(format!("[{} total]", servers.len()))
     );
     println!();
 
     // Server list
     for (name, server) in &servers {
         let source_badge = match server.source {
-            Some(crate::mcp::McpSource::Global) => "[G]".blue(),
-            Some(crate::mcp::McpSource::Project) => "[P]".green(),
-            Some(crate::mcp::McpSource::Workflow) => "[W]".yellow(),
-            None => "[ ]".dimmed(),
+            Some(crate::mcp::McpSource::Global) => ds::primary("[G]"),
+            Some(crate::mcp::McpSource::Project) => ds::success("[P]"),
+            Some(crate::mcp::McpSource::Workflow) => ds::warning("[W]"),
+            None => ds::muted("[ ]"),
         };
 
         let enabled_badge = if server.enabled {
-            "✓".green()
+            ds::success("✓")
         } else {
-            "○".dimmed()
+            ds::muted("○")
         };
 
         println!(
             "  {} {} {} {}",
             enabled_badge,
             source_badge,
-            name.bold(),
-            format!("({})", server.command).dimmed()
+            ds::highlight(name),
+            ds::muted(format!("({})", server.command))
         );
 
         // Show description if available
         if let Some(desc) = &server.description {
-            println!("      {}", desc.dimmed());
+            println!("      {}", ds::muted(desc));
         }
     }
 
     println!();
     println!(
         "{} {} {}",
-        "Legend:".dimmed(),
-        "[G]".blue(),
-        "Global".dimmed()
+        ds::muted("Legend:"),
+        ds::primary("[G]"),
+        ds::muted("Global")
     );
-    println!("        {} {}", "[P]".green(), "Project".dimmed());
+    println!("        {} {}", ds::success("[P]"), ds::muted("Project"));
 
     Ok(())
 }
@@ -250,11 +250,11 @@ async fn run_test(npm: &NpmClient, mcp: &McpConfigManager, name: &str) -> Result
     if name == "all" {
         let servers = mcp.list_all_servers()?;
         if servers.is_empty() {
-            println!("{}", "No servers to test".yellow());
+            println!("{}", ds::warning("No servers to test"));
             return Ok(());
         }
 
-        println!("{} {} servers...", "Testing".cyan(), servers.len());
+        println!("{} {} servers...", ds::primary("Testing"), servers.len());
         println!();
 
         for (server_name, _) in &servers {
@@ -280,17 +280,17 @@ async fn run_test(npm: &NpmClient, mcp: &McpConfigManager, name: &str) -> Result
 /// Test a single server.
 fn test_single_server(npm: &NpmClient, name: &str) {
     let _resolved = npm.resolve_alias(name);
-    print!("  {} {}... ", "Testing".cyan(), name.bold());
+    print!("  {} {}... ", ds::primary("Testing"), ds::highlight(name));
 
     match npm.test_server(name) {
         Ok(true) => {
-            println!("{}", "✓ OK".green());
+            println!("{}", ds::success("✓ OK"));
         }
         Ok(false) => {
-            println!("{}", "✗ No response".red());
+            println!("{}", ds::error("✗ No response"));
         }
         Err(e) => {
-            println!("{} {}", "✗ Error:".red(), e);
+            println!("{} {}", ds::error("✗ Error:"), e);
         }
     }
 }
@@ -328,15 +328,15 @@ fn sync_to_editors(_name: &str, sync_to: Option<&str>) {
     if let Some(targets) = sync_to {
         println!(
             "{} {} {}",
-            "→".dimmed(),
-            "Would sync to:".dimmed(),
-            targets.cyan()
+            ds::muted("→"),
+            ds::muted("Would sync to:"),
+            ds::primary(targets)
         );
     } else {
         println!(
             "{} {}",
-            "→".dimmed(),
-            "Will sync to configured editors on next `spn sync`".dimmed()
+            ds::muted("→"),
+            ds::muted("Will sync to configured editors on next `spn sync`")
         );
     }
 }

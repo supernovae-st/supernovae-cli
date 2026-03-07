@@ -13,7 +13,7 @@ use crate::secrets::{
 };
 use crate::SetupCommands;
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 use dialoguer::{theme::ColorfulTheme, Confirm, MultiSelect};
 use std::process::Command;
 
@@ -109,29 +109,29 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
 
     // Step 1: Explain what spn is
     println!();
-    println!("{}", "WHAT IS SPN?".bold().underline());
+    println!("{}", ds::highlight("WHAT IS SPN?").underlined());
     println!();
     println!(
         "{}",
-        "spn (SuperNovae Package Manager) is your AI development toolkit:".dimmed()
+        ds::muted("spn (SuperNovae Package Manager) is your AI development toolkit:")
     );
     println!();
-    println!("  {} {}", "📦".cyan(), "Package Manager".bold());
+    println!("  {} {}", ds::primary("📦"), ds::highlight("Package Manager"));
     println!(
         "     {}",
-        "Install AI workflows, schemas, skills, and MCP servers".dimmed()
+        ds::muted("Install AI workflows, schemas, skills, and MCP servers")
     );
     println!();
-    println!("  {} {}", "🔐".cyan(), "Secrets Manager".bold());
+    println!("  {} {}", ds::primary("🔐"), ds::highlight("Secrets Manager"));
     println!(
         "     {}",
-        "Securely store API keys for LLM providers and MCP tools".dimmed()
+        ds::muted("Securely store API keys for LLM providers and MCP tools")
     );
     println!();
-    println!("  {} {}", "🔄".cyan(), "Sync Manager".bold());
+    println!("  {} {}", ds::primary("🔄"), ds::highlight("Sync Manager"));
     println!(
         "     {}",
-        "Sync packages to Claude Code, VS Code, and other editors".dimmed()
+        ds::muted("Sync packages to Claude Code, VS Code, and other editors")
     );
     println!();
 
@@ -144,7 +144,7 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
     if !proceed {
         println!(
             "{}",
-            "Setup cancelled. Run `spn setup` anytime to continue.".dimmed()
+            ds::muted("Setup cancelled. Run `spn setup` anytime to continue.")
         );
         return Ok(());
     }
@@ -152,7 +152,7 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
     println!();
 
     // Step 2: Detect existing keys
-    println!("{}", "STEP 1/3: Detecting Existing Keys".bold().underline());
+    println!("{}", ds::highlight("STEP 1/3: Detecting Existing Keys").underlined());
     println!();
 
     let audit = security_audit();
@@ -168,16 +168,16 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
     if !in_env.is_empty() {
         println!(
             "  {} Found {} API keys in environment variables:",
-            "🔍".yellow(),
+            ds::warning("🔍"),
             in_env.len()
         );
         for (provider, _, _) in &in_env {
             if let Some((key, _)) = resolve_api_key(provider) {
                 println!(
                     "     {} {} {}",
-                    "•".dimmed(),
-                    provider.bold(),
-                    mask_api_key(&key).dimmed()
+                    ds::muted("•"),
+                    ds::highlight(provider),
+                    ds::muted(mask_api_key(&key))
                 );
             }
         }
@@ -186,67 +186,67 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
         // Offer to migrate
         println!(
             "{}",
-            "╭─────────────────────────────────────────────────────────────────────────────╮"
+            ds::warning("╭─────────────────────────────────────────────────────────────────────────────╮")
                 .yellow()
         );
         println!(
             "{}",
-            "│  💡 RECOMMENDATION: Migrate to OS Keychain                                  │"
+            ds::warning("│  💡 RECOMMENDATION: Migrate to OS Keychain                                  │")
                 .yellow()
         );
         println!(
             "{}",
-            "├─────────────────────────────────────────────────────────────────────────────┤"
+            ds::warning("├─────────────────────────────────────────────────────────────────────────────┤")
                 .yellow()
         );
         println!(
             "{}",
-            "│  Environment variables are convenient but less secure:                      │"
+            ds::warning("│  Environment variables are convenient but less secure:                      │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  • Visible to all processes                                                │"
+            ds::warning("│  • Visible to all processes                                                │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  • May appear in logs and crash reports                                    │"
+            ds::warning("│  • May appear in logs and crash reports                                    │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  • Not encrypted at rest                                                   │"
+            ds::warning("│  • Not encrypted at rest                                                   │")
                 .yellow()
         );
         println!(
             "{}",
-            "│                                                                             │"
+            ds::warning("│                                                                             │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  OS Keychain provides:                                                      │"
+            ds::warning("│  OS Keychain provides:                                                      │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  • Encrypted storage protected by your login                               │"
+            ds::warning("│  • Encrypted storage protected by your login                               │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  • Not visible to other processes                                          │"
+            ds::warning("│  • Not visible to other processes                                          │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  • Automatic cleanup on logout                                             │"
+            ds::warning("│  • Automatic cleanup on logout                                             │")
                 .yellow()
         );
         println!(
             "{}",
-            "╰─────────────────────────────────────────────────────────────────────────────╯"
+            ds::warning("╰─────────────────────────────────────────────────────────────────────────────╯")
                 .yellow()
         );
         println!();
@@ -263,54 +263,54 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
             if report.migrated > 0 {
                 println!(
                     "  {} {} keys migrated to OS Keychain",
-                    "✓".green(),
+                    ds::command("✓"),
                     report.migrated
                 );
             }
             if !report.errors.is_empty() {
                 for (provider, error) in &report.errors {
-                    println!("  {} {}: {}", "✗".red(), provider, error);
+                    println!("  {} {}: {}", ds::error("✗"), provider, error);
                 }
             }
         }
     } else if !in_keychain.is_empty() {
         println!(
             "  {} Found {} API keys already in OS Keychain:",
-            "✓".green(),
+            ds::command("✓"),
             in_keychain.len()
         );
         for (provider, _, _) in &in_keychain {
             if let Some((key, _)) = resolve_api_key(provider) {
                 println!(
                     "     {} {} {}",
-                    "🔐".dimmed(),
-                    provider.bold(),
-                    mask_api_key(&key).dimmed()
+                    ds::muted("🔐"),
+                    ds::highlight(provider),
+                    ds::muted(mask_api_key(&key))
                 );
             }
         }
         println!();
-        println!("  {}", "Your keys are already securely stored!".green());
+        println!("  {}", ds::command("Your keys are already securely stored!"));
     } else {
-        println!("  {} No existing API keys detected.", "ℹ".dimmed());
+        println!("  {} No existing API keys detected.", ds::muted("ℹ"));
         println!(
             "  {}",
-            "Let's set up your first provider in the next step.".dimmed()
+            ds::muted("Let's set up your first provider in the next step.")
         );
     }
 
     println!();
 
     // Step 3: Set up providers
-    println!("{}", "STEP 2/3: Set Up LLM Providers".bold().underline());
+    println!("{}", ds::highlight("STEP 2/3: Set Up LLM Providers").underlined());
     println!();
     println!(
         "{}",
-        "Which LLM providers would you like to configure?".dimmed()
+        ds::muted("Which LLM providers would you like to configure?")
     );
     println!(
         "{}",
-        "You can add more later with `spn provider set <name>`".dimmed()
+        ds::muted("You can add more later with `spn provider set <name>`")
     );
     println!();
 
@@ -320,18 +320,18 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
         .map(|p| {
             let configured = resolve_api_key(p.name).is_some();
             let status = if configured {
-                "✓ configured".green().to_string()
+                ds::command("✓ configured").to_string()
             } else if p.free_tier {
-                "○ (free tier)".dimmed().to_string()
+                ds::muted("○ (free tier)").to_string()
             } else {
-                "○".dimmed().to_string()
+                ds::muted("○").to_string()
             };
             format!(
                 "{} {} {}\n      {}",
                 status,
-                p.display_name.bold(),
-                p.description.dimmed(),
-                p.signup_url.cyan().underline()
+                ds::highlight(p.display_name),
+                ds::muted(p.description),
+                ds::primary(p.signup_url).underlined()
             )
         })
         .collect();
@@ -365,28 +365,28 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
             println!();
             println!(
                 "{}",
-                format!("━━━ {} ━━━", provider.display_name).cyan().bold()
+                ds::primary(format!("━━━ {} ━━━", provider.display_name))
             );
             println!();
 
             if provider.name == "ollama" {
                 println!(
                     "{}",
-                    "Ollama runs models locally - no API key needed!".green()
+                    ds::command("Ollama runs models locally - no API key needed!")
                 );
-                println!("  1. Download Ollama: {}", provider.signup_url.cyan());
-                println!("  2. Run: {}", "ollama pull llama3.2".cyan());
+                println!("  1. Download Ollama: {}", ds::primary(provider.signup_url));
+                println!("  2. Run: {}", ds::primary("ollama pull llama3.2"));
                 println!("  3. Set base URL (optional):");
                 println!(
                     "     {}",
-                    "export OLLAMA_API_BASE_URL=http://localhost:11434".cyan()
+                    ds::primary("export OLLAMA_API_BASE_URL=http://localhost:11434")
                 );
                 println!();
                 continue;
             }
 
             println!("  Get your API key at:");
-            println!("  {}", provider.signup_url.cyan().underline());
+            println!("  {}", ds::primary(provider.signup_url).underlined());
             println!();
 
             // Run the interactive wizard
@@ -395,10 +395,10 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
                     println!();
                 }
                 Ok(None) => {
-                    println!("{}", "Skipped.".dimmed());
+                    println!("{}", ds::muted("Skipped."));
                 }
                 Err(e) => {
-                    println!("{} {}", "Error:".red(), e);
+                    println!("{} {}", ds::error("Error:"), e);
                 }
             }
         }
@@ -407,7 +407,7 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
     println!();
 
     // Step 4: Summary & Next Steps
-    println!("{}", "STEP 3/3: Setup Complete!".bold().underline());
+    println!("{}", ds::highlight("STEP 3/3: Setup Complete!").underlined());
     println!();
 
     // Recount configured keys
@@ -426,7 +426,7 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
 /// Quick setup - just migrate existing keys and show status.
 async fn run_quick_setup() -> Result<()> {
     println!();
-    println!("{}", "QUICK SETUP".bold().underline());
+    println!("{}", ds::highlight("QUICK SETUP").underlined());
     println!();
 
     // Detect and migrate
@@ -439,12 +439,12 @@ async fn run_quick_setup() -> Result<()> {
     if !in_env.is_empty() {
         println!(
             "  {} Found {} keys in environment, migrating to keychain...",
-            "→".cyan(),
+            ds::primary("→"),
             in_env.len()
         );
         let report = migrate_env_to_keyring();
         if report.migrated > 0 {
-            println!("  {} {} keys migrated", "✓".green(), report.migrated);
+            println!("  {} {} keys migrated", ds::command("✓"), report.migrated);
         }
     }
 
@@ -465,61 +465,61 @@ fn print_welcome_banner() {
     println!();
     println!(
         "{}",
-        "╔═══════════════════════════════════════════════════════════════════════════════╗"
+        ds::primary("╔═══════════════════════════════════════════════════════════════════════════════╗")
             .cyan()
             .bold()
     );
     println!(
         "{}",
-        "║                                                                               ║"
+        ds::primary("║                                                                               ║")
             .cyan()
             .bold()
     );
     println!(
         "{}",
-        "║   ███████╗██████╗ ███╗   ██╗                                                 ║"
+        ds::primary("║   ███████╗██████╗ ███╗   ██╗                                                 ║")
             .cyan()
             .bold()
     );
     println!(
         "{}",
-        "║   ██╔════╝██╔══██╗████╗  ██║     SuperNovae Package Manager                  ║"
+        ds::primary("║   ██╔════╝██╔══██╗████╗  ██║     SuperNovae Package Manager                  ║")
             .cyan()
             .bold()
     );
     println!(
         "{}",
-        "║   ███████╗██████╔╝██╔██╗ ██║     AI Development Toolkit                      ║"
+        ds::primary("║   ███████╗██████╔╝██╔██╗ ██║     AI Development Toolkit                      ║")
             .cyan()
             .bold()
     );
     println!(
         "{}",
-        "║   ╚════██║██╔═══╝ ██║╚██╗██║                                                 ║"
+        ds::primary("║   ╚════██║██╔═══╝ ██║╚██╗██║                                                 ║")
             .cyan()
             .bold()
     );
     println!(
         "{}",
-        "║   ███████║██║     ██║ ╚████║     📦 Packages  🔐 Secrets  🔄 Sync            ║"
+        ds::primary("║   ███████║██║     ██║ ╚████║     📦 Packages  🔐 Secrets  🔄 Sync            ║")
             .cyan()
             .bold()
     );
     println!(
         "{}",
-        "║   ╚══════╝╚═╝     ╚═╝  ╚═══╝                                                 ║"
+        ds::primary("║   ╚══════╝╚═╝     ╚═╝  ╚═══╝                                                 ║")
             .cyan()
             .bold()
     );
     println!(
         "{}",
-        "║                                                                               ║"
+        ds::primary("║                                                                               ║")
             .cyan()
             .bold()
     );
     println!(
         "{}",
-        "╚═══════════════════════════════════════════════════════════════════════════════╝"
+        ds::primary("╚═══════════════════════════════════════════════════════════════════════════════╝")
             .cyan()
             .bold()
     );
@@ -529,47 +529,46 @@ fn print_welcome_banner() {
 fn print_summary(total_configured: usize, in_keychain: usize) {
     println!(
         "{}",
-        "╭─────────────────────────────────────────────────────────────────────────────╮".green()
+        ds::command("╭─────────────────────────────────────────────────────────────────────────────╮")
     );
     println!(
         "{}",
-        "│  ✅ SETUP COMPLETE                                                          │".green()
+        ds::command("│  ✅ SETUP COMPLETE                                                          │")
     );
     println!(
         "{}",
-        "├─────────────────────────────────────────────────────────────────────────────┤".green()
+        ds::command("├─────────────────────────────────────────────────────────────────────────────┤")
     );
     println!(
         "{}",
-        format!(
+        ds::success(format!(
             "│  {} API keys configured ({} in secure keychain)                          │",
             total_configured, in_keychain
-        )
-        .green()
+        ))
     );
     println!(
         "{}",
-        "╰─────────────────────────────────────────────────────────────────────────────╯".green()
+        ds::command("╰─────────────────────────────────────────────────────────────────────────────╯")
     );
     println!();
 
-    println!("{}", "🚀 WHAT'S NEXT?".bold());
+    println!("{}", ds::highlight("🚀 WHAT'S NEXT?"));
     println!();
-    println!("  {} Test your providers:", "1.".cyan().bold());
-    println!("     {}", "spn provider test all".cyan());
+    println!("  {} Test your providers:", ds::primary("1."));
+    println!("     {}", ds::primary("spn provider test all"));
     println!();
-    println!("  {} Add an MCP server:", "2.".cyan().bold());
-    println!("     {}", "spn mcp add neo4j".cyan());
+    println!("  {} Add an MCP server:", ds::primary("2."));
+    println!("     {}", ds::primary("spn mcp add neo4j"));
     println!();
-    println!("  {} Sync to Claude Code:", "3.".cyan().bold());
-    println!("     {}", "spn sync --enable claude-code".cyan());
+    println!("  {} Sync to Claude Code:", ds::primary("3."));
+    println!("     {}", ds::primary("spn sync --enable claude-code"));
     println!();
-    println!("  {} Run a Nika workflow:", "4.".cyan().bold());
-    println!("     {}", "nika chat".cyan());
+    println!("  {} Run a Nika workflow:", ds::primary("4."));
+    println!("     {}", ds::primary("nika chat"));
     println!();
     println!(
         "{}",
-        "Need help? Run `spn topic` for detailed guides.".dimmed()
+        ds::muted("Need help? Run `spn topic` for detailed guides.")
     );
     println!();
 }
@@ -582,7 +581,7 @@ fn print_summary(total_configured: usize, in_keychain: usize) {
 async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()> {
     print_nika_banner();
 
-    println!("{}", "CHECKING PREREQUISITES".bold().underline());
+    println!("{}", ds::highlight("CHECKING PREREQUISITES").underlined());
     println!();
 
     // Check prerequisites
@@ -592,28 +591,28 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
     if !has_cargo && !has_brew && method != "source" {
         println!(
             "{}",
-            "⚠️  Neither cargo nor brew found. Install one of:".yellow()
+            ds::warning("⚠️  Neither cargo nor brew found. Install one of:")
         );
-        println!("     {}", "• cargo: https://rustup.rs".dimmed());
-        println!("     {}", "• brew: https://brew.sh".dimmed());
+        println!("     {}", ds::muted("• cargo: https://rustup.rs"));
+        println!("     {}", ds::muted("• brew: https://brew.sh"));
         return Err(SpnError::NotFound(
             "cargo or brew required for installation".into(),
         ));
     }
 
     // Step 1: Install nika CLI
-    println!("{}", "STEP 1/3: Installing Nika CLI".bold().underline());
+    println!("{}", ds::highlight("STEP 1/3: Installing Nika CLI").underlined());
     println!();
 
     let install_result = match method {
         "cargo" if has_cargo => {
-            println!("  {} cargo install nika-cli", "Running:".cyan());
+            println!("  {} cargo install nika-cli", ds::primary("Running:"));
             Command::new("cargo").args(["install", "nika-cli"]).status()
         }
         "brew" if has_brew => {
             println!(
                 "  {} brew install supernovae-st/tap/nika",
-                "Running:".cyan()
+                ds::primary("Running:")
             );
             Command::new("brew")
                 .args(["install", "supernovae-st/tap/nika"])
@@ -622,27 +621,27 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
         "source" => {
             println!(
                 "  {}",
-                "Source installation: clone and build manually".yellow()
+                ds::warning("Source installation: clone and build manually")
             );
             println!(
                 "     {}",
-                "git clone https://github.com/supernovae-st/nika".dimmed()
+                ds::muted("git clone https://github.com/supernovae-st/nika")
             );
             println!(
                 "     {}",
-                "cd nika && cargo install --path tools/nika".dimmed()
+                ds::muted("cd nika && cargo install --path tools/nika")
             );
             return Ok(());
         }
         _ => {
             // Fallback to what's available
             if has_cargo {
-                println!("  {} cargo install nika-cli", "Running:".cyan());
+                println!("  {} cargo install nika-cli", ds::primary("Running:"));
                 Command::new("cargo").args(["install", "nika-cli"]).status()
             } else {
                 println!(
                     "  {} brew install supernovae-st/tap/nika",
-                    "Running:".cyan()
+                    ds::primary("Running:")
                 );
                 Command::new("brew")
                     .args(["install", "supernovae-st/tap/nika"])
@@ -653,54 +652,54 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
 
     match install_result {
         Ok(status) if status.success() => {
-            println!("  {} Nika CLI installed", "✓".green());
+            println!("  {} Nika CLI installed", ds::command("✓"));
         }
         Ok(status) => {
             println!(
                 "  {} Installation failed (exit code: {:?})",
-                "✗".red(),
+                ds::error("✗"),
                 status.code()
             );
         }
         Err(e) => {
-            println!("  {} Installation error: {}", "✗".red(), e);
+            println!("  {} Installation error: {}", ds::error("✗"), e);
         }
     }
     println!();
 
     // Step 2: Install nika-lsp (optional)
     if !no_lsp {
-        println!("{}", "STEP 2/3: Installing Nika LSP".bold().underline());
+        println!("{}", ds::highlight("STEP 2/3: Installing Nika LSP").underlined());
         println!();
 
         if has_cargo {
-            println!("  {} cargo install nika-lsp", "Running:".cyan());
+            println!("  {} cargo install nika-lsp", ds::primary("Running:"));
             match Command::new("cargo").args(["install", "nika-lsp"]).status() {
                 Ok(status) if status.success() => {
-                    println!("  {} Nika LSP installed", "✓".green());
+                    println!("  {} Nika LSP installed", ds::command("✓"));
                 }
                 Ok(_) => {
                     println!(
                         "  {}",
-                        "⚠️  LSP installation failed (optional, continuing)".yellow()
+                        ds::warning("⚠️  LSP installation failed (optional, continuing)")
                     );
                 }
                 Err(_) => {
                     println!(
                         "  {}",
-                        "⚠️  LSP installation failed (optional, continuing)".yellow()
+                        ds::warning("⚠️  LSP installation failed (optional, continuing)")
                     );
                 }
             }
         } else {
-            println!("  {}", "⚠️  Skipping LSP (requires cargo)".yellow());
+            println!("  {}", ds::warning("⚠️  Skipping LSP (requires cargo)"));
         }
         println!();
     }
 
     // Step 3: Configure editors
     if !no_sync {
-        println!("{}", "STEP 3/3: Configuring Editors".bold().underline());
+        println!("{}", ds::highlight("STEP 3/3: Configuring Editors").underlined());
         println!();
 
         // Detect Claude Code
@@ -709,16 +708,16 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
             .filter(|d| d.exists());
 
         if claude_config.is_some() {
-            println!("  {} Claude Code detected, syncing...", "→".cyan());
+            println!("  {} Claude Code detected, syncing...", ds::primary("→"));
             match Command::new("spn")
                 .args(["sync", "--enable", "claude-code"])
                 .status()
             {
                 Ok(status) if status.success() => {
-                    println!("  {} Claude Code configured", "✓".green());
+                    println!("  {} Claude Code configured", ds::command("✓"));
                 }
                 _ => {
-                    println!("  {} Claude Code sync failed", "⚠️".yellow());
+                    println!("  {} Claude Code sync failed", ds::warning("⚠️"));
                 }
             }
         }
@@ -731,12 +730,12 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
         if let Some(settings_path) = vscode_config {
             println!(
                 "  {} VS Code detected, configuring yaml.schemas...",
-                "→".cyan()
+                ds::primary("→")
             );
             if let Err(e) = configure_vscode_yaml_schema(&settings_path) {
-                println!("  {} VS Code config failed: {}", "⚠️".yellow(), e);
+                println!("  {} VS Code config failed: {}", ds::warning("⚠️"), e);
             } else {
-                println!("  {} VS Code configured", "✓".green());
+                println!("  {} VS Code configured", ds::command("✓"));
             }
         }
 
@@ -748,12 +747,12 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
         if let Some(settings_path) = cursor_config {
             println!(
                 "  {} Cursor detected, configuring yaml.schemas...",
-                "→".cyan()
+                ds::primary("→")
             );
             if let Err(e) = configure_cursor_yaml_schema(&settings_path) {
-                println!("  {} Cursor config failed: {}", "⚠️".yellow(), e);
+                println!("  {} Cursor config failed: {}", ds::warning("⚠️"), e);
             } else {
-                println!("  {} Cursor configured", "✓".green());
+                println!("  {} Cursor configured", ds::command("✓"));
             }
         }
         println!();
@@ -800,7 +799,7 @@ fn print_nika_banner() {
     println!();
     println!(
         "{}",
-        r#"
+        ds::primary(r#"
     ╔═══════════════════════════════════════════════════════════════╗
     ║                                                               ║
     ║   ███╗   ██╗██╗██╗  ██╗ █████╗                               ║
@@ -814,32 +813,31 @@ fn print_nika_banner() {
     ║   https://github.com/supernovae-st/nika                       ║
     ║                                                               ║
     ╚═══════════════════════════════════════════════════════════════╝
-"#
-        .cyan()
+"#)
     );
     println!();
 }
 
 fn print_nika_success() {
-    println!("{}", "🎉 NIKA SETUP COMPLETE!".bold().green());
+    println!("{}", ds::highlight("🎉 NIKA SETUP COMPLETE!").green());
     println!();
-    println!("{}", "WHAT'S NEXT?".bold());
+    println!("{}", ds::highlight("WHAT'S NEXT?"));
     println!();
-    println!("  {} Try the TUI:", "1.".cyan().bold());
-    println!("     {}", "nika".cyan());
+    println!("  {} Try the TUI:", ds::primary("1."));
+    println!("     {}", ds::primary("nika"));
     println!();
-    println!("  {} Start a chat:", "2.".cyan().bold());
-    println!("     {}", "nika chat".cyan());
+    println!("  {} Start a chat:", ds::primary("2."));
+    println!("     {}", ds::primary("nika chat"));
     println!();
-    println!("  {} Create a workflow:", "3.".cyan().bold());
-    println!("     {}", "nika new my-workflow".cyan());
+    println!("  {} Create a workflow:", ds::primary("3."));
+    println!("     {}", ds::primary("nika new my-workflow"));
     println!();
-    println!("  {} Run a workflow:", "4.".cyan().bold());
-    println!("     {}", "nika my-workflow.nika.yaml".cyan());
+    println!("  {} Run a workflow:", ds::primary("4."));
+    println!("     {}", ds::primary("nika my-workflow.nika.yaml"));
     println!();
     println!(
         "{}",
-        "Documentation: https://github.com/supernovae-st/nika#readme".dimmed()
+        ds::muted("Documentation: https://github.com/supernovae-st/nika#readme")
     );
     println!();
 }
@@ -855,7 +853,7 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
     let theme = ColorfulTheme::default();
 
     // Step 1: Check prerequisites
-    println!("{}", "STEP 1/4: Checking Prerequisites".bold().underline());
+    println!("{}", ds::highlight("STEP 1/4: Checking Prerequisites").underlined());
     println!();
 
     let has_cargo = Command::new("cargo").arg("--version").output().is_ok();
@@ -867,18 +865,18 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
     println!(
         "  {} Rust/Cargo: {}",
         if has_cargo {
-            "✓".green()
+            ds::command("✓")
         } else {
-            "✗".red()
+            ds::error("✗")
         },
         if has_cargo { "installed" } else { "not found" }
     );
     println!(
         "  {} Homebrew: {}",
         if has_brew {
-            "✓".green()
+            ds::command("✓")
         } else {
-            "○".dimmed()
+            ds::muted("○")
         },
         if has_brew {
             "installed"
@@ -889,9 +887,9 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
     println!(
         "  {} NovaNet CLI: {}",
         if has_novanet {
-            "✓".green()
+            ds::command("✓")
         } else {
-            "○".yellow()
+            ds::warning("○")
         },
         if has_novanet {
             "installed"
@@ -902,9 +900,9 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
     println!(
         "  {} Neo4j: {}",
         if has_neo4j {
-            "✓".green()
+            ds::command("✓")
         } else {
-            "○".yellow()
+            ds::warning("○")
         },
         if has_neo4j {
             "connected"
@@ -916,16 +914,16 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
 
     // Step 2: Install NovaNet CLI if needed
     if !has_novanet {
-        println!("{}", "STEP 2/4: Installing NovaNet CLI".bold().underline());
+        println!("{}", ds::highlight("STEP 2/4: Installing NovaNet CLI").underlined());
         println!();
 
         if !has_cargo && !has_brew {
             println!(
                 "{}",
-                "⚠️  Neither cargo nor brew found. Install one of:".yellow()
+                ds::warning("⚠️  Neither cargo nor brew found. Install one of:")
             );
-            println!("     {}", "• cargo: https://rustup.rs".dimmed());
-            println!("     {}", "• brew: https://brew.sh".dimmed());
+            println!("     {}", ds::muted("• cargo: https://rustup.rs"));
+            println!("     {}", ds::muted("• brew: https://brew.sh"));
             return Err(SpnError::NotFound(
                 "cargo or brew required for installation".into(),
             ));
@@ -949,48 +947,48 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
         let method = methods[selection];
 
         if method.contains("Skip") {
-            println!("{}", "Skipping installation.".dimmed());
+            println!("{}", ds::muted("Skipping installation."));
         } else if method.contains("Homebrew") {
             println!(
                 "  {} brew install supernovae-st/tap/novanet",
-                "Running:".cyan()
+                ds::primary("Running:")
             );
             match Command::new("brew")
                 .args(["install", "supernovae-st/tap/novanet"])
                 .status()
             {
                 Ok(status) if status.success() => {
-                    println!("  {} NovaNet CLI installed", "✓".green());
+                    println!("  {} NovaNet CLI installed", ds::command("✓"));
                 }
                 Ok(status) => {
                     println!(
                         "  {} Installation failed (exit code: {:?})",
-                        "✗".red(),
+                        ds::error("✗"),
                         status.code()
                     );
                 }
                 Err(e) => {
-                    println!("  {} Installation error: {}", "✗".red(), e);
+                    println!("  {} Installation error: {}", ds::error("✗"), e);
                 }
             }
         } else if method.contains("Cargo") {
-            println!("  {} cargo install novanet-cli", "Running:".cyan());
+            println!("  {} cargo install novanet-cli", ds::primary("Running:"));
             match Command::new("cargo")
                 .args(["install", "novanet-cli"])
                 .status()
             {
                 Ok(status) if status.success() => {
-                    println!("  {} NovaNet CLI installed", "✓".green());
+                    println!("  {} NovaNet CLI installed", ds::command("✓"));
                 }
                 Ok(status) => {
                     println!(
                         "  {} Installation failed (exit code: {:?})",
-                        "✗".red(),
+                        ds::error("✗"),
                         status.code()
                     );
                 }
                 Err(e) => {
-                    println!("  {} Installation error: {}", "✗".red(), e);
+                    println!("  {} Installation error: {}", ds::error("✗"), e);
                 }
             }
         }
@@ -998,80 +996,80 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
     } else {
         println!(
             "{}",
-            "STEP 2/4: NovaNet CLI Already Installed".bold().underline()
+            ds::highlight("STEP 2/4: NovaNet CLI Already Installed").underlined()
         );
         println!();
         // Show version
         if let Ok(output) = Command::new("novanet").arg("--version").output() {
             let version = String::from_utf8_lossy(&output.stdout);
-            println!("  {} {}", "Version:".dimmed(), version.trim());
+            println!("  {} {}", ds::muted("Version:"), version.trim());
         }
         println!();
     }
 
     // Step 3: Check/Setup Neo4j
-    println!("{}", "STEP 3/4: Neo4j Database".bold().underline());
+    println!("{}", ds::highlight("STEP 3/4: Neo4j Database").underlined());
     println!();
 
     if !has_neo4j {
         println!(
             "{}",
-            "╭─────────────────────────────────────────────────────────────────────────────╮"
+            ds::warning("╭─────────────────────────────────────────────────────────────────────────────╮")
                 .yellow()
         );
         println!(
             "{}",
-            "│  💡 NEO4J NOT RUNNING                                                       │"
+            ds::warning("│  💡 NEO4J NOT RUNNING                                                       │")
                 .yellow()
         );
         println!(
             "{}",
-            "├─────────────────────────────────────────────────────────────────────────────┤"
+            ds::warning("├─────────────────────────────────────────────────────────────────────────────┤")
                 .yellow()
         );
         println!(
             "{}",
-            "│  NovaNet requires Neo4j to store the knowledge graph.                       │"
+            ds::warning("│  NovaNet requires Neo4j to store the knowledge graph.                       │")
                 .yellow()
         );
         println!(
             "{}",
-            "│                                                                             │"
+            ds::warning("│                                                                             │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  Quick start with Docker:                                                   │"
+            ds::warning("│  Quick start with Docker:                                                   │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  docker run -d --name neo4j -p 7474:7474 -p 7687:7687 \\                     │"
+            ds::warning("│  docker run -d --name neo4j -p 7474:7474 -p 7687:7687 \\                     │")
                 .yellow()
         );
         println!(
             "{}",
-            "│    -e NEO4J_AUTH=neo4j/password neo4j:5                                     │"
+            ds::warning("│    -e NEO4J_AUTH=neo4j/password neo4j:5                                     │")
                 .yellow()
         );
         println!(
             "{}",
-            "│                                                                             │"
+            ds::warning("│                                                                             │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  Or install locally:                                                        │"
+            ds::warning("│  Or install locally:                                                        │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  brew install neo4j && neo4j start                                          │"
+            ds::warning("│  brew install neo4j && neo4j start                                          │")
                 .yellow()
         );
         println!(
             "{}",
-            "╰─────────────────────────────────────────────────────────────────────────────╯"
+            ds::warning("╰─────────────────────────────────────────────────────────────────────────────╯")
                 .yellow()
         );
         println!();
@@ -1086,7 +1084,7 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
                 .map_err(dialog_err)?;
 
             if start_docker {
-                println!("  {} Starting Neo4j container...", "→".cyan());
+                println!("  {} Starting Neo4j container...", ds::primary("→"));
                 let docker_result = Command::new("docker")
                     .args([
                         "run",
@@ -1107,20 +1105,20 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
 
                 match docker_result {
                     Ok(status) if status.success() => {
-                        println!("  {} Neo4j container started", "✓".green());
-                        println!("  {} Waiting for Neo4j to be ready...", "→".cyan());
+                        println!("  {} Neo4j container started", ds::command("✓"));
+                        println!("  {} Waiting for Neo4j to be ready...", ds::primary("→"));
                         // Give Neo4j a few seconds to start
                         std::thread::sleep(std::time::Duration::from_secs(5));
                     }
                     Ok(_) => {
                         println!(
                             "  {} Docker start failed (container may already exist)",
-                            "⚠".yellow()
+                            ds::warning("⚠")
                         );
-                        println!("     {}", "Try: docker start novanet-neo4j".dimmed());
+                        println!("     {}", ds::muted("Try: docker start novanet-neo4j"));
                     }
                     Err(e) => {
-                        println!("  {} Docker error: {}", "✗".red(), e);
+                        println!("  {} Docker error: {}", ds::error("✗"), e);
                     }
                 }
             }
@@ -1128,14 +1126,14 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
     } else {
         println!(
             "  {} Neo4j is running and accepting connections",
-            "✓".green()
+            ds::command("✓")
         );
     }
     println!();
 
     // Step 4: Configure editors (if not skipped)
     if !no_sync {
-        println!("{}", "STEP 4/4: Editor Configuration".bold().underline());
+        println!("{}", ds::highlight("STEP 4/4: Editor Configuration").underlined());
         println!();
 
         // Detect Claude Code
@@ -1144,16 +1142,16 @@ async fn run_novanet_setup(no_sync: bool) -> Result<()> {
             .filter(|d| d.exists());
 
         if claude_config.is_some() {
-            println!("  {} Claude Code detected, syncing...", "→".cyan());
+            println!("  {} Claude Code detected, syncing...", ds::primary("→"));
             match Command::new("spn")
                 .args(["sync", "--enable", "claude-code"])
                 .status()
             {
                 Ok(status) if status.success() => {
-                    println!("  {} Claude Code configured", "✓".green());
+                    println!("  {} Claude Code configured", ds::command("✓"));
                 }
                 _ => {
-                    println!("  {} Claude Code sync skipped", "○".dimmed());
+                    println!("  {} Claude Code sync skipped", ds::muted("○"));
                 }
             }
         }
@@ -1181,7 +1179,7 @@ fn print_novanet_banner() {
     println!();
     println!(
         "{}",
-        r#"
+        ds::primary(r#"
     ╔═══════════════════════════════════════════════════════════════╗
     ║                                                               ║
     ║   ███╗   ██╗ ██████╗ ██╗   ██╗ █████╗ ███╗   ██╗███████╗████████╗
@@ -1195,35 +1193,34 @@ fn print_novanet_banner() {
     ║   https://github.com/supernovae-st/novanet                    ║
     ║                                                               ║
     ╚═══════════════════════════════════════════════════════════════╝
-"#
-        .cyan()
+"#)
     );
     println!();
 }
 
 fn print_novanet_success() {
-    println!("{}", "🎉 NOVANET SETUP COMPLETE!".bold().green());
+    println!("{}", ds::highlight("🎉 NOVANET SETUP COMPLETE!").green());
     println!();
-    println!("{}", "WHAT'S NEXT?".bold());
+    println!("{}", ds::highlight("WHAT'S NEXT?"));
     println!();
-    println!("  {} Launch the TUI explorer:", "1.".cyan().bold());
-    println!("     {}", "novanet tui".cyan());
+    println!("  {} Launch the TUI explorer:", ds::primary("1."));
+    println!("     {}", ds::primary("novanet tui"));
     println!();
-    println!("  {} Validate your schema:", "2.".cyan().bold());
-    println!("     {}", "spn schema validate".cyan());
+    println!("  {} Validate your schema:", ds::primary("2."));
+    println!("     {}", ds::primary("spn schema validate"));
     println!();
-    println!("  {} Generate schema artifacts:", "3.".cyan().bold());
-    println!("     {}", "spn schema generate".cyan());
+    println!("  {} Generate schema artifacts:", ds::primary("3."));
+    println!("     {}", ds::primary("spn schema generate"));
     println!();
-    println!("  {} Query the graph:", "4.".cyan().bold());
+    println!("  {} Query the graph:", ds::primary("4."));
     println!(
         "     {}",
-        "novanet query \"MATCH (n) RETURN n LIMIT 10\"".cyan()
+        ds::command("novanet query \"MATCH (n) RETURN n LIMIT 10\"")
     );
     println!();
     println!(
         "{}",
-        "Documentation: https://github.com/supernovae-st/novanet#readme".dimmed()
+        ds::muted("Documentation: https://github.com/supernovae-st/novanet#readme")
     );
     println!();
 }
@@ -1243,7 +1240,7 @@ async fn run_claude_code_setup(force: bool) -> Result<()> {
     print_claude_code_banner();
 
     // Step 1: Check if Claude CLI is available
-    println!("{}", "STEP 1/4: Checking Prerequisites".bold().underline());
+    println!("{}", ds::highlight("STEP 1/4: Checking Prerequisites").underlined());
     println!();
 
     let claude_available = Command::new("claude")
@@ -1253,46 +1250,46 @@ async fn run_claude_code_setup(force: bool) -> Result<()> {
         .unwrap_or(false);
 
     if !claude_available {
-        println!("  {} Claude Code CLI not found", "✗".red());
+        println!("  {} Claude Code CLI not found", ds::error("✗"));
         println!();
         println!(
             "{}",
-            "╭─────────────────────────────────────────────────────────────────────────────╮"
+            ds::warning("╭─────────────────────────────────────────────────────────────────────────────╮")
                 .yellow()
         );
         println!(
             "{}",
-            "│  💡 INSTALL CLAUDE CODE                                                     │"
+            ds::warning("│  💡 INSTALL CLAUDE CODE                                                     │")
                 .yellow()
         );
         println!(
             "{}",
-            "├─────────────────────────────────────────────────────────────────────────────┤"
+            ds::warning("├─────────────────────────────────────────────────────────────────────────────┤")
                 .yellow()
         );
         println!(
             "{}",
-            "│  npm install -g @anthropic-ai/claude-code                                   │"
+            ds::warning("│  npm install -g @anthropic-ai/claude-code                                   │")
                 .yellow()
         );
         println!(
             "{}",
-            "│                                                                             │"
+            ds::warning("│                                                                             │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  Or with Homebrew:                                                          │"
+            ds::warning("│  Or with Homebrew:                                                          │")
                 .yellow()
         );
         println!(
             "{}",
-            "│  brew install claude                                                        │"
+            ds::warning("│  brew install claude                                                        │")
                 .yellow()
         );
         println!(
             "{}",
-            "╰─────────────────────────────────────────────────────────────────────────────╯"
+            ds::warning("╰─────────────────────────────────────────────────────────────────────────────╯")
                 .yellow()
         );
         println!();
@@ -1302,21 +1299,21 @@ async fn run_claude_code_setup(force: bool) -> Result<()> {
         ));
     }
 
-    println!("  {} Claude Code CLI found", "✓".green());
+    println!("  {} Claude Code CLI found", ds::command("✓"));
     println!();
 
     // Step 2: Check if plugin is already installed
-    println!("{}", "STEP 2/4: Checking Plugin Status".bold().underline());
+    println!("{}", ds::highlight("STEP 2/4: Checking Plugin Status").underlined());
     println!();
 
     let plugin_installed = is_plugin_installed(PLUGIN_FULL_NAME);
 
     if plugin_installed && !force {
-        println!("  {} SuperNovae plugin already installed", "✓".green());
+        println!("  {} SuperNovae plugin already installed", ds::command("✓"));
         println!();
         println!(
             "{}",
-            "Use --force to reinstall: spn setup claude-code --force".dimmed()
+            ds::muted("Use --force to reinstall: spn setup claude-code --force")
         );
         println!();
         print_claude_code_success(false);
@@ -1324,24 +1321,24 @@ async fn run_claude_code_setup(force: bool) -> Result<()> {
     }
 
     if plugin_installed && force {
-        println!("  {} Plugin found, reinstalling (--force)", "→".cyan());
+        println!("  {} Plugin found, reinstalling (--force)", ds::primary("→"));
     } else {
-        println!("  {} Plugin not found, installing...", "→".cyan());
+        println!("  {} Plugin not found, installing...", ds::primary("→"));
     }
     println!();
 
     // Step 3: Add the marketplace (if not already added)
-    println!("{}", "STEP 3/4: Adding Marketplace".bold().underline());
+    println!("{}", ds::highlight("STEP 3/4: Adding Marketplace").underlined());
     println!();
 
     let marketplace_exists = is_marketplace_added(MARKETPLACE_NAME);
 
     if marketplace_exists && !force {
-        println!("  {} Marketplace already added", "✓".green());
+        println!("  {} Marketplace already added", ds::command("✓"));
     } else {
         println!(
             "  {} claude plugin marketplace add {}",
-            "Running:".cyan(),
+            ds::primary("Running:"),
             MARKETPLACE_REPO
         );
 
@@ -1351,18 +1348,18 @@ async fn run_claude_code_setup(force: bool) -> Result<()> {
 
         match add_result {
             Ok(status) if status.success() => {
-                println!("  {} Marketplace added successfully", "✓".green());
+                println!("  {} Marketplace added successfully", ds::command("✓"));
             }
             Ok(status) => {
                 // Marketplace might already exist, which is fine
                 println!(
                     "  {} Marketplace add returned code {:?} (may already exist)",
-                    "→".cyan(),
+                    ds::primary("→"),
                     status.code()
                 );
             }
             Err(e) => {
-                println!("  {} Marketplace add error: {}", "✗".red(), e);
+                println!("  {} Marketplace add error: {}", ds::error("✗"), e);
                 return Err(SpnError::IoError(e));
             }
         }
@@ -1370,12 +1367,12 @@ async fn run_claude_code_setup(force: bool) -> Result<()> {
     println!();
 
     // Step 4: Install the plugin
-    println!("{}", "STEP 4/4: Installing Plugin".bold().underline());
+    println!("{}", ds::highlight("STEP 4/4: Installing Plugin").underlined());
     println!();
 
     println!(
         "  {} claude plugin install {}",
-        "Running:".cyan(),
+        ds::primary("Running:"),
         PLUGIN_FULL_NAME
     );
 
@@ -1385,12 +1382,12 @@ async fn run_claude_code_setup(force: bool) -> Result<()> {
 
     match install_result {
         Ok(status) if status.success() => {
-            println!("  {} SuperNovae plugin installed successfully", "✓".green());
+            println!("  {} SuperNovae plugin installed successfully", ds::command("✓"));
         }
         Ok(status) => {
             println!(
                 "  {} Installation failed (exit code: {:?})",
-                "✗".red(),
+                ds::error("✗"),
                 status.code()
             );
             return Err(SpnError::CommandFailed(format!(
@@ -1399,7 +1396,7 @@ async fn run_claude_code_setup(force: bool) -> Result<()> {
             )));
         }
         Err(e) => {
-            println!("  {} Installation error: {}", "✗".red(), e);
+            println!("  {} Installation error: {}", ds::error("✗"), e);
             return Err(SpnError::IoError(e));
         }
     }
@@ -1442,7 +1439,7 @@ fn print_claude_code_banner() {
     println!();
     println!(
         "{}",
-        r#"
+        ds::primary(r#"
     ╔═══════════════════════════════════════════════════════════════╗
     ║                                                               ║
     ║   ███████╗██████╗ ███╗   ██╗                                 ║
@@ -1453,35 +1450,34 @@ fn print_claude_code_banner() {
     ║   ╚══════╝╚═╝     ╚═╝  ╚═══╝                                 ║
     ║                                                               ║
     ╚═══════════════════════════════════════════════════════════════╝
-"#
-        .cyan()
+"#)
     );
     println!();
 }
 
 fn print_claude_code_success(newly_installed: bool) {
     if newly_installed {
-        println!("{}", "🎉 CLAUDE CODE PLUGIN INSTALLED!".bold().green());
+        println!("{}", ds::highlight("🎉 CLAUDE CODE PLUGIN INSTALLED!").green());
     } else {
-        println!("{}", "✅ CLAUDE CODE PLUGIN READY!".bold().green());
+        println!("{}", ds::highlight("✅ CLAUDE CODE PLUGIN READY!").green());
     }
     println!();
-    println!("{}", "WHAT'S NEXT?".bold());
+    println!("{}", ds::highlight("WHAT'S NEXT?"));
     println!();
-    println!("  {} Start Claude Code:", "1.".cyan().bold());
-    println!("     {}", "claude".cyan());
+    println!("  {} Start Claude Code:", ds::primary("1."));
+    println!("     {}", ds::primary("claude"));
     println!();
-    println!("  {} Available skills:", "2.".cyan().bold());
-    println!("     {}", "/novanet — NovaNet knowledge graph".dimmed());
-    println!("     {}", "/nika — Nika workflow engine".dimmed());
-    println!("     {}", "/spn-powers:yo — List all superpowers".dimmed());
+    println!("  {} Available skills:", ds::primary("2."));
+    println!("     {}", ds::muted("/novanet — NovaNet knowledge graph"));
+    println!("     {}", ds::muted("/nika — Nika workflow engine"));
+    println!("     {}", ds::muted("/spn-powers:yo — List all superpowers"));
     println!();
-    println!("  {} Check plugin status:", "3.".cyan().bold());
-    println!("     {}", "spn doctor".cyan());
+    println!("  {} Check plugin status:", ds::primary("3."));
+    println!("     {}", ds::primary("spn doctor"));
     println!();
     println!(
         "{}",
-        "Documentation: https://github.com/supernovae-st/claude-code-supernovae".dimmed()
+        ds::muted("Documentation: https://github.com/supernovae-st/claude-code-supernovae")
     );
     println!();
 }

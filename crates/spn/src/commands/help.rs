@@ -3,7 +3,7 @@
 //! Detailed help topics for SuperNovae CLI.
 
 use crate::error::Result;
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 /// Run help command with optional topic.
 pub async fn run(topic: Option<&str>) -> Result<()> {
@@ -19,7 +19,7 @@ pub async fn run(topic: Option<&str>) -> Result<()> {
         Some("daemon") => show_daemon_help(),
         Some("architecture") | Some("arch") => show_architecture_help(),
         Some(t) => {
-            eprintln!("{} Unknown topic: {}", "!".yellow(), t);
+            eprintln!("{} Unknown topic: {}", ds::warning("!"), t);
             eprintln!();
             show_topics_list();
         }
@@ -29,386 +29,377 @@ pub async fn run(topic: Option<&str>) -> Result<()> {
 }
 
 fn show_topics_list() {
-    println!("{}", "SuperNovae Help".cyan().bold());
-    println!("{}", "===============".cyan());
+    println!("{}", ds::primary("SuperNovae Help"));
+    println!("{}", ds::primary("==============="));
     println!();
-    println!("{}", "Available topics:".bold());
+    println!("{}", ds::highlight("Available topics:"));
     println!();
-    println!("  {}", "Getting Started".dimmed());
+    println!("  {}", ds::muted("Getting Started"));
     println!(
         "    {}     Configuration system (spn.yaml, .spn/)",
-        "config".cyan()
-    );
+        ds::primary("config")    );
     println!(
         "    {}     Package scopes (@nika, @novanet, @community)",
-        "scopes".cyan()
-    );
-    println!("    {}   Package registry", "registry".cyan());
+        ds::primary("scopes")    );
+    println!("    {}   Package registry", ds::primary("registry"));
     println!();
-    println!("  {}", "Core Features".dimmed());
-    println!("    {}        MCP server management", "mcp".cyan());
+    println!("  {}", ds::muted("Core Features"));
+    println!("    {}        MCP server management", ds::primary("mcp"));
     println!(
         "    {}       IDE sync (Claude Code, Cursor, VS Code)",
-        "sync".cyan()
-    );
-    println!("    {}  Nika workflow packages", "workflows".cyan());
+        ds::primary("sync")    );
+    println!("    {}  Nika workflow packages", ds::primary("workflows"));
     println!();
-    println!("  {}", "Infrastructure".dimmed());
-    println!("    {}     Local LLM model management", "models".cyan());
-    println!("    {}  API key management", "providers".cyan());
-    println!("    {}     Background service", "daemon".cyan());
-    println!("    {}       System architecture", "arch".cyan());
+    println!("  {}", ds::muted("Infrastructure"));
+    println!("    {}     Local LLM model management", ds::primary("models"));
+    println!("    {}  API key management", ds::primary("providers"));
+    println!("    {}     Background service", ds::primary("daemon"));
+    println!("    {}       System architecture", ds::primary("arch"));
     println!();
-    println!("Usage: {} <topic>", "spn topic".green());
+    println!("Usage: {} <topic>", ds::command("spn topic"));
     println!();
-    println!("{}", "Quick Reference:".bold());
+    println!("{}", ds::highlight("Quick Reference:"));
     println!();
-    println!("  {}              Initialize project", "spn init".dimmed());
-    println!("  {}       Add package", "spn add <pkg>".dimmed());
+    println!("  {}              Initialize project", ds::muted("spn init"));
+    println!("  {}       Add package", ds::muted("spn add <pkg>"));
     println!(
         "  {}           Install dependencies",
-        "spn install".dimmed()
+        ds::muted("spn install")
     );
-    println!("  {}              Sync to editors", "spn sync".dimmed());
-    println!("  {}            System health check", "spn doctor".dimmed());
+    println!("  {}              Sync to editors", ds::muted("spn sync"));
+    println!("  {}            System health check", ds::muted("spn doctor"));
 }
 
 fn show_config_help() {
-    println!("{}", "Configuration".cyan().bold());
-    println!("{}", "=============".cyan());
+    println!("{}", ds::primary("Configuration"));
+    println!("{}", ds::primary("============="));
     println!();
     println!(
         "{}",
-        "SuperNovae uses a layered configuration system:".bold()
+        ds::highlight("SuperNovae uses a layered configuration system:")
     );
     println!();
-    println!("  {} Project-level manifest", "1. spn.yaml".cyan());
+    println!("  {} Project-level manifest", ds::primary("1. spn.yaml"));
     println!("     Lists dependencies for a project");
     println!();
-    println!("  {} User-level settings", "2. ~/.spn/config.json".cyan());
+    println!("  {} User-level settings", ds::primary("2. ~/.spn/config.json"));
     println!("     Registry credentials, sync preferences");
     println!();
-    println!("  {} Installed packages", "3. ~/.spn/packages/".cyan());
+    println!("  {} Installed packages", ds::primary("3. ~/.spn/packages/"));
     println!("     Downloaded and extracted packages");
     println!();
-    println!("{}", "spn.yaml Example:".bold());
+    println!("{}", ds::highlight("spn.yaml Example:"));
     println!();
-    println!("  {}", "name: my-project".dimmed());
-    println!("  {}", "version: 1.0.0".dimmed());
-    println!("  {}", "dependencies:".dimmed());
-    println!("  {}", "  @nika/seo-audit: ^1.0.0".dimmed());
-    println!("  {}", "  @novanet/entity-explorer: ^0.5.0".dimmed());
+    println!("  {}", ds::muted("name: my-project"));
+    println!("  {}", ds::muted("version: 1.0.0"));
+    println!("  {}", ds::muted("dependencies:"));
+    println!("  {}", ds::muted("  @nika/seo-audit: ^1.0.0"));
+    println!("  {}", ds::muted("  @novanet/entity-explorer: ^0.5.0"));
     println!();
-    println!("{}", "Commands:".bold());
+    println!("{}", ds::highlight("Commands:"));
     println!();
-    println!("  {}         Create spn.yaml", "spn init".green());
-    println!("  {}  Show config", "spn config show".green());
-    println!("  {}   Config file locations", "spn config where".green());
+    println!("  {}         Create spn.yaml", ds::command("spn init"));
+    println!("  {}  Show config", ds::command("spn config show"));
+    println!("  {}   Config file locations", ds::command("spn config where"));
 }
 
 fn show_scopes_help() {
-    println!("{}", "Package Scopes".cyan().bold());
-    println!("{}", "==============".cyan());
+    println!("{}", ds::primary("Package Scopes"));
+    println!("{}", ds::primary("=============="));
     println!();
     println!("Packages are organized by scope (namespace):");
     println!();
-    println!("  {}   Official Nika workflow packages", "@nika/*".cyan());
+    println!("  {}   Official Nika workflow packages", ds::primary("@nika/*"));
     println!("              Examples: @nika/seo-audit, @nika/content-pipeline");
     println!();
-    println!("  {} Official NovaNet schema packages", "@novanet/*".cyan());
+    println!("  {} Official NovaNet schema packages", ds::primary("@novanet/*"));
     println!("              Examples: @novanet/entity-explorer, @novanet/schema-tools");
     println!();
     println!(
         "  {}    Community-contributed packages",
-        "@community/*".cyan()
-    );
+        ds::primary("@community/*")    );
     println!("              Examples: @community/my-workflow");
     println!();
-    println!("{}", "Scope Features:".bold());
+    println!("{}", ds::highlight("Scope Features:"));
     println!();
     println!("  - Scopes are namespaces, not permissions");
     println!("  - Anyone can publish to @community/*");
     println!("  - @nika/* and @novanet/* require maintainer access");
     println!();
-    println!("{}", "Index Structure:".bold());
+    println!("{}", ds::highlight("Index Structure:"));
     println!();
-    println!("  {}", "index/".dimmed());
-    println!("  {}", "├── @nika/".dimmed());
-    println!("  {}", "│   └── seo-audit".dimmed());
-    println!("  {}", "├── @novanet/".dimmed());
-    println!("  {}", "│   └── entity-explorer".dimmed());
-    println!("  {}", "└── @community/".dimmed());
-    println!("  {}", "    └── user-workflow".dimmed());
+    println!("  {}", ds::muted("index/"));
+    println!("  {}", ds::muted("├── @nika/"));
+    println!("  {}", ds::muted("│   └── seo-audit"));
+    println!("  {}", ds::muted("├── @novanet/"));
+    println!("  {}", ds::muted("│   └── entity-explorer"));
+    println!("  {}", ds::muted("└── @community/"));
+    println!("  {}", ds::muted("    └── user-workflow"));
 }
 
 fn show_mcp_help() {
-    println!("{}", "MCP Servers".cyan().bold());
-    println!("{}", "===========".cyan());
+    println!("{}", ds::primary("MCP Servers"));
+    println!("{}", ds::primary("==========="));
     println!();
     println!("MCP (Model Context Protocol) servers extend AI capabilities.");
     println!();
-    println!("{}", "Built-in Aliases:".bold());
+    println!("{}", ds::highlight("Built-in Aliases:"));
     println!();
-    println!("  {}          @neo4j/mcp-server-neo4j", "neo4j".cyan());
+    println!("  {}          @neo4j/mcp-server-neo4j", ds::primary("neo4j"));
     println!(
         "  {}     @anthropic/mcp-server-filesystem",
-        "filesystem".cyan()
-    );
-    println!("  {}         @anthropic/mcp-server-github", "github".cyan());
+        ds::primary("filesystem")    );
+    println!("  {}         @anthropic/mcp-server-github", ds::primary("github"));
     println!(
         "  {}       @anthropic/mcp-server-postgres",
-        "postgres".cyan()
-    );
-    println!("  {}         @anthropic/mcp-server-sqlite", "sqlite".cyan());
-    println!("  {}         @anthropic/mcp-server-memory", "memory".cyan());
+        ds::primary("postgres")    );
+    println!("  {}         @anthropic/mcp-server-sqlite", ds::primary("sqlite"));
+    println!("  {}         @anthropic/mcp-server-memory", ds::primary("memory"));
     println!(
         "  {}      @anthropic/mcp-server-puppeteer",
-        "puppeteer".cyan()
-    );
-    println!("  {}          @anthropic/mcp-server-fetch", "fetch".cyan());
+        ds::primary("puppeteer")    );
+    println!("  {}          @anthropic/mcp-server-fetch", ds::primary("fetch"));
     println!();
-    println!("{}", "Commands:".bold());
+    println!("{}", ds::highlight("Commands:"));
     println!();
     println!(
         "  {}          Install neo4j MCP server",
-        "spn mcp add neo4j".green()
+        ds::command("spn mcp add neo4j")
     );
     println!(
         "  {}       Remove MCP server",
-        "spn mcp remove neo4j".green()
+        ds::command("spn mcp remove neo4j")
     );
     println!(
         "  {}             List installed servers",
-        "spn mcp list".green()
+        ds::command("spn mcp list")
     );
     println!(
         "  {}         Test server connection",
-        "spn mcp test neo4j".green()
+        ds::command("spn mcp test neo4j")
     );
     println!();
-    println!("{}", "Integration:".bold());
+    println!("{}", ds::highlight("Integration:"));
     println!();
     println!("  MCP servers are installed via npm globally.");
     println!(
         "  Use {} to sync MCP config to your editor.",
-        "spn sync".cyan()
-    );
+        ds::command("spn sync")    );
 }
 
 fn show_sync_help() {
-    println!("{}", "IDE Sync".cyan().bold());
-    println!("{}", "========".cyan());
+    println!("{}", ds::primary("IDE Sync"));
+    println!("{}", ds::primary("========"));
     println!();
     println!("Sync packages and MCP servers to IDE configurations.");
     println!();
-    println!("{}", "Supported IDEs:".bold());
+    println!("{}", ds::highlight("Supported IDEs:"));
     println!();
-    println!("  {}     .claude/settings.json", "claude-code".cyan());
-    println!("  {}         .cursor/settings.json", "cursor".cyan());
-    println!("  {}         .vscode/settings.json", "vscode".cyan());
-    println!("  {}       .windsurf/settings.json", "windsurf".cyan());
+    println!("  {}     .claude/settings.json", ds::primary("claude-code"));
+    println!("  {}         .cursor/settings.json", ds::primary("cursor"));
+    println!("  {}         .vscode/settings.json", ds::primary("vscode"));
+    println!("  {}       .windsurf/settings.json", ds::primary("windsurf"));
     println!();
-    println!("{}", "Commands:".bold());
+    println!("{}", ds::highlight("Commands:"));
     println!();
     println!(
         "  {}                    Sync all enabled editors",
-        "spn sync".green()
+        ds::command("spn sync")
     );
     println!(
         "  {}  Enable sync for editor",
-        "spn sync --enable cursor".green()
+        ds::command("spn sync --enable cursor")
     );
     println!(
         "  {}           Show sync status",
-        "spn sync --status".green()
+        ds::command("spn sync --status")
     );
     println!(
         "  {}          Preview changes",
-        "spn sync --dry-run".green()
+        ds::command("spn sync --dry-run")
     );
     println!();
-    println!("{}", "What Gets Synced:".bold());
+    println!("{}", ds::highlight("What Gets Synced:"));
     println!();
     println!("  - MCP server configurations (mcpServers section)");
     println!("  - Installed skills from skills.sh");
     println!("  - Package paths for Nika include: resolution");
     println!();
-    println!("{}", "Sync Config:".bold());
+    println!("{}", ds::highlight("Sync Config:"));
     println!();
     println!("  Stored in ~/.spn/sync.json");
     println!("  Per-project overrides in .spn/sync.json");
 }
 
 fn show_workflows_help() {
-    println!("{}", "Nika Workflows".cyan().bold());
-    println!("{}", "==============".cyan());
+    println!("{}", ds::primary("Nika Workflows"));
+    println!("{}", ds::primary("=============="));
     println!();
     println!("Nika workflows are YAML files defining AI task pipelines.");
     println!();
-    println!("{}", "Workflow Structure:".bold());
+    println!("{}", ds::highlight("Workflow Structure:"));
     println!();
-    println!("  {}", "name: my-workflow".dimmed());
-    println!("  {}", "description: Example workflow".dimmed());
-    println!("  {}", "".dimmed());
-    println!("  {}", "tasks:".dimmed());
-    println!("  {}", "  - id: fetch-data".dimmed());
-    println!("  {}", "    fetch: https://api.example.com/data".dimmed());
-    println!("  {}", "    use.ctx: api_data".dimmed());
-    println!("  {}", "".dimmed());
-    println!("  {}", "  - id: process".dimmed());
-    println!("  {}", "    infer: Process this data".dimmed());
-    println!("  {}", "    context: $api_data".dimmed());
+    println!("  {}", ds::muted("name: my-workflow"));
+    println!("  {}", ds::muted("description: Example workflow"));
+    println!("  {}", ds::muted(""));
+    println!("  {}", ds::muted("tasks:"));
+    println!("  {}", ds::muted("  - id: fetch-data"));
+    println!("  {}", ds::muted("    fetch: https://api.example.com/data"));
+    println!("  {}", ds::muted("    use.ctx: api_data"));
+    println!("  {}", ds::muted(""));
+    println!("  {}", ds::muted("  - id: process"));
+    println!("  {}", ds::muted("    infer: Process this data"));
+    println!("  {}", ds::muted("    context: $api_data"));
     println!();
-    println!("{}", "Verbs:".bold());
+    println!("{}", ds::highlight("Verbs:"));
     println!();
-    println!("  {}   LLM inference (Claude, GPT, etc.)", "infer:".cyan());
-    println!("  {}    Execute shell command", "exec:".cyan());
-    println!("  {}   HTTP request", "fetch:".cyan());
-    println!("  {}  MCP tool call", "invoke:".cyan());
-    println!("  {}   Multi-turn agent loop", "agent:".cyan());
+    println!("  {}   LLM inference (Claude, GPT, etc.)", ds::primary("infer:"));
+    println!("  {}    Execute shell command", ds::primary("exec:"));
+    println!("  {}   HTTP request", ds::primary("fetch:"));
+    println!("  {}  MCP tool call", ds::primary("invoke:"));
+    println!("  {}   Multi-turn agent loop", ds::primary("agent:"));
     println!();
-    println!("{}", "Commands:".bold());
+    println!("{}", ds::highlight("Commands:"));
     println!();
-    println!("  {}     Run a workflow", "spn nk run file.yaml".green());
-    println!("  {}   Validate syntax", "spn nk check file.yaml".green());
-    println!("  {}          Open Nika Studio", "spn nk studio".green());
+    println!("  {}     Run a workflow", ds::command("spn nk run file.yaml"));
+    println!("  {}   Validate syntax", ds::command("spn nk check file.yaml"));
+    println!("  {}          Open Nika Studio", ds::command("spn nk studio"));
 }
 
 fn show_registry_help() {
-    println!("{}", "Package Registry".cyan().bold());
-    println!("{}", "================".cyan());
+    println!("{}", ds::primary("Package Registry"));
+    println!("{}", ds::primary("================"));
     println!();
     println!("SuperNovae uses a sparse index registry (like Cargo).");
     println!();
-    println!("{}", "Registry Location:".bold());
+    println!("{}", ds::highlight("Registry Location:"));
     println!();
     println!(
         "  {}",
-        "github.com/supernovae-st/supernovae-registry".cyan()
-    );
+        ds::url("github.com/supernovae-st/supernovae-registry")    );
     println!();
-    println!("{}", "Registry Structure:".bold());
+    println!("{}", ds::highlight("Registry Structure:"));
     println!();
-    println!("  {}", "supernovae-registry/".dimmed());
+    println!("  {}", ds::muted("supernovae-registry/"));
     println!(
         "  {}",
-        "├── config.json         # Registry metadata".dimmed()
+        ds::muted("├── config.json         # Registry metadata")
     );
     println!(
         "  {}",
-        "├── index/              # Sparse index (NDJSON)".dimmed()
+        ds::muted("├── index/              # Sparse index (NDJSON)")
     );
-    println!("  {}", "│   ├── @nika/".dimmed());
-    println!("  {}", "│   │   └── seo-audit".dimmed());
-    println!("  {}", "│   └── @novanet/".dimmed());
-    println!("  {}", "│       └── schema-tools".dimmed());
+    println!("  {}", ds::muted("│   ├── @nika/"));
+    println!("  {}", ds::muted("│   │   └── seo-audit"));
+    println!("  {}", ds::muted("│   └── @novanet/"));
+    println!("  {}", ds::muted("│       └── schema-tools"));
     println!(
         "  {}",
-        "└── releases/           # Package tarballs".dimmed()
+        ds::muted("└── releases/           # Package tarballs")
     );
-    println!("  {}", "    └── @nika/".dimmed());
-    println!("  {}", "        └── seo-audit-1.0.0.tar.gz".dimmed());
+    println!("  {}", ds::muted("    └── @nika/"));
+    println!("  {}", ds::muted("        └── seo-audit-1.0.0.tar.gz"));
     println!();
-    println!("{}", "Index Format (NDJSON):".bold());
+    println!("{}", ds::highlight("Index Format (NDJSON):"));
     println!();
     println!(
         "  {}",
-        r#"{"name":"seo-audit","version":"1.0.0","checksum":"sha256:..."}"#.dimmed()
+        ds::muted(r#"{"name":"seo-audit","version":"1.0.0","checksum":"sha256:..."}"#)
     );
     println!();
-    println!("{}", "Commands:".bold());
+    println!("{}", ds::highlight("Commands:"));
     println!();
-    println!("  {}      Search packages", "spn search <query>".green());
-    println!("  {}          Package details", "spn info <pkg>".green());
-    println!("  {}              Publish package", "spn publish".green());
+    println!("  {}      Search packages", ds::command("spn search <query>"));
+    println!("  {}          Package details", ds::command("spn info <pkg>"));
+    println!("  {}              Publish package", ds::command("spn publish"));
 }
 
 fn show_models_help() {
-    println!("{}", "Local LLM Models".cyan().bold());
-    println!("{}", "================".cyan());
+    println!("{}", ds::primary("Local LLM Models"));
+    println!("{}", ds::primary("================"));
     println!();
     println!("Manage local LLM models via Ollama for offline inference.");
     println!();
-    println!("{}", "Requirements:".bold());
+    println!("{}", ds::highlight("Requirements:"));
     println!();
-    println!("  Ollama must be installed: {}", "https://ollama.ai".cyan());
+    println!("  Ollama must be installed: {}", ds::primary("https://ollama.ai"));
     println!("  The spn daemon must be running for model operations.");
     println!();
-    println!("{}", "Popular Models:".bold());
+    println!("{}", ds::highlight("Popular Models:"));
     println!();
-    println!("  {}    Fast, efficient (1B params)", "llama3.2:1b".cyan());
-    println!("  {}    Balanced (7B params)", "llama3.2:7b".cyan());
-    println!("  {}        Coding specialist", "codellama".cyan());
-    println!("  {}     Lightweight (2.7B)", "phi3:mini".cyan());
-    println!("  {}  Instruction-tuned", "mistral:instruct".cyan());
+    println!("  {}    Fast, efficient (1B params)", ds::primary("llama3.2:1b"));
+    println!("  {}    Balanced (7B params)", ds::primary("llama3.2:7b"));
+    println!("  {}        Coding specialist", ds::primary("codellama"));
+    println!("  {}     Lightweight (2.7B)", ds::primary("phi3:mini"));
+    println!("  {}  Instruction-tuned", ds::primary("mistral:instruct"));
     println!();
-    println!("{}", "Commands:".bold());
+    println!("{}", ds::highlight("Commands:"));
     println!();
     println!(
         "  {}             List installed models",
-        "spn model list".green()
+        ds::command("spn model list")
     );
-    println!("  {}  Download a model", "spn model pull <name>".green());
-    println!("  {}  Load into memory", "spn model load <name>".green());
-    println!("  {}    Free memory", "spn model unload <name>".green());
-    println!("  {}    Remove model", "spn model delete <name>".green());
-    println!("  {}  Search available", "spn model search <q>".green());
+    println!("  {}  Download a model", ds::command("spn model pull <name>"));
+    println!("  {}  Load into memory", ds::command("spn model load <name>"));
+    println!("  {}    Free memory", ds::command("spn model unload <name>"));
+    println!("  {}    Remove model", ds::command("spn model delete <name>"));
+    println!("  {}  Search available", ds::command("spn model search <q>"));
     println!();
-    println!("{}", "Storage:".bold());
+    println!("{}", ds::highlight("Storage:"));
     println!();
     println!("  Models are stored in ~/.ollama/models/");
     println!("  Typical sizes: 1GB - 40GB depending on model");
     println!();
-    println!("{}", "Integration with Nika:".bold());
+    println!("{}", ds::highlight("Integration with Nika:"));
     println!();
     println!("  Nika workflows can use local models via the ollama provider:");
-    println!("  {}", "provider: ollama/llama3.2".dimmed());
+    println!("  {}", ds::muted("provider: ollama/llama3.2"));
 }
 
 fn show_providers_help() {
-    println!("{}", "API Key Management".cyan().bold());
-    println!("{}", "==================".cyan());
+    println!("{}", ds::primary("API Key Management"));
+    println!("{}", ds::primary("=================="));
     println!();
     println!("Securely manage API keys for LLM providers and MCP tools.");
     println!();
-    println!("{}", "Security:".bold());
+    println!("{}", ds::highlight("Security:"));
     println!();
     println!("  Keys are stored in your OS keychain (macOS/Windows/Linux).");
     println!("  Protected by your system login credentials.");
     println!("  Never stored in plain text or environment variables.");
     println!();
-    println!("{}", "Supported Providers:".bold());
+    println!("{}", ds::highlight("Supported Providers:"));
     println!();
-    println!("  {}", "LLM Providers".dimmed());
-    println!("    {}    Claude API", "anthropic".cyan());
-    println!("    {}       GPT-4, etc.", "openai".cyan());
-    println!("    {}      Mistral AI", "mistral".cyan());
-    println!("    {}         Groq (fast)", "groq".cyan());
-    println!("    {}     DeepSeek", "deepseek".cyan());
-    println!("    {}       Gemini", "gemini".cyan());
+    println!("  {}", ds::muted("LLM Providers"));
+    println!("    {}    Claude API", ds::primary("anthropic"));
+    println!("    {}       GPT-4, etc.", ds::primary("openai"));
+    println!("    {}      Mistral AI", ds::primary("mistral"));
+    println!("    {}         Groq (fast)", ds::primary("groq"));
+    println!("    {}     DeepSeek", ds::primary("deepseek"));
+    println!("    {}       Gemini", ds::primary("gemini"));
     println!();
-    println!("  {}", "MCP Tools".dimmed());
-    println!("    {}        Graph database", "neo4j".cyan());
-    println!("    {}       GitHub API", "github".cyan());
-    println!("    {}   Perplexity search", "perplexity".cyan());
-    println!("    {}    Firecrawl scraping", "firecrawl".cyan());
+    println!("  {}", ds::muted("MCP Tools"));
+    println!("    {}        Graph database", ds::primary("neo4j"));
+    println!("    {}       GitHub API", ds::primary("github"));
+    println!("    {}   Perplexity search", ds::primary("perplexity"));
+    println!("    {}    Firecrawl scraping", ds::primary("firecrawl"));
     println!();
-    println!("{}", "Commands:".bold());
+    println!("{}", ds::highlight("Commands:"));
     println!();
     println!(
         "  {}         List all keys (masked)",
-        "spn provider list".green()
+        ds::command("spn provider list")
     );
-    println!("  {}  Set a key", "spn provider set <name>".green());
-    println!("  {}  Get a key", "spn provider get <name>".green());
-    println!("  {}  Remove key", "spn provider delete <name>".green());
-    println!("  {}  Validate format", "spn provider test <name>".green());
+    println!("  {}  Set a key", ds::command("spn provider set <name>"));
+    println!("  {}  Get a key", ds::command("spn provider get <name>"));
+    println!("  {}  Remove key", ds::command("spn provider delete <name>"));
+    println!("  {}  Validate format", ds::command("spn provider test <name>"));
     println!(
         "  {}       Move env vars to keychain",
-        "spn provider migrate".green()
+        ds::command("spn provider migrate")
     );
     println!();
-    println!("{}", "Key Resolution Priority:".bold());
+    println!("{}", ds::highlight("Key Resolution Priority:"));
     println!();
     println!("  1. OS Keychain (most secure)");
     println!("  2. Environment variable");
@@ -416,8 +407,8 @@ fn show_providers_help() {
 }
 
 fn show_daemon_help() {
-    println!("{}", "Background Daemon".cyan().bold());
-    println!("{}", "=================".cyan());
+    println!("{}", ds::primary("Background Daemon"));
+    println!("{}", ds::primary("================="));
     println!();
     println!("The spn daemon is a background service that manages:");
     println!();
@@ -425,13 +416,12 @@ fn show_daemon_help() {
     println!("  - Model lifecycle management");
     println!("  - IPC communication with Nika and MCP servers");
     println!();
-    println!("{}", "Architecture:".bold());
+    println!("{}", ds::highlight("Architecture:"));
     println!();
     println!("  ┌──────────────────────────────────────────┐");
     println!(
         "  │ {} (single keychain accessor)    │",
-        "spn daemon".cyan()
-    );
+        ds::command("spn daemon")    );
     println!("  └────────────────┬─────────────────────────┘");
     println!("                   │ Unix socket");
     println!("       ┌───────────┼───────────┐");
@@ -440,7 +430,7 @@ fn show_daemon_help() {
     println!("    │Nika │    │ MCP  │    │ spn │");
     println!("    └─────┘    └──────┘    └─────┘");
     println!();
-    println!("{}", "Why a daemon?".bold());
+    println!("{}", ds::highlight("Why a daemon?"));
     println!();
     println!("  Without daemon: Each process accessing keychain triggers");
     println!("  a system popup asking for permission. Annoying!");
@@ -448,19 +438,19 @@ fn show_daemon_help() {
     println!("  With daemon: One auth prompt at daemon start, then silence.");
     println!("  All processes talk to daemon via Unix socket.");
     println!();
-    println!("{}", "Commands:".bold());
+    println!("{}", ds::highlight("Commands:"));
     println!();
-    println!("  {}          Start daemon", "spn daemon start".green());
-    println!("  {}           Stop daemon", "spn daemon stop".green());
-    println!("  {}         Check status", "spn daemon status".green());
-    println!("  {}        Restart", "spn daemon restart".green());
+    println!("  {}          Start daemon", ds::command("spn daemon start"));
+    println!("  {}           Stop daemon", ds::command("spn daemon stop"));
+    println!("  {}         Check status", ds::command("spn daemon status"));
+    println!("  {}        Restart", ds::command("spn daemon restart"));
     println!(
         "  {}        Install as system service",
-        "spn daemon install".green()
+        ds::command("spn daemon install")
     );
-    println!("  {}      Remove service", "spn daemon uninstall".green());
+    println!("  {}      Remove service", ds::command("spn daemon uninstall"));
     println!();
-    println!("{}", "Files:".bold());
+    println!("{}", ds::highlight("Files:"));
     println!();
     println!("  Socket: ~/.spn/daemon.sock");
     println!("  PID:    ~/.spn/daemon.pid");
@@ -468,18 +458,17 @@ fn show_daemon_help() {
 }
 
 fn show_architecture_help() {
-    println!("{}", "SuperNovae Architecture".cyan().bold());
-    println!("{}", "=======================".cyan());
+    println!("{}", ds::primary("SuperNovae Architecture"));
+    println!("{}", ds::primary("======================="));
     println!();
     println!("spn is the unified entry point for the SuperNovae AI toolkit.");
     println!();
-    println!("{}", "System Overview:".bold());
+    println!("{}", ds::highlight("System Overview:"));
     println!();
     println!("                    ┌─────────────────────────────────┐");
     println!(
         "                    │              {}                │",
-        "spn".cyan().bold()
-    );
+        ds::primary("spn")    );
     println!("                    │    (Package Manager + CLI)      │");
     println!("                    └────────────┬────────────────────┘");
     println!("                                 │");
@@ -489,52 +478,51 @@ fn show_architecture_help() {
     println!("    ┌──────────┐          ┌──────────┐          ┌──────────┐");
     println!(
         "    │   {}   │          │ {} │          │  {}  │",
-        "nika".cyan(),
-        "novanet".cyan(),
-        "ollama".cyan()
-    );
+        ds::primary("nika"),
+        ds::primary("novanet"),
+        ds::primary("ollama")    );
     println!("    │ (Engine) │          │ (Brain)  │          │ (Models) │");
     println!("    └──────────┘          └──────────┘          └──────────┘");
     println!();
-    println!("{}", "Components:".bold());
+    println!("{}", ds::highlight("Components:"));
     println!();
-    println!("  {} SuperNovae Package Manager", "spn".cyan());
+    println!("  {} SuperNovae Package Manager", ds::primary("spn"));
     println!("      Packages, secrets, sync, daemon");
     println!();
-    println!("  {} Workflow Engine", "nika".cyan());
+    println!("  {} Workflow Engine", ds::primary("nika"));
     println!("      YAML workflows, 5 verbs, DAG execution");
     println!("      Access: spn nk <command>");
     println!();
-    println!("  {} Knowledge Graph", "novanet".cyan());
+    println!("  {} Knowledge Graph", ds::primary("novanet"));
     println!("      Neo4j-based, 61 node types, MCP server");
     println!("      Access: spn nv <command>");
     println!();
-    println!("  {} Local Models", "ollama".cyan());
+    println!("  {} Local Models", ds::primary("ollama"));
     println!("      LLM inference, model management");
     println!("      Access: spn model <command>");
     println!();
-    println!("{}", "Communication:".bold());
+    println!("{}", ds::highlight("Communication:"));
     println!();
     println!("  spn → nika      Binary proxy (spn nk → nika)");
     println!("  spn → novanet   Binary proxy (spn nv → novanet)");
     println!("  spn → ollama    IPC via daemon");
     println!("  nika → novanet  MCP protocol (invoke: novanet_*)");
     println!();
-    println!("{}", "Storage Locations:".bold());
+    println!("{}", ds::highlight("Storage Locations:"));
     println!();
     println!("  ~/.spn/          spn config, packages, daemon");
     println!("  ~/.claude/       Claude Code skills, settings");
     println!("  ~/.ollama/       Local LLM models");
     println!("  ~/.nika/         Nika config, traces");
     println!();
-    println!("{}", "Learn More:".bold());
+    println!("{}", ds::highlight("Learn More:"));
     println!();
     println!(
         "  {}              System health check",
-        "spn doctor".green()
+        ds::command("spn doctor")
     );
-    println!("  {}       Detailed status", "spn status --json".green());
-    println!("  {}    Interactive onboarding", "spn setup".green());
+    println!("  {}       Detailed status", ds::command("spn status --json"));
+    println!("  {}    Interactive onboarding", ds::command("spn setup"));
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@
 //! Uses Levenshtein distance to find similar commands when the user
 //! makes a typo, providing helpful "did you mean?" suggestions.
 
-use console::style;
+use crate::ux::design_system as ds;
 
 /// All available top-level commands.
 const COMMANDS: &[&str] = &[
@@ -90,8 +90,8 @@ pub fn print_suggestion(input: &str) {
         eprintln!();
         eprintln!(
             "  {} '{}'",
-            style("Did you mean?").yellow().bold(),
-            style(format!("spn {}", suggestion)).cyan()
+            ds::warning("Did you mean?").bold(),
+            ds::primary(format!("spn {}", suggestion))
         );
         eprintln!();
     }

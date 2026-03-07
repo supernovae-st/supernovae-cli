@@ -4,7 +4,7 @@
 
 use std::env;
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 use crate::config::{global, local, scope::ScopeType, team, ConfigResolver};
 use crate::error::{Result, SpnError};
@@ -27,7 +27,7 @@ async fn show_config(_section: Option<String>) -> Result<()> {
     let config = resolver.resolved();
     let scopes = resolver.get_scope_paths()?;
 
-    println!("{}", "⚙️  Resolved Configuration".cyan().bold());
+    println!("{}", ds::primary("⚙️  Resolved Configuration"));
     println!();
 
     let mut has_config = false;
@@ -35,13 +35,13 @@ async fn show_config(_section: Option<String>) -> Result<()> {
     // Show providers
     if !config.providers.is_empty() {
         has_config = true;
-        println!("{}", "Providers:".bold());
+        println!("{}", ds::highlight("Providers:"));
         for (name, provider) in &config.providers {
             if let Some(model) = &provider.model {
-                println!("  {} model = {}", name.cyan(), model);
+                println!("  {} model = {}", ds::primary(name), model);
             }
             if let Some(endpoint) = &provider.endpoint {
-                println!("  {} endpoint = {}", name.cyan(), endpoint);
+                println!("  {} endpoint = {}", ds::primary(name), endpoint);
             }
         }
         println!();
@@ -50,7 +50,7 @@ async fn show_config(_section: Option<String>) -> Result<()> {
     // Show sync config
     if !config.sync.enabled_editors.is_empty() || config.sync.auto_sync {
         has_config = true;
-        println!("{}", "Sync:".bold());
+        println!("{}", ds::highlight("Sync:"));
         println!("  enabled_editors = {:?}", config.sync.enabled_editors);
         println!("  auto_sync = {}", config.sync.auto_sync);
         println!();
@@ -59,32 +59,32 @@ async fn show_config(_section: Option<String>) -> Result<()> {
     // Show MCP servers
     if !config.servers.is_empty() {
         has_config = true;
-        println!("{}", "MCP Servers:".bold());
+        println!("{}", ds::highlight("MCP Servers:"));
         for (name, server) in &config.servers {
             let status = if server.disabled { "(disabled)" } else { "" };
-            println!("  {} {} {}", name.cyan(), server.command, status.dimmed());
+            println!("  {} {} {}", ds::primary(name), server.command, ds::muted(status));
         }
         println!();
     }
 
     // Show message if no config found
     if !has_config {
-        println!("  {}", "No configuration found.".dimmed());
+        println!("  {}", ds::muted("No configuration found."));
         println!();
-        println!("{}", "Config File Locations:".bold());
+        println!("{}", ds::highlight("Config File Locations:"));
         for scope in &scopes {
             let status = if scope.exists {
-                "✓".green()
+                ds::success("✓")
             } else {
-                "○".dimmed()
+                ds::muted("○")
             };
             println!("  {} {}", status, scope.display_name());
         }
         println!();
-        println!("{}", "Quick Start:".bold());
-        println!("  {} Create project manifest", "spn init".cyan());
-        println!("  {} Add MCP server", "spn mcp add <name>".cyan());
-        println!("  {} Set API key", "spn provider set <name>".cyan());
+        println!("{}", ds::highlight("Quick Start:"));
+        println!("  {} Create project manifest", ds::primary("spn init"));
+        println!("  {} Add MCP server", ds::primary("spn mcp add <name>"));
+        println!("  {} Set API key", ds::primary("spn provider set <name>"));
         println!();
     }
 
@@ -95,22 +95,22 @@ async fn show_locations() -> Result<()> {
     let resolver = ConfigResolver::load()?;
     let scopes = resolver.get_scope_paths()?;
 
-    println!("{}", "📁 Config File Locations".cyan().bold());
+    println!("{}", ds::primary("📁 Config File Locations"));
     println!();
-    println!("   {}", "Precedence: Local > Team > Global".dimmed());
+    println!("   {}", ds::muted("Precedence: Local > Team > Global"));
     println!();
 
     for scope in scopes {
         let status = if scope.exists {
-            "✓".green()
+            ds::success("✓")
         } else {
-            "○".dimmed()
+            ds::muted("○")
         };
         println!("   {} {}", status, scope.display_name());
     }
 
     println!();
-    println!("   {} = exists, {} = not found", "✓".green(), "○".dimmed());
+    println!("   {} = exists, {} = not found", ds::success("✓"), ds::muted("○"));
 
     Ok(())
 }
@@ -119,7 +119,7 @@ async fn list_config(show_origin: bool) -> Result<()> {
     let resolver = ConfigResolver::load()?;
     let config = resolver.resolved();
 
-    println!("{}", "📋 Configuration Values".cyan().bold());
+    println!("{}", ds::primary("📋 Configuration Values"));
     println!();
 
     // List providers
@@ -155,7 +155,7 @@ async fn list_config(show_origin: bool) -> Result<()> {
         println!();
         println!(
             "   {}",
-            "Use 'spn config get <key> --show-origin' for detailed origin info".dimmed()
+            ds::muted("Use 'spn config get <key> --show-origin' for detailed origin info")
         );
     }
 
@@ -167,14 +167,14 @@ async fn get_value(key: &str, show_origin: bool) -> Result<()> {
 
     // TODO: Implement key path resolution
     // For now, just show a message
-    println!("{} Getting value for key: {}", "🔍".cyan(), key.bold());
+    println!("{} Getting value for key: {}", ds::primary("🔍"), ds::highlight(key));
 
     if show_origin {
         println!();
-        println!("   {} Origin tracking not yet implemented", "⚠️".yellow());
+        println!("   {} Origin tracking not yet implemented", ds::warning("⚠️"));
         println!(
             "   {} This will show which scope defined this value",
-            "→".dimmed()
+            ds::muted("→")
         );
     }
 
@@ -191,8 +191,8 @@ async fn set_value(key: &str, value: &str, scope: &str) -> Result<()> {
 
     println!(
         "{} Setting {} = {} in {} scope",
-        "✍️".cyan(),
-        key.bold(),
+        ds::primary("✍️"),
+        ds::highlight(key),
         value,
         scope_type
     );
@@ -201,9 +201,9 @@ async fn set_value(key: &str, value: &str, scope: &str) -> Result<()> {
     println!();
     println!(
         "   {} Key path resolution not yet implemented",
-        "⚠️".yellow()
+        ds::warning("⚠️")
     );
-    println!("   {} Manual edit with: spn config edit", "→".dimmed());
+    println!("   {} Manual edit with: spn config edit", ds::muted("→"));
 
     Ok(())
 }
@@ -269,8 +269,8 @@ async fn import_config(file: &str, scope: &str, skip_confirm: bool) -> Result<()
 
     println!(
         "{} Importing configuration from {}",
-        "📥".cyan(),
-        file.bold()
+        ds::primary("📥"),
+        ds::highlight(file)
     );
     println!("   Target scope: {}", scope_type);
     println!();
@@ -332,14 +332,14 @@ async fn import_config(file: &str, scope: &str, skip_confirm: bool) -> Result<()
     };
 
     if mcp_servers.is_empty() {
-        println!("{}", "⚠️  No MCP servers found in file".yellow());
+        println!("{}", ds::warning("⚠️  No MCP servers found in file"));
         return Ok(());
     }
 
     // Show what will be imported
-    println!("{}", "MCP Servers to import:".bold());
+    println!("{}", ds::highlight("MCP Servers to import:"));
     for (name, server) in &mcp_servers {
-        println!("  {} {} {}", "•".cyan(), name.bold(), server.command);
+        println!("  {} {} {}", ds::primary("•"), ds::highlight(name), server.command);
         if !server.args.is_empty() {
             println!("    args: {:?}", server.args);
         }
@@ -362,7 +362,7 @@ async fn import_config(file: &str, scope: &str, skip_confirm: bool) -> Result<()
             .unwrap_or(false);
 
         if !confirmed {
-            println!("{}", "❌ Import cancelled".yellow());
+            println!("{}", ds::warning("❌ Import cancelled"));
             return Ok(());
         }
     }
@@ -376,7 +376,7 @@ async fn import_config(file: &str, scope: &str, skip_confirm: bool) -> Result<()
             global::save(&config)?;
             println!(
                 "{} Imported to {}",
-                "✅".green(),
+                ds::success("✅"),
                 global::config_path()?.display()
             );
         }
@@ -384,7 +384,7 @@ async fn import_config(file: &str, scope: &str, skip_confirm: bool) -> Result<()
             team::save_mcp(&cwd, &mcp_servers)?;
             println!(
                 "{} Imported to {}",
-                "✅".green(),
+                ds::success("✅"),
                 team::mcp_config_path(&cwd).display()
             );
         }
@@ -395,7 +395,7 @@ async fn import_config(file: &str, scope: &str, skip_confirm: bool) -> Result<()
             local::ensure_gitignored(&cwd)?;
             println!(
                 "{} Imported to {}",
-                "✅".green(),
+                ds::success("✅"),
                 local::config_path(&cwd).display()
             );
         }

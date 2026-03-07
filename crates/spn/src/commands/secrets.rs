@@ -12,7 +12,7 @@ use crate::secrets::{
 };
 use crate::SecretsCommands;
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
@@ -59,15 +59,15 @@ async fn run_doctor(fix: bool) -> Result<()> {
     println!();
     println!(
         "{}",
-        "╔═══════════════════════════════════════════════════════════════════════════════╗".cyan()
+        ds::primary("╔═══════════════════════════════════════════════════════════════════════════════╗")
     );
     println!(
         "{}",
-        "║  🩺 SECRETS DOCTOR                                                            ║".cyan()
+        ds::primary("║  🩺 SECRETS DOCTOR                                                            ║")
     );
     println!(
         "{}",
-        "╚═══════════════════════════════════════════════════════════════════════════════╝".cyan()
+        ds::primary("╚═══════════════════════════════════════════════════════════════════════════════╝")
     );
     println!();
 
@@ -76,14 +76,14 @@ async fn run_doctor(fix: bool) -> Result<()> {
     let mut errors = 0;
 
     // Check 1: Keychain Access
-    println!("{}", "Checking keychain access...".dimmed());
+    println!("{}", ds::muted("Checking keychain access..."));
     match check_keychain_access() {
         Ok(result) => checks.push(result),
         Err(e) => checks.push(CheckResult::Error(format!("Keychain check failed: {}", e))),
     }
 
     // Check 2: Global secrets file permissions
-    println!("{}", "Checking file permissions...".dimmed());
+    println!("{}", ds::muted("Checking file permissions..."));
     match check_file_permissions() {
         Ok(result) => checks.push(result),
         Err(e) => checks.push(CheckResult::Error(format!(
@@ -93,19 +93,19 @@ async fn run_doctor(fix: bool) -> Result<()> {
     }
 
     // Check 3: .gitignore for .env
-    println!("{}", "Checking .gitignore...".dimmed());
+    println!("{}", ds::muted("Checking .gitignore..."));
     checks.push(check_gitignore());
 
     // Check 4: Memory protection
-    println!("{}", "Checking memory protection...".dimmed());
+    println!("{}", ds::muted("Checking memory protection..."));
     checks.push(check_memory_protection());
 
     // Check 5: Key format validation
-    println!("{}", "Validating key formats...".dimmed());
+    println!("{}", ds::muted("Validating key formats..."));
     checks.extend(check_key_formats());
 
     // Check 6: Duplicate keys
-    println!("{}", "Checking for duplicate keys...".dimmed());
+    println!("{}", ds::muted("Checking for duplicate keys..."));
     checks.extend(check_duplicate_keys());
 
     println!();
@@ -115,23 +115,23 @@ async fn run_doctor(fix: bool) -> Result<()> {
 
     for check in &checks {
         let icon = match check {
-            CheckResult::Pass(_) => check.icon().green(),
+            CheckResult::Pass(_) => ds::success(check.icon()),
             CheckResult::Warning(_) => {
                 warnings += 1;
-                check.icon().yellow()
+                ds::warning(check.icon())
             }
             CheckResult::Error(_) => {
                 errors += 1;
-                check.icon().red()
+                ds::error(check.icon())
             }
-            CheckResult::Info(_) => check.icon().blue(),
+            CheckResult::Info(_) => ds::primary(check.icon()),
         };
 
         let message = match check {
-            CheckResult::Pass(m) => m.green().to_string(),
-            CheckResult::Warning(m) => m.yellow().to_string(),
-            CheckResult::Error(m) => m.red().to_string(),
-            CheckResult::Info(m) => m.blue().to_string(),
+            CheckResult::Pass(m) => ds::success(m).to_string(),
+            CheckResult::Warning(m) => ds::warning(m).to_string(),
+            CheckResult::Error(m) => ds::error(m).to_string(),
+            CheckResult::Info(m) => ds::primary(m).to_string(),
         };
 
         println!("│    {} {}", icon, message);
@@ -145,13 +145,13 @@ async fn run_doctor(fix: bool) -> Result<()> {
     if total_issues == 0 {
         println!(
             "{} {}",
-            "✓".green().bold(),
-            "All health checks passed!".green().bold()
+            ds::success("✓").bold(),
+            ds::success("All health checks passed!").bold()
         );
     } else {
         println!(
             "{} {} ({} warning{}, {} error{})",
-            "Issues found:".bold(),
+            ds::highlight("Issues found:"),
             total_issues,
             warnings,
             if warnings == 1 { "" } else { "s" },
@@ -163,8 +163,8 @@ async fn run_doctor(fix: bool) -> Result<()> {
             println!();
             println!(
                 "{} {}",
-                "Tip:".dimmed(),
-                "Run `spn secrets doctor --fix` to auto-fix where possible.".dimmed()
+                ds::muted("Tip:"),
+                ds::muted("Run `spn secrets doctor --fix` to auto-fix where possible.")
             );
         }
     }
@@ -172,7 +172,7 @@ async fn run_doctor(fix: bool) -> Result<()> {
     // Auto-fix if requested
     if fix && total_issues > 0 {
         println!();
-        println!("{}", "Attempting auto-fix...".cyan());
+        println!("{}", ds::primary("Attempting auto-fix..."));
         run_auto_fix(&checks).await?;
     }
 
@@ -337,7 +337,7 @@ async fn run_auto_fix(checks: &[CheckResult]) -> Result<()> {
     for check in checks {
         match check {
             CheckResult::Warning(msg) if msg.contains(".gitignore") => {
-                println!("  {} Adding .env to .gitignore...", "→".cyan());
+                println!("  {} Adding .env to .gitignore...", ds::primary("→"));
 
                 let gitignore_path = std::path::Path::new(".gitignore");
                 let mut content = if gitignore_path.exists() {
@@ -352,18 +352,18 @@ async fn run_auto_fix(checks: &[CheckResult]) -> Result<()> {
                     }
                     content.push_str(".env\n");
                     fs::write(gitignore_path, content)?;
-                    println!("    {} Added .env to .gitignore", "✓".green());
+                    println!("    {} Added .env to .gitignore", ds::success("✓"));
                 }
             }
             CheckResult::Warning(msg) if msg.contains("permissions") => {
-                println!("  {} Fixing file permissions...", "→".cyan());
+                println!("  {} Fixing file permissions...", ds::primary("→"));
 
                 if let Ok(path) = global_secrets_path() {
                     if path.exists() {
                         let mut perms = fs::metadata(&path)?.permissions();
                         perms.set_mode(0o600);
                         fs::set_permissions(&path, perms)?;
-                        println!("    {} Set permissions to 600", "✓".green());
+                        println!("    {} Set permissions to 600", ds::success("✓"));
                     }
                 }
             }
@@ -383,43 +383,43 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
         println!();
         println!(
             "{}",
-            "╭─────────────────────────────────────────────────────────────────────────────╮".red()
+            ds::error("╭─────────────────────────────────────────────────────────────────────────────╮")
         );
         println!(
             "{}",
-            "│  ⚠️  WARNING: PLAINTEXT EXPORT                                              │".red()
+            ds::error("│  ⚠️  WARNING: PLAINTEXT EXPORT                                              │")
         );
         println!(
             "{}",
-            "│                                                                             │".red()
+            ds::error("│                                                                             │")
         );
         println!(
             "{}",
-            "│  You are about to export secrets in PLAINTEXT. This is dangerous!          │".red()
+            ds::error("│  You are about to export secrets in PLAINTEXT. This is dangerous!          │")
         );
         println!(
             "{}",
-            "│  The output will contain unencrypted API keys.                             │".red()
+            ds::error("│  The output will contain unencrypted API keys.                             │")
         );
         println!(
             "{}",
-            "│                                                                             │".red()
+            ds::error("│                                                                             │")
         );
         println!(
             "{}",
-            "│  Only use this for:                                                        │".red()
+            ds::error("│  Only use this for:                                                        │")
         );
         println!(
             "{}",
-            "│    • Migrating to another machine you control                              │".red()
+            ds::error("│    • Migrating to another machine you control                              │")
         );
         println!(
             "{}",
-            "│    • Backup to encrypted storage                                           │".red()
+            ds::error("│    • Backup to encrypted storage                                           │")
         );
         println!(
             "{}",
-            "╰─────────────────────────────────────────────────────────────────────────────╯".red()
+            ds::error("╰─────────────────────────────────────────────────────────────────────────────╯")
         );
         println!();
     }
@@ -447,7 +447,7 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
     }
 
     if providers.is_empty() {
-        println!("{}", "No secrets configured to export.".yellow());
+        println!("{}", ds::warning("No secrets configured to export."));
         return Ok(());
     }
 
@@ -464,15 +464,15 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
                 fs::write(&path, &yaml)?;
                 println!(
                     "{} Exported {} secrets to {}",
-                    "✓".green(),
+                    ds::success("✓"),
                     export.get("providers").map(|p| p.len()).unwrap_or(0),
-                    path.cyan()
+                    ds::primary(&path)
                 );
                 println!();
                 println!(
                     "{} {}",
-                    "⚠".yellow(),
-                    "Remember to delete this file after importing!".yellow()
+                    ds::warning("⚠"),
+                    ds::warning("Remember to delete this file after importing!")
                 );
             }
             None => {
@@ -481,20 +481,20 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
         }
     } else {
         // SOPS encryption
-        println!("{}", "SOPS encryption not yet implemented.".yellow());
+        println!("{}", ds::warning("SOPS encryption not yet implemented."));
         println!();
-        println!("For now, use {} to export plaintext:", "--plaintext".cyan());
+        println!("For now, use {} to export plaintext:", ds::primary("--plaintext"));
         println!(
             "  {} {}",
-            "spn secrets export --plaintext -o".cyan(),
-            "secrets.yaml".dimmed()
+            ds::primary("spn secrets export --plaintext -o"),
+            ds::muted("secrets.yaml")
         );
         println!();
         println!("Then encrypt with SOPS:");
         println!(
             "  {} {}",
-            "sops encrypt".cyan(),
-            "secrets.yaml > secrets.enc.yaml".dimmed()
+            ds::primary("sops encrypt"),
+            ds::muted("secrets.yaml > secrets.enc.yaml")
         );
     }
 
@@ -508,7 +508,7 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
 
     // Check if file exists
     if !std::path::Path::new(file).exists() {
-        eprintln!("{} File not found: {}", "✗".red(), file);
+        eprintln!("{} File not found: {}", ds::error("✗"), file);
         std::process::exit(1);
     }
 
@@ -521,7 +521,7 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
     let providers = match data.get("providers") {
         Some(p) => p,
         None => {
-            eprintln!("{} Invalid format: missing 'providers' key", "✗".red());
+            eprintln!("{} Invalid format: missing 'providers' key", ds::error("✗"));
             std::process::exit(1);
         }
     };
@@ -529,15 +529,15 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
     println!();
     println!(
         "{}",
-        "╭─────────────────────────────────────────────────────────────────────────────╮".cyan()
+        ds::primary("╭─────────────────────────────────────────────────────────────────────────────╮")
     );
     println!(
         "{}",
-        "│  📥 SECRETS IMPORT                                                          │".cyan()
+        ds::primary("│  📥 SECRETS IMPORT                                                          │")
     );
     println!(
         "{}",
-        "├─────────────────────────────────────────────────────────────────────────────┤".cyan()
+        ds::primary("├─────────────────────────────────────────────────────────────────────────────┤")
     );
 
     println!("│  Found {} secrets to import:", providers.len());
@@ -545,11 +545,11 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
         // Check if it's encrypted (starts with ENC[)
         let is_encrypted = value.starts_with("ENC[");
         let status = if is_encrypted {
-            "encrypted".yellow()
+            ds::warning("encrypted")
         } else {
-            "plaintext".green()
+            ds::success("plaintext")
         };
-        println!("│    {} {} ({})", "•".dimmed(), provider.bold(), status);
+        println!("│    {} {} ({})", ds::muted("•"), ds::highlight(provider), status);
     }
 
     println!("╰─────────────────────────────────────────────────────────────────────────────╯");
@@ -565,7 +565,7 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
         io::stdin().read_line(&mut input)?;
 
         if !input.trim().eq_ignore_ascii_case("y") {
-            println!("{}", "Cancelled.".dimmed());
+            println!("{}", ds::muted("Cancelled."));
             return Ok(());
         }
     }
@@ -579,7 +579,7 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
         if value.starts_with("ENC[") {
             println!(
                 "  {} {}: Skipping encrypted value (use SOPS to decrypt first)",
-                "⚠".yellow(),
+                ds::warning("⚠"),
                 provider
             );
             skipped += 1;
@@ -591,13 +591,13 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
             Ok(()) => {
                 println!(
                     "  {} {}: Imported to keychain",
-                    "✓".green(),
-                    provider.bold()
+                    ds::success("✓"),
+                    ds::highlight(provider)
                 );
                 imported += 1;
             }
             Err(e) => {
-                println!("  {} {}: Failed - {}", "✗".red(), provider.bold(), e);
+                println!("  {} {}: Failed - {}", ds::error("✗"), ds::highlight(provider), e);
             }
         }
     }
@@ -605,7 +605,7 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
     println!();
     println!(
         "{} Imported {} secrets, skipped {}",
-        "Summary:".bold(),
+        ds::highlight("Summary:"),
         imported,
         skipped
     );
@@ -614,8 +614,8 @@ async fn run_import(file: &str, yes: bool) -> Result<()> {
         println!();
         println!(
             "{} {}",
-            "Tip:".dimmed(),
-            "For encrypted files, run `sops decrypt file.yaml` first.".dimmed()
+            ds::muted("Tip:"),
+            ds::muted("For encrypted files, run `sops decrypt file.yaml` first.")
         );
     }
 

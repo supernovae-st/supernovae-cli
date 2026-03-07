@@ -6,7 +6,7 @@
 use crate::error::{Result, SpnError};
 use crate::interop::model_registry::ModelRegistry;
 use crate::ModelCommands;
-use colored::Colorize;
+use crate::ux::design_system as ds;
 use dialoguer::Confirm;
 use spn_client::{LoadConfig, Request, Response, SpnClient};
 
@@ -50,23 +50,23 @@ async fn list(json: bool, running_only: bool) -> Result<()> {
             }
 
             if models.is_empty() {
-                println!("{}", "No models installed.".yellow());
+                println!("{}", ds::warning("No models installed."));
                 println!();
                 println!("Get started:");
-                println!("  {} spn model pull llama3.2", "•".cyan());
-                println!("  {} spn model pull mistral:7b", "•".cyan());
+                println!("  {} spn model pull llama3.2", ds::primary("•"));
+                println!("  {} spn model pull mistral:7b", ds::primary("•"));
                 return Ok(());
             }
 
-            println!("{}", "Installed Models".bold());
+            println!("{}", ds::highlight("Installed Models"));
             println!();
 
             // Header
             println!(
                 "  {:<30} {:>10} {:>10}",
-                "NAME".dimmed(),
-                "SIZE".dimmed(),
-                "QUANT".dimmed()
+                ds::muted("NAME"),
+                ds::muted("SIZE"),
+                ds::muted("QUANT")
             );
             println!("  {}", "-".repeat(52));
 
@@ -88,11 +88,11 @@ async fn list(json: bool, running_only: bool) -> Result<()> {
             }
 
             if running.is_empty() {
-                println!("{}", "No models currently loaded.".yellow());
+                println!("{}", ds::warning("No models currently loaded."));
                 return Ok(());
             }
 
-            println!("{}", "Running Models".bold());
+            println!("{}", ds::highlight("Running Models"));
             println!();
 
             for model in &running {
@@ -101,7 +101,7 @@ async fn list(json: bool, running_only: bool) -> Result<()> {
                     .map(|v| format!("{:.1} GB VRAM", v as f64 / 1_073_741_824.0))
                     .unwrap_or_else(|| "-".to_string());
 
-                println!("  {} {} ({})", "*".green(), model.name, vram);
+                println!("  {} {} ({})", ds::success("*"), model.name, vram);
             }
         }
 
@@ -126,7 +126,7 @@ async fn list(json: bool, running_only: bool) -> Result<()> {
 async fn pull(name: &str) -> Result<()> {
     let mut client = connect_to_daemon().await?;
 
-    println!("{} Pulling model: {}", "->".cyan(), name.bold());
+    println!("{} Pulling model: {}", ds::primary("->"), ds::highlight(name));
     println!("   This may take a while...");
 
     let response = client
@@ -138,7 +138,7 @@ async fn pull(name: &str) -> Result<()> {
 
     match response {
         Response::Success { success: true } => {
-            println!("{} Model '{}' pulled successfully", "*".green(), name);
+            println!("{} Model '{}' pulled successfully", ds::success("*"), name);
         }
         Response::Success { success: false } => {
             return Err(SpnError::CommandFailed("Pull failed".to_string()));
@@ -163,7 +163,7 @@ async fn pull(name: &str) -> Result<()> {
 async fn load(name: &str, keep_alive: bool) -> Result<()> {
     let mut client = connect_to_daemon().await?;
 
-    println!("{} Loading model: {}", "->".cyan(), name.bold());
+    println!("{} Loading model: {}", ds::primary("->"), ds::highlight(name));
 
     let config = if keep_alive {
         Some(LoadConfig {
@@ -186,7 +186,7 @@ async fn load(name: &str, keep_alive: bool) -> Result<()> {
 
     match response {
         Response::Success { success: true } => {
-            println!("{} Model '{}' loaded", "*".green(), name);
+            println!("{} Model '{}' loaded", ds::success("*"), name);
             if keep_alive {
                 println!("   Model will stay loaded until manually unloaded");
             }
@@ -211,7 +211,7 @@ async fn load(name: &str, keep_alive: bool) -> Result<()> {
 async fn unload(name: &str) -> Result<()> {
     let mut client = connect_to_daemon().await?;
 
-    println!("{} Unloading model: {}", "->".cyan(), name.bold());
+    println!("{} Unloading model: {}", ds::primary("->"), ds::highlight(name));
 
     let response = client
         .send_request(Request::ModelUnload {
@@ -222,7 +222,7 @@ async fn unload(name: &str) -> Result<()> {
 
     match response {
         Response::Success { success: true } => {
-            println!("{} Model '{}' unloaded", "*".green(), name);
+            println!("{} Model '{}' unloaded", ds::success("*"), name);
         }
         Response::Error { message } => {
             return Err(SpnError::CommandFailed(message));
@@ -257,7 +257,7 @@ async fn delete(name: &str, skip_confirm: bool) -> Result<()> {
 
     let mut client = connect_to_daemon().await?;
 
-    println!("{} Deleting model: {}", "->".cyan(), name.bold());
+    println!("{} Deleting model: {}", ds::primary("->"), ds::highlight(name));
 
     let response = client
         .send_request(Request::ModelDelete {
@@ -268,7 +268,7 @@ async fn delete(name: &str, skip_confirm: bool) -> Result<()> {
 
     match response {
         Response::Success { success: true } => {
-            println!("{} Model '{}' deleted", "*".green(), name);
+            println!("{} Model '{}' deleted", ds::success("*"), name);
         }
         Response::Error { message } => {
             return Err(SpnError::CommandFailed(message));
@@ -302,18 +302,18 @@ async fn status(json: bool) -> Result<()> {
                 return Ok(());
             }
 
-            println!("{}", "Model Status".bold());
+            println!("{}", ds::highlight("Model Status"));
             println!();
 
             if running.is_empty() {
-                println!("  {} No models loaded", "o".dimmed());
+                println!("  {} No models loaded", ds::muted("o"));
                 println!();
                 println!(
                     "  Load a model with: {} spn model load llama3.2",
-                    "->".cyan()
+                    ds::primary("->")
                 );
             } else {
-                println!("  {:<30} {:>12}", "MODEL".dimmed(), "VRAM".dimmed());
+                println!("  {:<30} {:>12}", ds::muted("MODEL"), ds::muted("VRAM"));
                 println!("  {}", "-".repeat(44));
 
                 let mut total_vram: u64 = 0;
@@ -328,7 +328,7 @@ async fn status(json: bool) -> Result<()> {
                         "-".to_string()
                     };
 
-                    println!("  {} {:<28} {:>12}", "*".green(), model.name, vram_str);
+                    println!("  {} {:<28} {:>12}", ds::success("*"), model.name, vram_str);
                 }
 
                 if total_vram > 0 {
@@ -364,7 +364,7 @@ async fn connect_to_daemon() -> Result<SpnClient> {
     SpnClient::connect().await.map_err(|_| {
         SpnError::CommandFailed(format!(
             "Daemon is not running\n\nStart the daemon with: {} spn daemon start",
-            "->".cyan()
+            ds::primary("->")
         ))
     })
 }
@@ -389,7 +389,7 @@ fn format_size(bytes: u64) -> String {
 async fn search(query: &str, category: Option<&str>) -> Result<()> {
     let registry = ModelRegistry::new();
 
-    println!("{} Searching for: {}", "->".cyan(), query.bold());
+    println!("{} Searching for: {}", ds::primary("->"), ds::highlight(query));
     println!();
 
     let results = if let Some(cat) = category {
@@ -412,23 +412,23 @@ async fn search(query: &str, category: Option<&str>) -> Result<()> {
     };
 
     if results.is_empty() {
-        println!("{}", "No models found.".yellow());
+        println!("{}", ds::warning("No models found."));
         println!();
         println!("Try:");
-        println!("  {} spn model search coding", "•".cyan());
-        println!("  {} spn model search --category vision", "•".cyan());
+        println!("  {} spn model search coding", ds::primary("•"));
+        println!("  {} spn model search --category vision", ds::primary("•"));
         return Ok(());
     }
 
-    println!("{}", "Available Models".bold());
+    println!("{}", ds::highlight("Available Models"));
     println!();
 
     // Header
     println!(
         "  {:<35} {:<12} {}",
-        "NAME".dimmed(),
-        "CATEGORY".dimmed(),
-        "DESCRIPTION".dimmed()
+        ds::muted("NAME"),
+        ds::muted("CATEGORY"),
+        ds::muted("DESCRIPTION")
     );
     println!("  {}", "-".repeat(80));
 
@@ -447,9 +447,9 @@ async fn search(query: &str, category: Option<&str>) -> Result<()> {
 
         println!(
             "  {:<35} {:<12} {}",
-            model.ollama_model.cyan(),
+            ds::primary(&model.ollama_model),
             model.category,
-            desc.dimmed()
+            ds::muted(&desc)
         );
     }
 
@@ -458,7 +458,7 @@ async fn search(query: &str, category: Option<&str>) -> Result<()> {
     println!();
     println!(
         "  Pull a model: {} spn model pull {}",
-        "->".cyan(),
+        ds::primary("->"),
         results
             .first()
             .map(|m| m.ollama_model.as_str())
@@ -489,23 +489,23 @@ async fn info(name: &str, json_output: bool) -> Result<()> {
                     return Ok(());
                 }
 
-                println!("{}", "Local Model Information".bold());
+                println!("{}", ds::highlight("Local Model Information"));
                 println!();
-                println!("  {} {}", "Name:".dimmed(), model.name.bold().cyan());
-                println!("  {} {}", "Size:".dimmed(), format_size(model.size));
+                println!("  {} {}", ds::muted("Name:"), ds::primary(&model.name));
+                println!("  {} {}", ds::muted("Size:"), format_size(model.size));
 
                 if let Some(ref quant) = model.quantization {
-                    println!("  {} {}", "Quantization:".dimmed(), quant);
+                    println!("  {} {}", ds::muted("Quantization:"), quant);
                 }
 
                 if let Some(ref params) = model.parameters {
-                    println!("  {} {}", "Parameters:".dimmed(), params);
+                    println!("  {} {}", ds::muted("Parameters:"), params);
                 }
 
                 if let Some(ref digest) = model.digest {
                     println!(
                         "  {} {}...",
-                        "Digest:".dimmed(),
+                        ds::muted("Digest:"),
                         &digest[..12.min(digest.len())]
                     );
                 }
@@ -513,7 +513,7 @@ async fn info(name: &str, json_output: bool) -> Result<()> {
                 println!();
                 println!(
                     "  Load model: {} spn model load {}",
-                    "->".cyan(),
+                    ds::primary("->"),
                     model.name
                 );
 
@@ -551,69 +551,69 @@ async fn info(name: &str, json_output: bool) -> Result<()> {
             return Ok(());
         }
 
-        println!("{}", "Model Information".bold());
+        println!("{}", ds::highlight("Model Information"));
         println!();
-        println!("  {} {}", "Name:".dimmed(), model.name.bold());
-        println!("  {} {}", "Ollama:".dimmed(), model.ollama_model.cyan());
-        println!("  {} {}", "Category:".dimmed(), model.category);
+        println!("  {} {}", ds::muted("Name:"), ds::highlight(&model.name));
+        println!("  {} {}", ds::muted("Ollama:"), ds::primary(&model.ollama_model));
+        println!("  {} {}", ds::muted("Category:"), model.category);
 
         if let Some(desc) = &model.description {
-            println!("  {} {}", "Description:".dimmed(), desc);
+            println!("  {} {}", ds::muted("Description:"), desc);
         }
 
         if !model.capabilities.is_empty() {
             println!();
-            println!("  {}", "Capabilities:".dimmed());
+            println!("  {}", ds::muted("Capabilities:"));
             for cap in &model.capabilities {
-                println!("    {} {}", "•".green(), cap);
+                println!("    {} {}", ds::success("•"), cap);
             }
         }
 
         if !model.recommended_for.is_empty() {
             println!();
-            println!("  {}", "Recommended for:".dimmed());
+            println!("  {}", ds::muted("Recommended for:"));
             for rec in &model.recommended_for {
-                println!("    {} {}", "→".cyan(), rec);
+                println!("    {} {}", ds::primary("→"), rec);
             }
         }
 
         if !model.variants.is_empty() {
             println!();
-            println!("  {}", "Variants:".dimmed());
+            println!("  {}", ds::muted("Variants:"));
             for var in &model.variants {
                 println!(
                     "    {} {} (Size: {}, VRAM: {})",
-                    "•".cyan(),
-                    var.ollama.bold(),
+                    ds::primary("•"),
+                    ds::highlight(&var.ollama),
                     var.size,
                     var.vram
                 );
                 if !var.best_for.is_empty() {
-                    println!("      Best for: {}", var.best_for.dimmed());
+                    println!("      Best for: {}", ds::muted(&var.best_for));
                 }
             }
         }
 
         if !model.benchmarks.is_empty() {
             println!();
-            println!("  {}", "Benchmarks:".dimmed());
+            println!("  {}", ds::muted("Benchmarks:"));
             for (name, score) in &model.benchmarks {
-                println!("    {} {}: {:.1}", "•".cyan(), name, score);
+                println!("    {} {}: {:.1}", ds::primary("•"), name, score);
             }
         }
 
         println!();
         println!(
             "  Pull this model: {} spn model pull {}",
-            "->".cyan(),
+            ds::primary("->"),
             model.ollama_model
         );
     } else {
-        println!("{} Model '{}' not found in registry", "!".yellow(), name);
+        println!("{} Model '{}' not found in registry", ds::warning("!"), name);
         println!();
         println!("Try:");
-        println!("  {} spn model search {}", "•".cyan(), name);
-        println!("  {} spn model list", "•".cyan());
+        println!("  {} spn model search {}", ds::primary("•"), name);
+        println!("  {} spn model list", ds::primary("•"));
     }
 
     Ok(())
@@ -626,21 +626,21 @@ async fn info(name: &str, json_output: bool) -> Result<()> {
 async fn recommend(use_case: Option<&str>) -> Result<()> {
     let registry = ModelRegistry::new();
 
-    println!("{}", "Model Recommendations".bold());
+    println!("{}", ds::highlight("Model Recommendations"));
     println!();
 
     let models = registry.recommend(use_case).await;
 
     if models.is_empty() {
-        println!("{}", "No recommendations available.".yellow());
+        println!("{}", ds::warning("No recommendations available."));
         return Ok(());
     }
 
     if let Some(case) = use_case {
-        println!("  For use case: {}", case.bold().cyan());
+        println!("  For use case: {}", ds::primary(case));
         println!();
     } else {
-        println!("  {}", "Top models by category:".dimmed());
+        println!("  {}", ds::muted("Top models by category:"));
         println!();
     }
 
@@ -659,18 +659,18 @@ async fn recommend(use_case: Option<&str>) -> Result<()> {
 
         println!(
             "  {} {} [{}]",
-            "*".green(),
-            model.ollama_model.bold(),
-            model.category.cyan()
+            ds::success("*"),
+            ds::highlight(&model.ollama_model),
+            ds::primary(&model.category)
         );
         if !desc.is_empty() {
-            println!("    {}", desc.dimmed());
+            println!("    {}", ds::muted(&desc));
         }
         println!();
     }
 
-    println!("  Pull a model: {} spn model pull <model>", "->".cyan());
-    println!("  More info: {} spn model info <model>", "->".cyan());
+    println!("  Pull a model: {} spn model pull <model>", ds::primary("->"));
+    println!("  More info: {} spn model info <model>", ds::primary("->"));
 
     Ok(())
 }

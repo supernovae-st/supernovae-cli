@@ -2,7 +2,7 @@
 //!
 //! Lists packages with newer versions available.
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 use crate::error::{Result, SpnError};
 use crate::index::IndexClient;
@@ -10,7 +10,7 @@ use crate::storage::LocalStorage;
 
 /// Run the outdated command.
 pub async fn run() -> Result<()> {
-    println!("{} Checking for outdated packages...", "📋".cyan());
+    println!("{} Checking for outdated packages...", ds::primary("📋"));
 
     let storage =
         LocalStorage::new().map_err(|e| SpnError::ConfigError(format!("Storage error: {}", e)))?;
@@ -20,7 +20,7 @@ pub async fn run() -> Result<()> {
         .map_err(|e| SpnError::ConfigError(format!("Failed to load state: {}", e)))?;
 
     if state.packages.is_empty() {
-        println!("   {} No packages installed", "ℹ️".yellow());
+        println!("   {} No packages installed", ds::warning("ℹ️"));
         return Ok(());
     }
 
@@ -34,25 +34,25 @@ pub async fn run() -> Result<()> {
                 if latest.version != installed.version {
                     println!(
                         "   {} {} {} → {}",
-                        "↑".yellow(),
+                        ds::warning("↑"),
                         name,
-                        installed.version.red(),
-                        latest.version.green()
+                        ds::error(&installed.version),
+                        ds::success(&latest.version)
                     );
                     outdated_count += 1;
                 }
             }
             Err(_) => {
-                println!("   {} {} (not in registry)", "?".yellow(), name);
+                println!("   {} {} (not in registry)", ds::warning("?"), name);
             }
         }
     }
 
     if outdated_count == 0 {
-        println!("   {} All packages up to date!", "✓".green());
+        println!("   {} All packages up to date!", ds::success("✓"));
     } else {
         println!();
-        println!("   {} Run {} to update", "ℹ️".blue(), "spn update".cyan());
+        println!("   {} Run {} to update", ds::primary("ℹ️"), ds::primary("spn update"));
     }
 
     Ok(())

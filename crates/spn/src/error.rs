@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use console::style;
+use crate::ux::design_system as ds;
 use thiserror::Error;
 
 /// Result type alias for CLI operations.
@@ -114,24 +114,24 @@ impl SpnError {
         match self {
             SpnError::PackageNotFound(name) => Some(format!(
                 "Try: {} {} to find similar packages",
-                style("spn search").cyan(),
+                ds::primary("spn search"),
                 name
             )),
 
             SpnError::ManifestNotFound => Some(format!(
                 "Run {} to create a new spn.yaml file",
-                style("spn init").cyan()
+                ds::primary("spn init")
             )),
 
             SpnError::LockfileNotFound => Some(format!(
                 "Run {} to generate spn.lock from spn.yaml",
-                style("spn install").cyan()
+                ds::primary("spn install")
             )),
 
             SpnError::IndexError(_) => Some(format!(
                 "Check your network connection and try again.\n   \
                  Registry: {}",
-                style("https://github.com/supernovae-st/supernovae-registry").dim()
+                ds::muted("https://github.com/supernovae-st/supernovae-registry")
             )),
 
             SpnError::NetworkError(_) => Some(
@@ -143,25 +143,25 @@ impl SpnError {
             SpnError::McpServerNotFound(name) => Some(format!(
                 "Available MCP servers: {}\n   \
                  Install with: {} {}",
-                style("neo4j, firecrawl, perplexity, supadata, github, slack").dim(),
-                style("spn mcp add").cyan(),
+                ds::muted("neo4j, firecrawl, perplexity, supadata, github, slack"),
+                ds::primary("spn mcp add"),
                 name
             )),
 
             SpnError::SkillNotFound(name) => Some(format!(
                 "Search for skills: {}\n   \
                  Install with: {} {}",
-                style("spn skill list").cyan(),
-                style("spn skill add").cyan(),
+                ds::primary("spn skill list"),
+                ds::primary("spn skill add"),
                 name
             )),
 
             SpnError::IntegrityError { package, .. } => Some(format!(
                 "The package {} may have been corrupted during download.\n   \
                  Try: {} && {}",
-                style(package).bold(),
-                style("spn remove").cyan(),
-                style("spn add").cyan()
+                ds::highlight(package),
+                ds::primary("spn remove"),
+                ds::primary("spn add")
             )),
 
             SpnError::VersionConflict(msg) => Some(format!(
@@ -169,7 +169,7 @@ impl SpnError {
                  Try relaxing version constraints in spn.yaml or use:\n   \
                  {} to update to compatible versions",
                 msg,
-                style("spn update").cyan()
+                ds::primary("spn update")
             )),
 
             SpnError::DependencyResolution(msg) => Some(format!(
@@ -181,45 +181,45 @@ impl SpnError {
             SpnError::CommandNotFound(cmd) => Some(format!(
                 "Command '{}' not found.\n   \
                  Run {} for available commands.",
-                style(cmd).yellow(),
-                style("spn --help").cyan()
+                ds::warning(cmd),
+                ds::primary("spn --help")
             )),
 
             SpnError::ConfigError(_) => Some(format!(
                 "Configuration may be corrupted.\n   \
                  Check {} or run {} to diagnose.",
-                style("~/.spn/config.toml").dim(),
-                style("spn doctor").cyan()
+                ds::muted("~/.spn/config.toml"),
+                ds::primary("spn doctor")
             )),
 
             SpnError::DaemonNotRunning => Some(format!(
                 "Start the daemon with: {}\n   \
                  Or install as service: {}",
-                style("spn daemon start").cyan(),
-                style("spn daemon install").cyan()
+                ds::primary("spn daemon start"),
+                ds::primary("spn daemon install")
             )),
 
             SpnError::DaemonAlreadyRunning => Some(format!(
                 "Stop the daemon first: {}\n   \
                  Or check status with: {}",
-                style("spn daemon stop").cyan(),
-                style("spn daemon status").cyan()
+                ds::primary("spn daemon stop"),
+                ds::primary("spn daemon status")
             )),
 
             SpnError::ProviderNotFound(name) => Some(format!(
                 "Provider '{}' not recognized.\n   \
                  Available: {}\n   \
                  List configured: {}",
-                style(name).yellow(),
-                style("anthropic, openai, mistral, groq, deepseek, gemini, ollama").dim(),
-                style("spn provider list").cyan()
+                ds::warning(name),
+                ds::muted("anthropic, openai, mistral, groq, deepseek, gemini, ollama"),
+                ds::primary("spn provider list")
             )),
 
             SpnError::NoVersionsAvailable(pkg) => Some(format!(
                 "Package '{}' exists but has no available versions.\n   \
                  It may have been yanked. Check: {}",
-                style(pkg).yellow(),
-                style(format!("spn info {}", pkg)).cyan()
+                ds::warning(pkg),
+                ds::primary(format!("spn info {}", pkg))
             )),
 
             SpnError::YamlError(_) => Some(format!(
@@ -227,9 +227,9 @@ impl SpnError {
                  {} Incorrect indentation (use 2 spaces)\n   \
                  {} Missing colons after keys\n   \
                  {} Unquoted special characters",
-                style("•").dim(),
-                style("•").dim(),
-                style("•").dim()
+                ds::muted("•"),
+                ds::muted("•"),
+                ds::muted("•")
             )),
 
             SpnError::TomlError(_) => Some(format!(
@@ -237,9 +237,9 @@ impl SpnError {
                  {} Missing quotes around strings\n   \
                  {} Incorrect table headers [section]\n   \
                  {} Duplicate keys",
-                style("•").dim(),
-                style("•").dim(),
-                style("•").dim()
+                ds::muted("•"),
+                ds::muted("•"),
+                ds::muted("•")
             )),
 
             SpnError::IoError(e) => match e.kind() {
@@ -251,7 +251,7 @@ impl SpnError {
                 std::io::ErrorKind::PermissionDenied => Some(format!(
                     "Permission denied.\n   \
                          Try running with {} or check file permissions.",
-                    style("sudo").cyan()
+                    ds::primary("sudo")
                 )),
                 std::io::ErrorKind::AlreadyExists => {
                     Some("File or directory already exists.".to_string())
@@ -266,11 +266,11 @@ impl SpnError {
     /// Print the error with optional help message to stderr.
     pub fn print(&self) {
         eprintln!();
-        eprintln!("  {} {}", style("✗").red().bold(), style(self).red());
+        eprintln!("  {} {}", ds::error("✗").bold(), ds::error(self));
 
         if let Some(help) = self.help() {
             eprintln!();
-            eprintln!("  {} {}", style("→").cyan(), style(help).dim());
+            eprintln!("  {} {}", ds::primary("→"), ds::muted(help));
         }
         eprintln!();
     }

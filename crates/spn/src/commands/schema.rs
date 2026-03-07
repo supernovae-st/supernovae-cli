@@ -11,25 +11,25 @@
 
 use crate::error::{CliError, Result};
 use crate::SchemaCommands;
-use console::style;
+use crate::ux::design_system as ds;
 
 pub async fn run(command: SchemaCommands) -> Result<()> {
     // Check if novanet is available
     let novanet_available = which::which("novanet").is_ok();
 
     if !novanet_available {
-        eprintln!("{} NovaNet CLI not found", style("⚠").yellow().bold());
+        eprintln!("{} NovaNet CLI not found", ds::warning("⚠").bold());
         eprintln!();
         eprintln!("   Schema commands require NovaNet to be installed:");
         eprintln!(
             "   {} brew install supernovae-st/tap/novanet",
-            style("•").cyan()
+            ds::primary("•")
         );
-        eprintln!("   {} cargo install novanet-cli", style("•").cyan());
+        eprintln!("   {} cargo install novanet-cli", ds::primary("•"));
         eprintln!();
         eprintln!(
             "   Run {} to install automatically.",
-            style("spn setup novanet").cyan()
+            ds::primary("spn setup novanet")
         );
         eprintln!();
         return Ok(());
@@ -46,7 +46,7 @@ pub async fn run(command: SchemaCommands) -> Result<()> {
 /// Show schema statistics (JSON output).
 /// Proxies to `novanet schema stats`.
 async fn schema_stats() -> Result<()> {
-    println!("{} Schema statistics:\n", style("📊").cyan());
+    println!("{} Schema statistics:\n", ds::primary("📊"));
 
     let output = std::process::Command::new("novanet")
         .args(["schema", "stats"])
@@ -62,7 +62,7 @@ async fn schema_stats() -> Result<()> {
                     println!("   No schema configured in this project.");
                     println!();
                     println!("   To add a schema package:");
-                    println!("   {} spn add @novanet/core-schema", style("•").cyan());
+                    println!("   {} spn add @novanet/core-schema", ds::primary("•"));
                 } else {
                     eprint!("{}", stderr);
                 }
@@ -82,7 +82,7 @@ async fn schema_stats() -> Result<()> {
 /// Validate YAML ↔ Neo4j sync.
 /// Proxies to `novanet schema validate`.
 async fn schema_validate() -> Result<()> {
-    println!("{} Validating schema...\n", style("✓").green());
+    println!("{} Validating schema...\n", ds::success("✓"));
 
     let output = std::process::Command::new("novanet")
         .args(["schema", "validate"])
@@ -109,7 +109,7 @@ async fn schema_validate() -> Result<()> {
 /// Generate all schema artifacts (TypeScript, Cypher, etc.).
 /// Proxies to `novanet schema generate`.
 async fn schema_generate() -> Result<()> {
-    println!("{} Generating schema artifacts...\n", style("🔧").cyan());
+    println!("{} Generating schema artifacts...\n", ds::primary("🔧"));
 
     let output = std::process::Command::new("novanet")
         .args(["schema", "generate"])
@@ -122,7 +122,7 @@ async fn schema_generate() -> Result<()> {
                 println!();
                 println!(
                     "   {} Schema artifacts generated successfully.",
-                    style("✓").green()
+                    ds::success("✓")
                 );
             } else {
                 eprint!("{}", String::from_utf8_lossy(&out.stderr));
@@ -142,7 +142,7 @@ async fn schema_generate() -> Result<()> {
 /// Validate Cypher seed files.
 /// Proxies to `novanet schema cypher-validate`.
 async fn schema_cypher_validate() -> Result<()> {
-    println!("{} Validating Cypher seed files...\n", style("🔍").cyan());
+    println!("{} Validating Cypher seed files...\n", ds::primary("🔍"));
 
     let output = std::process::Command::new("novanet")
         .args(["schema", "cypher-validate"])
@@ -153,7 +153,7 @@ async fn schema_cypher_validate() -> Result<()> {
             if out.status.success() {
                 print!("{}", String::from_utf8_lossy(&out.stdout));
                 println!();
-                println!("   {} Cypher files are valid.", style("✓").green());
+                println!("   {} Cypher files are valid.", ds::success("✓"));
             } else {
                 eprint!("{}", String::from_utf8_lossy(&out.stderr));
             }

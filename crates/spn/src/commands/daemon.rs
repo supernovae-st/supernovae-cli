@@ -5,7 +5,7 @@
 use crate::daemon::{paths, DaemonConfig, DaemonServer, ServiceManager};
 use crate::error::Result;
 use crate::DaemonCommands;
-use colored::Colorize;
+use crate::ux::design_system as ds;
 use std::fs;
 use std::process::Command;
 
@@ -25,13 +25,13 @@ pub async fn run(command: DaemonCommands) -> Result<()> {
 async fn start(foreground: bool) -> Result<()> {
     // Check if already running
     if is_daemon_running() {
-        println!("{} Daemon is already running", "⚠".yellow());
+        println!("{} Daemon is already running", ds::warning("⚠"));
         return Ok(());
     }
 
     if foreground {
         // Run in foreground
-        println!("{} Starting daemon in foreground...", "🚀".green());
+        println!("{} Starting daemon in foreground...", ds::success("🚀"));
         println!("   Socket: {:?}", paths::socket()?);
         println!("   PID file: {:?}", paths::pid_file()?);
         println!();
@@ -47,7 +47,7 @@ async fn start(foreground: bool) -> Result<()> {
             .map_err(|e| anyhow::anyhow!("Daemon error: {}", e))?;
     } else {
         // Daemonize (spawn detached process)
-        println!("{} Starting daemon...", "🚀".green());
+        println!("{} Starting daemon...", ds::success("🚀"));
 
         // Get the path to the current executable
         let exe = std::env::current_exe()?;
@@ -66,17 +66,17 @@ async fn start(foreground: bool) -> Result<()> {
                 tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
                 if is_daemon_running() {
-                    println!("{} Daemon started successfully", "✓".green());
+                    println!("{} Daemon started successfully", ds::success("✓"));
                     if let Ok(socket) = paths::socket() {
                         println!("   Socket: {:?}", socket);
                     }
                 } else {
-                    println!("{} Daemon may have failed to start", "⚠".yellow());
+                    println!("{} Daemon may have failed to start", ds::warning("⚠"));
                     println!("   Check logs or run with --foreground for debugging");
                 }
             }
             Err(e) => {
-                println!("{} Failed to start daemon: {}", "✗".red(), e);
+                println!("{} Failed to start daemon: {}", ds::error("✗"), e);
             }
         }
     }
@@ -89,7 +89,7 @@ async fn stop() -> Result<()> {
     let pid_file = paths::pid_file()?;
 
     if !pid_file.exists() {
-        println!("{} Daemon is not running (no PID file)", "⚠".yellow());
+        println!("{} Daemon is not running (no PID file)", ds::warning("⚠"));
         return Ok(());
     }
 
@@ -100,7 +100,7 @@ async fn stop() -> Result<()> {
         .parse()
         .map_err(|_| anyhow::anyhow!("Invalid PID in {:?}", pid_file))?;
 
-    println!("{} Stopping daemon (PID: {})...", "🛑".yellow(), pid);
+    println!("{} Stopping daemon (PID: {})...", ds::warning("🛑"), pid);
 
     // Send SIGTERM
     let result = unsafe { libc::kill(pid, libc::SIGTERM) };
@@ -111,20 +111,20 @@ async fn stop() -> Result<()> {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             let check = unsafe { libc::kill(pid, 0) };
             if check != 0 {
-                println!("{} Daemon stopped", "✓".green());
+                println!("{} Daemon stopped", ds::success("✓"));
                 return Ok(());
             }
         }
 
         // Still running, force kill
-        println!("{} Sending SIGKILL...", "⚠".yellow());
+        println!("{} Sending SIGKILL...", ds::warning("⚠"));
         unsafe { libc::kill(pid, libc::SIGKILL) };
-        println!("{} Daemon force stopped", "✓".green());
+        println!("{} Daemon force stopped", ds::success("✓"));
     } else {
         // Process doesn't exist, clean up stale PID file
         println!(
             "{} Daemon was not running, cleaning up stale PID file",
-            "⚠".yellow()
+            ds::warning("⚠")
         );
         fs::remove_file(&pid_file).ok();
     }
@@ -157,21 +157,21 @@ async fn status(json: bool) -> Result<()> {
         });
         println!("{}", serde_json::to_string_pretty(&status)?);
     } else {
-        println!("{}", "spn daemon status".bold());
+        println!("{}", ds::highlight("spn daemon status"));
         println!();
 
         if running {
-            println!("  Status:  {} running", "●".green());
+            println!("  Status:  {} running", ds::success("●"));
             if let Some(pid) = pid {
                 println!("  PID:     {}", pid);
             }
         } else {
-            println!("  Status:  {} stopped", "○".red());
+            println!("  Status:  {} stopped", ds::error("○"));
             println!();
             println!(
                 "  {} Run '{}' to start",
-                "→".cyan(),
-                "spn daemon start".cyan()
+                ds::primary("→"),
+                ds::primary("spn daemon start")
             );
         }
 
@@ -181,7 +181,7 @@ async fn status(json: bool) -> Result<()> {
 
         if !running && socket_exists {
             println!();
-            println!("  {} Stale socket file detected", "⚠".yellow());
+            println!("  {} Stale socket file detected", ds::warning("⚠"));
             println!("  Run 'spn daemon start' to clean up and start");
         }
     }
@@ -235,33 +235,33 @@ fn get_daemon_pid() -> Option<i32> {
 
 /// Install daemon as a system service.
 async fn install() -> Result<()> {
-    println!("{} Installing daemon as system service...", "🔧".cyan());
+    println!("{} Installing daemon as system service...", ds::primary("🔧"));
 
     let manager =
         ServiceManager::detect().map_err(|e| anyhow::anyhow!("Service management: {}", e))?;
 
     println!(
         "   {} Service manager: {:?}",
-        "→".blue(),
+        ds::primary("→"),
         manager.manager_type()
     );
 
     match manager.install() {
         Ok(()) => {
-            println!("{} Daemon installed successfully!", "✓".green());
+            println!("{} Daemon installed successfully!", ds::success("✓"));
             println!();
             println!("The daemon will now start automatically at login.");
             println!();
-            println!("To check status:     {}", "spn daemon status".cyan());
-            println!("To uninstall:        {}", "spn daemon uninstall".cyan());
+            println!("To check status:     {}", ds::primary("spn daemon status"));
+            println!("To uninstall:        {}", ds::primary("spn daemon uninstall"));
         }
         Err(crate::daemon::ServiceError::AlreadyInstalled) => {
-            println!("{} Daemon is already installed as a service", "⚠".yellow());
+            println!("{} Daemon is already installed as a service", ds::warning("⚠"));
             println!();
-            println!("To reinstall, first run: {}", "spn daemon uninstall".cyan());
+            println!("To reinstall, first run: {}", ds::primary("spn daemon uninstall"));
         }
         Err(e) => {
-            println!("{} Installation failed: {}", "✗".red(), e);
+            println!("{} Installation failed: {}", ds::error("✗"), e);
             return Err(anyhow::anyhow!("Service install failed: {}", e).into());
         }
     }
@@ -271,25 +271,25 @@ async fn install() -> Result<()> {
 
 /// Uninstall daemon system service.
 async fn uninstall() -> Result<()> {
-    println!("{} Uninstalling daemon service...", "🔧".cyan());
+    println!("{} Uninstalling daemon service...", ds::primary("🔧"));
 
     let manager =
         ServiceManager::detect().map_err(|e| anyhow::anyhow!("Service management: {}", e))?;
 
     match manager.uninstall() {
         Ok(()) => {
-            println!("{} Daemon service uninstalled", "✓".green());
+            println!("{} Daemon service uninstalled", ds::success("✓"));
             println!();
             println!("The daemon will no longer start at login.");
             println!();
-            println!("To run manually:     {}", "spn daemon start".cyan());
-            println!("To reinstall:        {}", "spn daemon install".cyan());
+            println!("To run manually:     {}", ds::primary("spn daemon start"));
+            println!("To reinstall:        {}", ds::primary("spn daemon install"));
         }
         Err(crate::daemon::ServiceError::NotInstalled) => {
-            println!("{} Daemon is not installed as a service", "⚠".yellow());
+            println!("{} Daemon is not installed as a service", ds::warning("⚠"));
         }
         Err(e) => {
-            println!("{} Uninstall failed: {}", "✗".red(), e);
+            println!("{} Uninstall failed: {}", ds::error("✗"), e);
             return Err(anyhow::anyhow!("Service uninstall failed: {}", e).into());
         }
     }

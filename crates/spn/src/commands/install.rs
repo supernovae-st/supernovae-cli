@@ -2,7 +2,7 @@
 //!
 //! Installs all dependencies from spn.yaml, optionally using spn.lock for frozen versions.
 
-use colored::Colorize;
+use crate::ux::design_system as ds;
 
 use crate::error::{Result, SpnError};
 use crate::index::{Downloader, IndexClient};
@@ -34,7 +34,7 @@ pub async fn run(frozen: bool) -> Result<()> {
 
 /// Run the install command with full options.
 pub async fn run_with_options(options: InstallOptions) -> Result<()> {
-    println!("{} Installing dependencies...", "📦".cyan());
+    println!("{} Installing dependencies...", ds::primary("📦"));
 
     // 1. Find and load manifest
     let manifest_path = find_manifest()?;
@@ -57,13 +57,13 @@ pub async fn run_with_options(options: InstallOptions) -> Result<()> {
     };
 
     if dependencies.is_empty() {
-        println!("   {} No dependencies to install", "✓".green());
+        println!("   {} No dependencies to install", ds::success("✓"));
         return Ok(());
     }
 
     println!(
         "   {} Found {} dependencies",
-        "→".blue(),
+        ds::primary("→"),
         dependencies.len()
     );
 
@@ -128,7 +128,7 @@ pub async fn run_with_options(options: InstallOptions) -> Result<()> {
         if installed_version.as_ref() == Some(&entry.version) {
             println!(
                 "   {} {}@{} (already installed)",
-                "✓".green(),
+                ds::success("✓"),
                 name,
                 entry.version
             );
@@ -139,7 +139,7 @@ pub async fn run_with_options(options: InstallOptions) -> Result<()> {
         if options.dry_run {
             println!(
                 "   {} Would install {}@{} (constraint: {})",
-                "→".blue(),
+                ds::primary("→"),
                 name,
                 entry.version,
                 version_constraint
@@ -159,7 +159,7 @@ pub async fn run_with_options(options: InstallOptions) -> Result<()> {
 
         println!(
             "   {} {}@{} → {}",
-            "✓".green(),
+            ds::success("✓"),
             name,
             entry.version,
             installed.path.display()
@@ -182,20 +182,20 @@ pub async fn run_with_options(options: InstallOptions) -> Result<()> {
         lockfile
             .write_to_file(&lockfile_path)
             .map_err(|e| SpnError::ConfigError(format!("Failed to save lockfile: {}", e)))?;
-        println!("   {} Updated spn.lock", "✓".green());
+        println!("   {} Updated spn.lock", ds::success("✓"));
     }
 
     // 7. Summary
     if options.dry_run {
         println!(
             "{} Dry run complete: {} would be installed",
-            "✨".yellow(),
+            ds::warning("✨"),
             dependencies.len()
         );
     } else {
         println!(
             "{} Installed {} packages ({} already up-to-date)",
-            "✨".yellow(),
+            ds::warning("✨"),
             installed_count,
             skipped_count
         );
