@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.2](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.2) - 2026-03-07
+
+### Added
+
+- **ux**: Add human-readable formatters and enhanced help
+
+### Changed
+
+- Fix formatting
+
+
 ## [0.14.1](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.1) - 2026-03-07
 
 ### Documentation
