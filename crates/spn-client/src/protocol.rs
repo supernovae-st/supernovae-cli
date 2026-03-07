@@ -175,10 +175,21 @@ mod tests {
 
     #[test]
     fn test_response_deserialization() {
-        // Pong
+        // Pong with protocol version
+        let json = r#"{"protocol_version":1,"version":"0.14.2"}"#;
+        let response: Response = serde_json::from_str(json).unwrap();
+        assert!(
+            matches!(response, Response::Pong { protocol_version, version }
+                if protocol_version == 1 && version == "0.14.2")
+        );
+
+        // Pong without protocol version (backwards compatibility)
         let json = r#"{"version":"0.9.0"}"#;
         let response: Response = serde_json::from_str(json).unwrap();
-        assert!(matches!(response, Response::Pong { version } if version == "0.9.0"));
+        assert!(
+            matches!(response, Response::Pong { protocol_version, version }
+                if protocol_version == 0 && version == "0.9.0")
+        );
 
         // Secret
         let json = r#"{"value":"sk-test-123"}"#;

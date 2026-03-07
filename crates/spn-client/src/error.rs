@@ -53,4 +53,8 @@ pub enum Error {
     /// Request timed out.
     #[error("Request timed out after {0} seconds")]
     Timeout(u64),
+
+    /// Protocol version mismatch between client and daemon.
+    #[error("Protocol version mismatch: client v{client}, daemon v{daemon}")]
+    ProtocolMismatch { client: u32, daemon: u32 },
 }

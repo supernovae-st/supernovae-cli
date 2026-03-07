@@ -64,6 +64,7 @@ async fn test_protocol_length_prefix() {
 
         // Send response
         let response = Response::Pong {
+            protocol_version: spn_client::PROTOCOL_VERSION,
             version: "test".to_string(),
         };
         let response_json = serde_json::to_vec(&response).unwrap();
@@ -168,6 +169,7 @@ async fn test_multiple_requests_same_connection() {
             assert!(matches!(request, Request::Ping));
 
             let response = Response::Pong {
+                protocol_version: spn_client::PROTOCOL_VERSION,
                 version: format!("v{}", i),
             };
             let response_json = serde_json::to_vec(&response).unwrap();
@@ -198,7 +200,7 @@ async fn test_multiple_requests_same_connection() {
 
         let response: Response = serde_json::from_slice(&response_buf).unwrap();
         match response {
-            Response::Pong { version } => {
+            Response::Pong { version, .. } => {
                 assert_eq!(version, format!("v{}", i));
             }
             _ => panic!("Expected Pong response"),
@@ -239,6 +241,7 @@ async fn test_concurrent_connections() {
                                 }
 
                                 let response = Response::Pong {
+                                    protocol_version: spn_client::PROTOCOL_VERSION,
                                     version: "concurrent".to_string(),
                                 };
                                 let response_json = serde_json::to_vec(&response).unwrap();

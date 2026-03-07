@@ -1,7 +1,7 @@
 //! Request handler for daemon commands.
 
 use secrecy::ExposeSecret;
-use spn_client::{Request, Response};
+use spn_client::{Request, Response, PROTOCOL_VERSION};
 use std::sync::Arc;
 use tracing::{debug, warn};
 
@@ -51,6 +51,7 @@ impl RequestHandler {
 
     fn handle_ping(&self) -> Response {
         Response::Pong {
+            protocol_version: PROTOCOL_VERSION,
             version: self.version.clone(),
         }
     }
@@ -172,7 +173,11 @@ mod tests {
         let response = handler.handle(Request::Ping).await;
 
         match response {
-            Response::Pong { version } => {
+            Response::Pong {
+                protocol_version,
+                version,
+            } => {
+                assert_eq!(protocol_version, PROTOCOL_VERSION);
                 assert!(!version.is_empty());
             }
             _ => panic!("Expected Pong response"),

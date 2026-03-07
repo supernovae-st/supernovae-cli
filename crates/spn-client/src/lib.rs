@@ -51,7 +51,7 @@ mod protocol;
 
 pub use error::Error;
 pub use paths::{PathError, SpnPaths};
-pub use protocol::{Request, Response};
+pub use protocol::{Request, Response, PROTOCOL_VERSION};
 pub use secrecy::{ExposeSecret, SecretString};
 
 // Re-export all spn-core types for convenience
@@ -225,14 +225,31 @@ impl SpnClient {
         self.fallback_mode
     }
 
-    /// Ping the daemon to verify the connection.
+    /// Ping the daemon to verify the connection and check protocol compatibility.
+    ///
+    /// Returns the daemon's CLI version string on success.
+    /// Warns if the protocol version doesn't match but allows connection.
     ///
     /// This method is only available on Unix platforms.
     #[cfg(unix)]
     pub async fn ping(&mut self) -> Result<String, Error> {
         let response = self.send_request(Request::Ping).await?;
         match response {
-            Response::Pong { version } => Ok(version),
+            Response::Pong {
+                protocol_version,
+                version,
+            } => {
+                // Check protocol version compatibility
+                if protocol_version != protocol::PROTOCOL_VERSION {
+                    warn!(
+                        "Protocol version mismatch: client v{}, daemon v{}. \
+                        Consider updating your daemon with 'spn daemon restart'.",
+                        protocol::PROTOCOL_VERSION,
+                        protocol_version
+                    );
+                }
+                Ok(version)
+            }
             Response::Error { message } => Err(Error::DaemonError(message)),
             _ => Err(Error::UnexpectedResponse),
         }
