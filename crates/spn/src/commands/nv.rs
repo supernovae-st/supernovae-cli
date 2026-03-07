@@ -64,10 +64,10 @@ pub async fn run(command: NovaNetCommands) -> Result<()> {
             args
         }
         NovaNetCommands::Db { command } => match command {
-            DbCommands::Start => vec!["db".to_string(), "start".to_string()],
             DbCommands::Seed => vec!["db".to_string(), "seed".to_string()],
-            DbCommands::Reset => vec!["db".to_string(), "reset".to_string()],
             DbCommands::Migrate => vec!["db".to_string(), "migrate".to_string()],
+            DbCommands::Reset => vec!["db".to_string(), "reset".to_string()],
+            DbCommands::Verify => vec!["db".to_string(), "verify".to_string()],
         },
         NovaNetCommands::Search { query, kind, json } => {
             let mut args = vec!["search".to_string(), query.clone()];

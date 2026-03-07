@@ -108,6 +108,8 @@ MCP servers, LLM providers, packages, and secrets. Works with **Ollama**, **Clau
   - [Sync & Editor Integration](#-sync--editor-integration)
 - [Configuration Files](#-configuration-files)
 - [The SuperNovae Ecosystem](#-the-supernovae-ecosystem)
+- [FAQ](#-faq)
+- [Troubleshooting](#-troubleshooting)
 - [Directory Structure](#-directory-structure)
 - [Contributing](#-contributing)
 
@@ -2327,6 +2329,155 @@ flowchart TB
 | **prompt** | `@prompts/` | ❌ NO | Prompt templates | `@prompts/seo-meta` |
 
 <br>
+
+---
+
+## ❓ FAQ
+
+### General
+
+**Q: What's the difference between spn and Nika?**
+
+spn is the package manager (install, configure, sync). Nika is the runtime engine (execute workflows). They work together: spn manages what's installed, Nika runs it.
+
+**Q: Do I need all three tools (spn, Nika, NovaNet)?**
+
+No. Start with spn alone for MCP servers and skills. Add Nika when you need AI workflows. Add NovaNet when you need a knowledge graph for localization.
+
+**Q: Is this only for Claude Code?**
+
+No. spn supports Claude Code, Cursor, Windsurf, and any editor with MCP support. Skills sync to all enabled editors.
+
+### Configuration
+
+**Q: Where are my API keys stored?**
+
+In your OS keychain (macOS Keychain, Windows Credential Manager, or Linux Secret Service). Run `spn provider list --show-source` to see each key's location.
+
+**Q: What's the difference between global, team, and local config?**
+
+- **Global** (`~/.spn/config.toml`): User settings, applies everywhere
+- **Team** (`./mcp.yaml`): Project settings, committed to git
+- **Local** (`./.spn/local.yaml`): Your overrides, gitignored
+
+**Q: How do I share MCP servers with my team?**
+
+Add them to `./mcp.yaml` and commit to git. Team members run `spn sync` after pulling.
+
+### Troubleshooting
+
+**Q: `spn mcp add` fails with npm error**
+
+Ensure Node.js 18+ is installed: `node --version`. If using nvm, run `nvm use 18` or higher.
+
+**Q: API key not found after setting it**
+
+Check the key exists: `spn provider list`. If using Docker, environment variables are required (no keychain access).
+
+**Q: Sync not updating editor config**
+
+1. Check enabled editors: `spn sync --status`
+2. Enable missing editor: `spn sync --enable claude-code`
+3. Force sync: `spn sync`
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### "command not found: spn"
+
+**Cause:** spn binary not in PATH.
+
+```bash
+# Check installation
+which spn || echo "Not installed"
+
+# Reinstall via Homebrew
+brew reinstall supernovae-st/tap/spn
+
+# Or reinstall via Cargo
+cargo install --force spn-cli
+```
+
+#### "Failed to access keychain"
+
+**Cause:** OS keychain permissions.
+
+```bash
+# macOS: Reset keychain permissions
+security unlock-keychain ~/Library/Keychains/login.keychain-db
+
+# Linux: Ensure secret service is running
+systemctl --user status gnome-keyring-daemon
+```
+
+#### "MCP server failed to start"
+
+**Cause:** Missing npm package or environment variables.
+
+```bash
+# Check server config
+spn mcp list
+
+# Test specific server
+spn mcp test neo4j
+
+# Check npm package
+npm list -g @neo4j/mcp-server-neo4j
+```
+
+#### "Sync has no effect"
+
+**Cause:** Editor not enabled or config already up-to-date.
+
+```bash
+# Check sync status
+spn sync --status
+
+# Enable editor
+spn sync --enable claude-code
+
+# Force sync with preview
+spn sync --interactive
+```
+
+#### "Provider test fails"
+
+**Cause:** Invalid key format or network issue.
+
+```bash
+# Test key format only
+spn provider test anthropic
+
+# Re-set key
+spn provider set anthropic
+
+# Check key source
+spn provider list --show-source
+```
+
+### Debug Mode
+
+For detailed diagnostics:
+
+```bash
+# Run any command with verbose output
+spn --verbose doctor
+
+# Check all systems
+spn doctor --verbose
+
+# Export diagnostics
+spn doctor --json > diagnostics.json
+```
+
+### Getting Help
+
+- **GitHub Issues:** [supernovae-st/supernovae-cli/issues](https://github.com/supernovae-st/supernovae-cli/issues)
+- **Discord:** [discord.gg/supernovae](https://discord.gg/supernovae)
+- **Documentation:** [supernovae.studio/docs](https://supernovae.studio/docs)
 
 ---
 

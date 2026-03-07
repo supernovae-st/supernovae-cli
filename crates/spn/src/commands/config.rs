@@ -25,12 +25,16 @@ pub async fn run(command: ConfigCommands) -> Result<()> {
 async fn show_config(_section: Option<String>) -> Result<()> {
     let resolver = ConfigResolver::load()?;
     let config = resolver.resolved();
+    let scopes = resolver.get_scope_paths()?;
 
     println!("{}", "⚙️  Resolved Configuration".cyan().bold());
     println!();
 
+    let mut has_config = false;
+
     // Show providers
     if !config.providers.is_empty() {
+        has_config = true;
         println!("{}", "Providers:".bold());
         for (name, provider) in &config.providers {
             if let Some(model) = &provider.model {
@@ -45,6 +49,7 @@ async fn show_config(_section: Option<String>) -> Result<()> {
 
     // Show sync config
     if !config.sync.enabled_editors.is_empty() || config.sync.auto_sync {
+        has_config = true;
         println!("{}", "Sync:".bold());
         println!("  enabled_editors = {:?}", config.sync.enabled_editors);
         println!("  auto_sync = {}", config.sync.auto_sync);
@@ -53,11 +58,33 @@ async fn show_config(_section: Option<String>) -> Result<()> {
 
     // Show MCP servers
     if !config.servers.is_empty() {
+        has_config = true;
         println!("{}", "MCP Servers:".bold());
         for (name, server) in &config.servers {
             let status = if server.disabled { "(disabled)" } else { "" };
             println!("  {} {} {}", name.cyan(), server.command, status.dimmed());
         }
+        println!();
+    }
+
+    // Show message if no config found
+    if !has_config {
+        println!("  {}", "No configuration found.".dimmed());
+        println!();
+        println!("{}", "Config File Locations:".bold());
+        for scope in &scopes {
+            let status = if scope.exists {
+                "✓".green()
+            } else {
+                "○".dimmed()
+            };
+            println!("  {} {}", status, scope.display_name());
+        }
+        println!();
+        println!("{}", "Quick Start:".bold());
+        println!("  {} Create project manifest", "spn init".cyan());
+        println!("  {} Add MCP server", "spn mcp add <name>".cyan());
+        println!("  {} Set API key", "spn provider set <name>".cyan());
         println!();
     }
 

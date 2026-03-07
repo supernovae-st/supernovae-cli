@@ -555,14 +555,14 @@ enum McpServerCommands {
 
 #[derive(Subcommand)]
 enum DbCommands {
-    /// Start Neo4j database
-    Start,
     /// Seed database
     Seed,
-    /// Reset and reseed database
-    Reset,
     /// Run migrations
     Migrate,
+    /// Reset database (drop + seed)
+    Reset,
+    /// Verify YAML↔Neo4j arc consistency
+    Verify,
 }
 
 #[derive(Subcommand)]
