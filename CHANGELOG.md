@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.1) - 2026-03-07
+
+### Documentation
+
+- Align versions and enable automated crates.io publishing
+
+### Fixed
+
+- **cli**: Align spn nk config with nika CLI subcommands
+
+
 ## [0.14.0](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.0) - 2026-03-07
 
 ### Added
