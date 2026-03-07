@@ -1,6 +1,6 @@
 [package]
 name = "spn-cli"
-version = "0.14.2"
+version = "0.14.3"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "SuperNovae Package Manager - unified CLI for AI workflows, secrets, MCP servers, and daemon management"
@@ -41,9 +41,9 @@ docker = []
 
 [dependencies]
 # Workspace crates
-spn-client = { version = "0.2.4", path = "../spn-client" }
+spn-client = { version = "0.3.0", path = "../spn-client" }
 spn-keyring = { version = "0.1.3", path = "../spn-keyring", default-features = false }
-spn-ollama = { version = "0.1.3", path = "../spn-ollama" }
+spn-ollama = { version = "0.1.4", path = "../spn-ollama" }
 
 # CLI framework
 clap = { version = "4.5", features = ["derive", "env"] }
