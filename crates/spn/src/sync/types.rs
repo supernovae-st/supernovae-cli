@@ -4,8 +4,8 @@
 
 #![allow(dead_code)]
 
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// Supported IDE targets for synchronization.
@@ -78,7 +78,7 @@ pub struct McpConfig {
 
     /// Environment variables for the MCP server.
     #[serde(default)]
-    pub env: HashMap<String, String>,
+    pub env: FxHashMap<String, String>,
 }
 
 /// Integration configuration for package.
@@ -291,7 +291,7 @@ mod tests {
             mcp: Some(McpConfig {
                 command: "node".to_string(),
                 args: vec!["dist/mcp.js".to_string()],
-                env: HashMap::new(),
+                env: FxHashMap::default(),
             }),
             ..Default::default()
         };

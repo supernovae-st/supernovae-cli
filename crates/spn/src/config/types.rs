@@ -6,7 +6,6 @@
 
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Root configuration structure.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -93,8 +92,8 @@ pub struct McpServerConfig {
     pub args: Vec<String>,
 
     /// Environment variables.
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub env: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "FxHashMap::is_empty")]
+    pub env: FxHashMap<String, String>,
 
     /// Whether this is disabled.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

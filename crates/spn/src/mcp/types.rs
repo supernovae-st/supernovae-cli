@@ -7,8 +7,8 @@
 
 #![allow(dead_code)]
 
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Root configuration for MCP servers.
 ///
@@ -21,7 +21,7 @@ pub struct McpConfig {
 
     /// MCP server definitions.
     #[serde(default)]
-    pub servers: HashMap<String, McpServer>,
+    pub servers: FxHashMap<String, McpServer>,
 }
 
 fn default_version() -> u32 {
@@ -40,7 +40,7 @@ pub struct McpServer {
 
     /// Environment variables for the server process.
     #[serde(default)]
-    pub env: HashMap<String, String>,
+    pub env: FxHashMap<String, String>,
 
     /// Optional description for documentation.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -88,7 +88,7 @@ pub struct ProjectMcpConfig {
 
     /// Additional project-specific servers.
     #[serde(default)]
-    pub servers: HashMap<String, McpServer>,
+    pub servers: FxHashMap<String, McpServer>,
 }
 
 impl McpConfig {
@@ -96,7 +96,7 @@ impl McpConfig {
     pub fn new() -> Self {
         Self {
             version: 1,
-            servers: HashMap::new(),
+            servers: FxHashMap::default(),
         }
     }
 
@@ -165,7 +165,7 @@ impl McpServer {
         Self {
             command: command.into(),
             args: Vec::new(),
-            env: HashMap::new(),
+            env: FxHashMap::default(),
             description: None,
             enabled: true,
             source: None,
@@ -179,7 +179,7 @@ impl McpServer {
     }
 
     /// Builder: add environment variables.
-    pub fn with_env(mut self, env: HashMap<String, String>) -> Self {
+    pub fn with_env(mut self, env: FxHashMap<String, String>) -> Self {
         self.env = env;
         self
     }
@@ -237,7 +237,7 @@ mod tests {
             use_servers: vec!["neo4j".into()],
             disable: vec![],
             servers: {
-                let mut s = HashMap::new();
+                let mut s = FxHashMap::default();
                 s.insert("custom".into(), McpServer::new("node"));
                 s
             },
@@ -258,7 +258,7 @@ mod tests {
         let project = ProjectMcpConfig {
             use_servers: vec![], // Use all
             disable: vec!["linear".into()],
-            servers: HashMap::new(),
+            servers: FxHashMap::default(),
         };
 
         let merged = global.merge_with_project(&project);

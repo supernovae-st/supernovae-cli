@@ -4,7 +4,7 @@
 //!
 //! Uses [`config_loader`] for shared JSON operations (load, insert MCP, write).
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::path::{Path, PathBuf};
 
 use serde_json::{json, Value};
@@ -342,7 +342,7 @@ fn build_mcp_config(package_path: &Path, mcp: &McpConfig) -> Value {
     });
 
     if !mcp.env.is_empty() {
-        let mut env = HashMap::new();
+        let mut env = FxHashMap::default();
         for (key, value) in &mcp.env {
             env.insert(
                 key.clone(),
@@ -449,7 +449,7 @@ mod tests {
             mcp: Some(McpConfig {
                 command: "node".to_string(),
                 args: vec!["${PACKAGE_PATH}/dist/index.js".to_string()],
-                env: HashMap::new(),
+                env: FxHashMap::default(),
             }),
             ..Default::default()
         };
@@ -476,7 +476,7 @@ mod tests {
         let mcp = McpConfig {
             command: "node".to_string(),
             args: vec!["${PACKAGE_PATH}/dist/mcp.js".to_string()],
-            env: HashMap::from([("API_KEY".to_string(), "secret".to_string())]),
+            env: [("API_KEY".to_string(), "secret".to_string())].into_iter().collect(),
         };
 
         let config = build_mcp_config(&package_path, &mcp);
@@ -569,7 +569,7 @@ mod tests {
             mcp: Some(McpConfig {
                 command: "node".to_string(),
                 args: vec!["dist/mcp.js".to_string()],
-                env: HashMap::new(),
+                env: FxHashMap::default(),
             }),
             skills: vec!["skills".to_string()],
             hooks: vec!["hooks".to_string()],

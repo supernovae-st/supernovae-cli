@@ -313,7 +313,7 @@ pub fn config_path_for_target(target: IdeTarget, project_root: Option<&Path>) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
+    use rustc_hash::FxHashMap;
     use tempfile::TempDir;
 
     fn create_test_mcp_config() -> McpConfig {
@@ -323,7 +323,7 @@ mod tests {
             McpServer {
                 command: "npx".to_string(),
                 args: vec!["-y".to_string(), "@neo4j/mcp-server-neo4j".to_string()],
-                env: HashMap::new(),
+                env: FxHashMap::default(),
                 description: Some("Neo4j MCP server".to_string()),
                 enabled: true,
                 source: None,
@@ -337,7 +337,7 @@ mod tests {
                     "-y".to_string(),
                     "@modelcontextprotocol/server-github".to_string(),
                 ],
-                env: HashMap::from([("GITHUB_TOKEN".to_string(), "${GITHUB_TOKEN}".to_string())]),
+                env: [("GITHUB_TOKEN".to_string(), "${GITHUB_TOKEN}".to_string())].into_iter().collect(),
                 description: None,
                 enabled: true,
                 source: None,
@@ -359,14 +359,11 @@ mod tests {
             McpServer {
                 command: "npx".to_string(),
                 args: vec!["-y".to_string(), "@neo4j/mcp-server-neo4j".to_string()],
-                env: HashMap::from([
+                env: [
                     ("NEO4J_URI".to_string(), "bolt://localhost:7687".to_string()),
                     ("NEO4J_USER".to_string(), "neo4j".to_string()),
-                    (
-                        "NEO4J_PASSWORD".to_string(),
-                        "${NEO4J_PASSWORD}".to_string(),
-                    ),
-                ]),
+                    ("NEO4J_PASSWORD".to_string(), "${NEO4J_PASSWORD}".to_string()),
+                ].into_iter().collect(),
                 description: Some("Neo4j knowledge graph".to_string()),
                 enabled: true,
                 source: None,
@@ -378,10 +375,7 @@ mod tests {
             McpServer {
                 command: "npx".to_string(),
                 args: vec!["-y".to_string(), "@anthropic/mcp-perplexity".to_string()],
-                env: HashMap::from([(
-                    "PERPLEXITY_API_KEY".to_string(),
-                    "${PERPLEXITY_API_KEY}".to_string(),
-                )]),
+                env: [("PERPLEXITY_API_KEY".to_string(), "${PERPLEXITY_API_KEY}".to_string())].into_iter().collect(),
                 description: Some("Web search".to_string()),
                 enabled: true,
                 source: None,
@@ -393,10 +387,7 @@ mod tests {
             McpServer {
                 command: "npx".to_string(),
                 args: vec!["-y".to_string(), "@anthropic/mcp-firecrawl".to_string()],
-                env: HashMap::from([(
-                    "FIRECRAWL_API_KEY".to_string(),
-                    "${FIRECRAWL_API_KEY}".to_string(),
-                )]),
+                env: [("FIRECRAWL_API_KEY".to_string(), "${FIRECRAWL_API_KEY}".to_string())].into_iter().collect(),
                 description: None,
                 enabled: true,
                 source: None,
@@ -437,11 +428,11 @@ mod tests {
             McpServer {
                 command: "node".to_string(),
                 args: vec!["server.js".to_string()],
-                env: HashMap::from([
+                env: [
                     ("API_KEY".to_string(), "${API_KEY}".to_string()),
                     ("SECRET_TOKEN".to_string(), "${SECRET_TOKEN}".to_string()),
                     ("DB_PASSWORD".to_string(), "${DB_PASSWORD}".to_string()),
-                ]),
+                ].into_iter().collect(),
                 description: None,
                 enabled: true,
                 source: None,
@@ -596,7 +587,7 @@ mod tests {
         let server = McpServer {
             command: "node".to_string(),
             args: vec!["server.js".to_string()],
-            env: HashMap::new(),
+            env: FxHashMap::default(),
             description: None,
             enabled: true,
             source: None,
