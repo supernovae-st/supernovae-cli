@@ -337,18 +337,16 @@ impl Downloader {
 
             // Check for symlinks pointing outside extraction directory
             if entry.header().entry_type().is_symlink() {
-                if let Ok(link) = entry.link_name() {
-                    if let Some(link_path) = link {
-                        if link_path
-                            .components()
-                            .any(|c| matches!(c, std::path::Component::ParentDir))
-                        {
-                            return Err(DownloadError::InvalidPath(format!(
-                                "Tarball contains symlink with path traversal: {} -> {}",
-                                path.display(),
-                                link_path.display()
-                            )));
-                        }
+                if let Ok(Some(link_path)) = entry.link_name() {
+                    if link_path
+                        .components()
+                        .any(|c| matches!(c, std::path::Component::ParentDir))
+                    {
+                        return Err(DownloadError::InvalidPath(format!(
+                            "Tarball contains symlink with path traversal: {} -> {}",
+                            path.display(),
+                            link_path.display()
+                        )));
                     }
                 }
             }

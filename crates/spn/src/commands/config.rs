@@ -37,13 +37,11 @@ fn validate_editor(editor: &str) -> Result<&str> {
     let editor_cmd = editor.split_whitespace().next().unwrap_or(editor);
 
     // If absolute path, verify it exists
-    if editor_cmd.starts_with('/') {
-        if !Path::new(editor_cmd).exists() {
-            return Err(SpnError::ConfigError(format!(
-                "Editor not found: {}",
-                editor_cmd
-            )));
-        }
+    if editor_cmd.starts_with('/') && !Path::new(editor_cmd).exists() {
+        return Err(SpnError::ConfigError(format!(
+            "Editor not found: {}",
+            editor_cmd
+        )));
     }
 
     Ok(editor)
@@ -303,7 +301,7 @@ async fn edit_config(local_flag: bool, user: bool, mcp: bool) -> Result<()> {
     println!("✏️  Opening {} with {}...", path.display(), editor);
 
     // Open editor
-    std::process::Command::new(&editor).arg(&path).status()?;
+    std::process::Command::new(editor).arg(&path).status()?;
 
     println!("   Config saved.");
 
