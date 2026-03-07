@@ -159,7 +159,7 @@ docker run --rm \
 ### Verify Installation
 
 ```bash
-spn --version  # spn-cli 0.14.0
+spn --version  # spn-cli 0.14.2
 spn doctor     # System diagnostic
 ```
 
@@ -2251,7 +2251,7 @@ Resolved package versions (committed to git).
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818cf8', 'lineColor': '#a5b4fc', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#312e81'}}}%%
 flowchart TB
-    subgraph SPN["🌟 spn — Package Manager v0.14.0"]
+    subgraph SPN["🌟 spn — Package Manager v0.14.2"]
         direction LR
         subgraph OWNED["We Own"]
             W["📋 workflows/<br/>YAML DAGs"]
@@ -2276,8 +2276,8 @@ flowchart TB
     end
 
     subgraph RUNTIME["🚀 Runtime Engines"]
-        NIKA["🦋 Nika v0.17.5<br/>Workflow Runtime<br/><i>5 Semantic Verbs</i>"]
-        NOVANET["🧠 NovaNet v0.14.0<br/>Knowledge Graph<br/><i>Neo4j + MCP Server</i>"]
+        NIKA["🦋 Nika v0.21.1<br/>Workflow Runtime<br/><i>5 Semantic Verbs</i>"]
+        NOVANET["🧠 NovaNet v0.17.2<br/>Knowledge Graph<br/><i>Neo4j + MCP Server</i>"]
     end
 
     subgraph EDITORS["📂 Editor Integration"]
@@ -2527,8 +2527,8 @@ spn doctor --json > diagnostics.json
 
 | Repository | Description | Version |
 |:-----------|:------------|:--------|
-| [nika](https://github.com/supernovae-st/nika) | 🦋 Semantic YAML workflow engine | v0.17.5 |
-| [novanet](https://github.com/supernovae-st/novanet) | 🧠 Knowledge graph for localization | v0.14.0 |
+| [nika](https://github.com/supernovae-st/nika) | 🦋 Semantic YAML workflow engine | v0.21.1 |
+| [novanet](https://github.com/supernovae-st/novanet) | 🧠 Knowledge graph for localization | v0.17.2 |
 | [supernovae-registry](https://github.com/supernovae-st/supernovae-registry) | 📦 Public package registry | - |
 | [supernovae-index](https://github.com/supernovae-st/supernovae-index) | 📇 Sparse package index | - |
 | [homebrew-tap](https://github.com/supernovae-st/homebrew-tap) | 🍺 Homebrew formulas | - |

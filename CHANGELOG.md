@@ -73,6 +73,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Error handling now returns `Result<(), SpnError>` consistently across all CLI commands
 - Improved error messages with proper context and suggestions
 
+## [0.12.5] - 2026-03-06
+
+### Changed
+
+- **📦 Dependencies**: Update all dependencies to latest versions
+
+## [0.12.4] - 2026-03-06
+
+### Fixed
+
+- **🐳 Docker**: Disable spn-keyring default features for musl builds
+
+## [0.12.3] - 2026-03-06
+
+### Changed
+
+- **📦 Release**: Bump spn-keyring to v0.1.2, spn-core to v0.1.1
+- **📦 Release**: Bump spn-client to v0.2.3 (add SpnPaths export)
+
 ## [0.12.2] - 2026-03-05
 
 ### Changed
@@ -433,7 +452,13 @@ spn CLI ──► spn daemon (IPC) ──► spn-ollama ──► Ollama API (lo
 
 ---
 
-[Unreleased]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.2...HEAD
+[Unreleased]: https://github.com/supernovae-st/supernovae-cli/compare/v0.14.2...HEAD
+[0.14.2]: https://github.com/supernovae-st/supernovae-cli/compare/v0.14.1...v0.14.2
+[0.14.1]: https://github.com/supernovae-st/supernovae-cli/compare/v0.14.0...v0.14.1
+[0.14.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.5...v0.14.0
+[0.12.5]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.4...v0.12.5
+[0.12.4]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.3...v0.12.4
+[0.12.3]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.11.0...v0.12.0

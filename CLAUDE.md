@@ -1,12 +1,12 @@
 # supernovae-cli
 
-**SuperNovae CLI (`spn`)** v0.14.0 — Unified package manager for the SuperNovae AI workflow ecosystem.
+**SuperNovae CLI (`spn`)** v0.14.2 — Unified package manager for the SuperNovae AI workflow ecosystem.
 
 ## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  spn — SuperNovae Package Manager v0.14.0                                       │
+│  spn — SuperNovae Package Manager v0.14.2                                       │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │  Package Commands:                                                              │
@@ -62,7 +62,7 @@
 - **Security:** keyring (OS keychain), secrecy, zeroize, libc (mlock)
 - **Performance:** rustc-hash (FxHashMap)
 
-## Workspace Architecture (v0.14.0)
+## Workspace Architecture (v0.14.2)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -98,7 +98,7 @@
 │              │                                               │                  │
 │              ▼                                               ▼                  │
 │  ┌────────────────────────┐                   ┌────────────────────────┐        │
-│  │  spn-cli (v0.14.0)     │                   │  Nika (v0.21.0)        │        │
+│  │  spn-cli (v0.14.2)     │                   │  Nika (v0.21.1)        │        │
 │  │  • provider set/get    │                   │  • spn-daemon feature  │        │
 │  │  • model pull/load     │                   │  • KNOWN_PROVIDERS     │        │
 │  │  • setup wizard        │                   │  • Unified secrets     │        │
@@ -255,7 +255,7 @@ supernovae-cli/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Release Automation (v0.14.0)
+## Release Automation (v0.14.2)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -286,7 +286,7 @@ supernovae-cli/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Feature Flags (v0.14.0)
+## Feature Flags (v0.14.2)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -363,7 +363,7 @@ cargo install --path crates/spn
 | spn-keyring | 0.1.3 | [Published](https://crates.io/crates/spn-keyring) |
 | spn-ollama | 0.1.3 | [Published](https://crates.io/crates/spn-ollama) |
 | spn-client | 0.2.4 | [Published](https://crates.io/crates/spn-client) |
-| spn-cli | 0.14.0 | [Published](https://crates.io/crates/spn-cli) |
+| spn-cli | 0.14.2 | [Published](https://crates.io/crates/spn-cli) |
 
 ## Storage Layout
 
