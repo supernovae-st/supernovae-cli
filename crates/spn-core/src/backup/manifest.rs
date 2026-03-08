@@ -119,8 +119,7 @@ impl BackupManifest {
     pub fn from_json(json: &str) -> Result<Self, String> {
         // Simple JSON parser for the manifest format
         let version = extract_string(json, "version").unwrap_or_else(|| "1.0".to_string());
-        let created_at =
-            extract_string(json, "created_at").ok_or("Missing created_at")?;
+        let created_at = extract_string(json, "created_at").ok_or("Missing created_at")?;
         let label = extract_string(json, "label");
         let hostname = extract_string(json, "hostname").unwrap_or_default();
 

@@ -107,11 +107,7 @@ impl BackupManager {
 
         // Create manifest
         let mut manifest = BackupManifest::new(label.map(String::from));
-        manifest.set_hostname(
-            gethostname::gethostname()
-                .to_string_lossy()
-                .to_string(),
-        );
+        manifest.set_hostname(gethostname::gethostname().to_string_lossy().to_string());
 
         // Generate backup filename
         let timestamp = &manifest.created_at;
@@ -187,9 +183,8 @@ impl BackupManager {
 
         // Read manifest
         let manifest_path = staging_dir.path().join("manifest.json");
-        let manifest_content = fs::read_to_string(&manifest_path).map_err(|_| {
-            SpnError::InvalidInput("Missing manifest.json in backup".to_string())
-        })?;
+        let manifest_content = fs::read_to_string(&manifest_path)
+            .map_err(|_| SpnError::InvalidInput("Missing manifest.json in backup".to_string()))?;
         let manifest = BackupManifest::from_json(&manifest_content)
             .map_err(|e| SpnError::InvalidInput(format!("Invalid manifest: {}", e)))?;
 
@@ -260,9 +255,8 @@ impl BackupManager {
 
         // Read manifest
         let manifest_path = staging_dir.path().join("manifest.json");
-        let manifest_content = fs::read_to_string(&manifest_path).map_err(|_| {
-            SpnError::InvalidInput("Missing manifest.json".to_string())
-        })?;
+        let manifest_content = fs::read_to_string(&manifest_path)
+            .map_err(|_| SpnError::InvalidInput("Missing manifest.json".to_string()))?;
         let manifest = BackupManifest::from_json(&manifest_content)
             .map_err(|e| SpnError::InvalidInput(format!("Invalid manifest: {}", e)))?;
 
@@ -295,9 +289,7 @@ impl Default for SpnAdapter {
 impl SpnAdapter {
     pub fn new() -> Self {
         Self {
-            spn_dir: dirs::home_dir()
-                .expect("home dir")
-                .join(".spn"),
+            spn_dir: dirs::home_dir().expect("home dir").join(".spn"),
         }
     }
 }
@@ -400,9 +392,7 @@ impl Default for NikaAdapter {
 impl NikaAdapter {
     pub fn new() -> Self {
         Self {
-            nika_dir: dirs::home_dir()
-                .expect("home dir")
-                .join(".nika"),
+            nika_dir: dirs::home_dir().expect("home dir").join(".nika"),
         }
     }
 }
@@ -538,7 +528,9 @@ impl BackupAdapter for NovaNetAdapter {
     }
 
     fn collect(&self, staging_dir: &Path) -> std::result::Result<AdapterContents, BackupError> {
-        let brain_path = self.brain_path.as_ref()
+        let brain_path = self
+            .brain_path
+            .as_ref()
             .ok_or(BackupError::NotAvailable("NovaNet brain/ not found".into()))?;
 
         let novanet_staging = staging_dir.join("novanet");
@@ -571,7 +563,9 @@ impl BackupAdapter for NovaNetAdapter {
     }
 
     fn restore(&self, staging_dir: &Path) -> std::result::Result<(), BackupError> {
-        let brain_path = self.brain_path.as_ref()
+        let brain_path = self
+            .brain_path
+            .as_ref()
             .ok_or(BackupError::NotAvailable("NovaNet brain/ not found".into()))?;
 
         let novanet_staging = staging_dir.join("novanet");
@@ -735,21 +729,13 @@ pub async fn run(command: BackupCommands) -> Result<()> {
             println!();
             println!("{} Backup created successfully!", style("✅").green());
             println!();
-            println!(
-                "   {} {}",
-                style("📦 File:").bold(),
-                info.path.display()
-            );
+            println!("   {} {}", style("📦 File:").bold(), info.path.display());
             println!(
                 "   {} {}",
                 style("📊 Size:").bold(),
                 format_bytes(info.size_bytes)
             );
-            println!(
-                "   {} {}",
-                style("🕐 Time:").bold(),
-                &info.timestamp[..19]
-            );
+            println!("   {} {}", style("🕐 Time:").bold(), &info.timestamp[..19]);
 
             if let Some(label) = &info.manifest.label {
                 println!("   {} {}", style("🏷️  Label:").bold(), label);
@@ -928,11 +914,7 @@ pub async fn run(command: BackupCommands) -> Result<()> {
                         backup.path.file_name().unwrap().to_string_lossy()
                     );
                 }
-                println!(
-                    "{} Pruned {} backups",
-                    style("✅").green(),
-                    to_delete.len()
-                );
+                println!("{} Pruned {} backups", style("✅").green(), to_delete.len());
             } else {
                 println!(
                     "{} Dry run - would delete {} backups:",
@@ -940,10 +922,7 @@ pub async fn run(command: BackupCommands) -> Result<()> {
                     to_delete.len()
                 );
                 for backup in to_delete {
-                    println!(
-                        "   {}",
-                        backup.path.file_name().unwrap().to_string_lossy()
-                    );
+                    println!("   {}", backup.path.file_name().unwrap().to_string_lossy());
                 }
                 println!();
                 println!("Run with {} to actually delete", style("--execute").bold());
