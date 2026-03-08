@@ -249,12 +249,94 @@ jobs:
     name: Update Homebrew Formula
     needs: release
     runs-on: ubuntu-latest
+    env:
+      # Use env vars for safe interpolation in shell scripts
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
-      - name: Update Homebrew formula
-        uses: mislav/bump-homebrew-formula-action@v3
-        with:
-          formula-name: spn
-          homebrew-tap: supernovae-st/homebrew-tap
-          download-url: https://github.com/supernovae-st/supernovae-cli/releases/download/${{ env.RELEASE_TAG }}/spn-x86_64-apple-darwin.tar.gz
+      - name: Download release artifacts and compute SHA256
+        id: sha256
+        run: |
+          VERSION="${TAG#v}"
+          BASE_URL="https://github.com/supernovae-st/supernovae-cli/releases/download/${TAG}"
+
+          # Download and compute SHA256 for each architecture
+          curl -sL "${BASE_URL}/spn-aarch64-apple-darwin.tar.gz" -o macos-arm64.tar.gz
+          curl -sL "${BASE_URL}/spn-x86_64-apple-darwin.tar.gz" -o macos-intel.tar.gz
+          curl -sL "${BASE_URL}/spn-aarch64-unknown-linux-gnu.tar.gz" -o linux-arm64.tar.gz
+          curl -sL "${BASE_URL}/spn-x86_64-unknown-linux-gnu.tar.gz" -o linux-intel.tar.gz
+
+          echo "macos_arm64=$(sha256sum macos-arm64.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "macos_intel=$(sha256sum macos-intel.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "linux_arm64=$(sha256sum linux-arm64.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "linux_intel=$(sha256sum linux-intel.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Clone homebrew-tap
         env:
-          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/supernovae-st/homebrew-tap.git"
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update formula
+        env:
+          VERSION: ${{ steps.sha256.outputs.version }}
+          RELEASE_TAG: ${{ steps.sha256.outputs.tag }}
+          SHA_MACOS_ARM64: ${{ steps.sha256.outputs.macos_arm64 }}
+          SHA_MACOS_INTEL: ${{ steps.sha256.outputs.macos_intel }}
+          SHA_LINUX_ARM64: ${{ steps.sha256.outputs.linux_arm64 }}
+          SHA_LINUX_INTEL: ${{ steps.sha256.outputs.linux_intel }}
+        run: |
+          cat > homebrew-tap/Formula/spn.rb <<EOF
+          # Formula/spn.rb
+          class Spn < Formula
+            desc "SuperNovae CLI - The Agentic AI Toolkit"
+            homepage "https://github.com/supernovae-st/supernovae-cli"
+            version "${VERSION}"
+            license "AGPL-3.0-or-later"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/supernovae-st/supernovae-cli/releases/download/${RELEASE_TAG}/spn-aarch64-apple-darwin.tar.gz"
+                sha256 "${SHA_MACOS_ARM64}"
+              end
+              on_intel do
+                url "https://github.com/supernovae-st/supernovae-cli/releases/download/${RELEASE_TAG}/spn-x86_64-apple-darwin.tar.gz"
+                sha256 "${SHA_MACOS_INTEL}"
+              end
+            end
+
+            on_linux do
+              on_arm do
+                url "https://github.com/supernovae-st/supernovae-cli/releases/download/${RELEASE_TAG}/spn-aarch64-unknown-linux-gnu.tar.gz"
+                sha256 "${SHA_LINUX_ARM64}"
+              end
+              on_intel do
+                url "https://github.com/supernovae-st/supernovae-cli/releases/download/${RELEASE_TAG}/spn-x86_64-unknown-linux-gnu.tar.gz"
+                sha256 "${SHA_LINUX_INTEL}"
+              end
+            end
+
+            def install
+              bin.install "spn"
+            end
+
+            test do
+              assert_match "spn", shell_output("#{bin}/spn --version")
+            end
+          end
+          EOF
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' homebrew-tap/Formula/spn.rb
+
+      - name: Commit and push
+        env:
+          VERSION: ${{ steps.sha256.outputs.version }}
+        run: |
+          cd homebrew-tap
+          git add Formula/spn.rb
+          git commit -m "spn ${VERSION}"
+          git push
