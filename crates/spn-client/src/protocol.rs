@@ -32,11 +32,67 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
-use spn_core::{LoadConfig, ModelInfo, RunningModel};
+use spn_core::{LoadConfig, ModelInfo, PullProgress, RunningModel};
+
+/// Progress update for model operations (pull, load, delete).
+///
+/// Used for streaming progress from daemon to CLI during long-running operations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelProgress {
+    /// Current status message (e.g., "downloading", "verifying", "extracting")
+    pub status: String,
+    /// Bytes/units completed (optional for indeterminate operations)
+    pub completed: Option<u64>,
+    /// Total bytes/units (optional for indeterminate operations)
+    pub total: Option<u64>,
+    /// Model digest (for pull operations)
+    pub digest: Option<String>,
+}
+
+impl ModelProgress {
+    /// Calculate completion percentage (0.0 - 100.0).
+    /// Returns None if total is unknown or zero.
+    pub fn percentage(&self) -> Option<f64> {
+        match (self.completed, self.total) {
+            (Some(completed), Some(total)) if total > 0 => {
+                Some((completed as f64 / total as f64) * 100.0)
+            }
+            _ => None,
+        }
+    }
+
+    /// Create a new indeterminate progress (spinner mode).
+    pub fn indeterminate(status: impl Into<String>) -> Self {
+        Self {
+            status: status.into(),
+            completed: None,
+            total: None,
+            digest: None,
+        }
+    }
+
+    /// Create a determinate progress (progress bar mode).
+    pub fn determinate(status: impl Into<String>, completed: u64, total: u64) -> Self {
+        Self {
+            status: status.into(),
+            completed: Some(completed),
+            total: Some(total),
+            digest: None,
+        }
+    }
+
+    /// Create from PullProgress (from spn_core/spn_ollama).
+    pub fn from_pull_progress(p: &PullProgress) -> Self {
+        Self {
+            status: p.status.clone(),
+            completed: Some(p.completed),
+            total: Some(p.total),
+            digest: None, // PullProgress doesn't have digest field
+        }
+    }
+}
 
 /// Current protocol version.
-///
-/// Increment this when making breaking changes to the wire protocol:
 /// - Adding required fields to requests/responses
 /// - Changing the serialization format
 /// - Removing commands or response variants
@@ -171,6 +227,22 @@ pub enum Response {
 
     /// Error response.
     Error { message: String },
+
+    // ==================== Streaming Responses ====================
+    /// Progress update for model operations (streaming).
+    Progress {
+        /// Progress details
+        progress: ModelProgress,
+    },
+
+    /// End of stream marker.
+    StreamEnd {
+        /// Whether the operation succeeded
+        success: bool,
+        /// Error message if failed
+        #[serde(default)]
+        error: Option<String>,
+    },
 }
 
 #[cfg(test)]
@@ -239,5 +311,79 @@ mod tests {
         let json = r#"{"message":"Not found"}"#;
         let response: Response = serde_json::from_str(json).unwrap();
         assert!(matches!(response, Response::Error { message } if message == "Not found"));
+    }
+
+    #[test]
+    fn test_model_progress_serialization() {
+        let progress = ModelProgress {
+            status: "downloading".into(),
+            completed: Some(50),
+            total: Some(100),
+            digest: Some("sha256:abc123".into()),
+        };
+
+        let json = serde_json::to_string(&progress).unwrap();
+        let parsed: ModelProgress = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.status, "downloading");
+        assert_eq!(parsed.completed, Some(50));
+        assert_eq!(parsed.total, Some(100));
+    }
+
+    #[test]
+    fn test_model_progress_percentage() {
+        let progress = ModelProgress {
+            status: "downloading".into(),
+            completed: Some(75),
+            total: Some(100),
+            digest: None,
+        };
+
+        assert_eq!(progress.percentage(), Some(75.0));
+
+        let no_total = ModelProgress {
+            status: "starting".into(),
+            completed: None,
+            total: None,
+            digest: None,
+        };
+
+        assert_eq!(no_total.percentage(), None);
+    }
+
+    #[test]
+    fn test_model_progress_constructors() {
+        let indeterminate = ModelProgress::indeterminate("loading");
+        assert_eq!(indeterminate.status, "loading");
+        assert!(indeterminate.percentage().is_none());
+
+        let determinate = ModelProgress::determinate("downloading", 50, 100);
+        assert_eq!(determinate.percentage(), Some(50.0));
+    }
+
+    #[test]
+    fn test_response_progress_variant() {
+        let progress = ModelProgress::determinate("downloading", 50, 100);
+        let response = Response::Progress { progress };
+
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("downloading"));
+    }
+
+    #[test]
+    fn test_response_stream_end_variant() {
+        let success_response = Response::StreamEnd {
+            success: true,
+            error: None,
+        };
+        let json = serde_json::to_string(&success_response).unwrap();
+        assert!(json.contains("success"));
+
+        let error_response = Response::StreamEnd {
+            success: false,
+            error: Some("Connection lost".into()),
+        };
+        let json = serde_json::to_string(&error_response).unwrap();
+        assert!(json.contains("Connection lost"));
     }
 }
