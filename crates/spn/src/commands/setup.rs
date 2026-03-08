@@ -777,7 +777,7 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
         println!();
     }
 
-    // Step 3: Start spn daemon (for keychain-free secrets)
+    // Step 3: Start spn daemon (unified secret management)
     println!(
         "{}",
         ds::highlight("STEP 3/5: Starting spn Daemon").underlined()
@@ -785,7 +785,7 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
     println!();
     println!(
         "  {}",
-        ds::muted("The daemon provides keychain-free secrets to Nika workflows.")
+        ds::muted("The daemon provides unified secret access (no keychain popups).")
     );
     println!();
 
@@ -816,10 +816,7 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
                 if spn_client::daemon_socket_exists() {
                     println!("  {} Daemon started", ds::command("✓"));
                 } else {
-                    println!(
-                        "  {} Daemon may have failed to start",
-                        ds::warning("⚠️")
-                    );
+                    println!("  {} Daemon may have failed to start", ds::warning("⚠️"));
                     println!(
                         "     {}",
                         ds::muted("Run 'spn daemon start' manually later")
@@ -827,11 +824,7 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
                 }
             }
             Err(e) => {
-                println!(
-                    "  {} Daemon start failed: {}",
-                    ds::warning("⚠️"),
-                    e
-                );
+                println!("  {} Daemon start failed: {}", ds::warning("⚠️"), e);
                 println!(
                     "     {}",
                     ds::muted("Run 'spn daemon start' manually later")
@@ -1047,13 +1040,13 @@ fn print_nika_success() {
         "  {}",
         ds::muted("Nika requires at least one LLM provider to be configured.")
     );
-    println!(
-        "  {}",
-        ds::muted("If not done during setup, run:")
-    );
+    println!("  {}", ds::muted("If not done during setup, run:"));
     println!();
     println!("     {}", ds::primary("spn provider set anthropic"));
-    println!("     {}", ds::muted("# or: spn provider migrate (from env vars)"));
+    println!(
+        "     {}",
+        ds::muted("# or: spn provider migrate (from env vars)")
+    );
     println!();
 
     println!("{}", ds::highlight("WHAT'S NEXT?"));
