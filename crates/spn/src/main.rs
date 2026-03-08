@@ -265,9 +265,17 @@ enum Commands {
     #[command(visible_alias = "ex")]
     Explore,
 
-    /// Get context-aware suggestions
+    /// Get context-aware suggestions (smart wizard)
     #[command(visible_alias = "sg")]
-    Suggest,
+    Suggest {
+        /// Interactive mode: select and run suggestions directly
+        #[arg(short, long)]
+        interactive: bool,
+
+        /// Filter by category: security, setup, tools, project
+        #[arg(short, long)]
+        category: Option<String>,
+    },
 
     /// Initialize a new project
     Init {
@@ -1363,7 +1371,9 @@ async fn main() {
         Commands::Provider { command } => commands::provider::run(command).await,
         Commands::Status { json } => commands::status::run(json).await,
         Commands::Explore => commands::explore::run().await,
-        Commands::Suggest => commands::suggest::run().await,
+        Commands::Suggest { interactive, category } => {
+            commands::suggest::run(interactive, category).await
+        }
         Commands::Init {
             local,
             mcp,
