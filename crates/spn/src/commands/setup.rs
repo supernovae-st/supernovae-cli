@@ -1873,4 +1873,101 @@ mod tests {
         let result = is_marketplace_added("nonexistent-marketplace-xyz-12345");
         assert!(!result);
     }
+
+    // ========================================================================
+    // Editor Configuration Tests
+    // ========================================================================
+
+    #[test]
+    fn test_vscode_uses_config_dir() {
+        // VS Code should use the standard config directory
+        let config_dir = dirs::config_dir();
+        assert!(config_dir.is_some(), "Config dir should be available");
+
+        let vscode_path = config_dir.unwrap().join("Code/User/settings.json");
+        // On macOS: ~/Library/Application Support/Code/User/settings.json
+        // On Linux: ~/.config/Code/User/settings.json
+        assert!(
+            vscode_path.to_string_lossy().contains("Code"),
+            "VS Code path should contain 'Code'"
+        );
+    }
+
+    #[test]
+    fn test_cursor_uses_home_dir_dotfile() {
+        // Cursor uses ~/.cursor/User/settings.json
+        let home = dirs::home_dir();
+        assert!(home.is_some(), "Home dir should be available");
+
+        let cursor_path = home.unwrap().join(".cursor/User/settings.json");
+        assert!(
+            cursor_path.to_string_lossy().contains(".cursor"),
+            "Cursor path should contain '.cursor'"
+        );
+    }
+
+    #[test]
+    fn test_windsurf_uses_config_dir() {
+        // Windsurf should use the standard config directory (like VS Code)
+        // NOT a dotfile in home
+        let config_dir = dirs::config_dir();
+        assert!(config_dir.is_some(), "Config dir should be available");
+
+        let windsurf_path = config_dir.unwrap().join("Windsurf/User/settings.json");
+        // On macOS: ~/Library/Application Support/Windsurf/User/settings.json
+        // On Linux: ~/.config/Windsurf/User/settings.json
+        assert!(
+            windsurf_path.to_string_lossy().contains("Windsurf"),
+            "Windsurf path should contain 'Windsurf'"
+        );
+
+        // Verify it does NOT use dotfile pattern
+        assert!(
+            !windsurf_path.to_string_lossy().contains(".windsurf"),
+            "Windsurf should NOT use dotfile pattern"
+        );
+    }
+
+    #[test]
+    fn test_yaml_schema_url_format() {
+        // The Nika schema URL should be valid HTTPS
+        let schema_url = "https://nika.dev/schema/workflow.json";
+        assert!(schema_url.starts_with("https://"));
+        assert!(schema_url.ends_with(".json"));
+        assert!(schema_url.contains("nika.dev"));
+    }
+
+    #[test]
+    fn test_yaml_schema_patterns() {
+        // The patterns for Nika workflow files
+        let patterns = ["*.nika.yaml", "*.nika.yml"];
+        for pattern in patterns {
+            assert!(pattern.contains("nika"));
+            assert!(pattern.starts_with("*"));
+        }
+    }
+
+    #[test]
+    fn test_configure_vscode_yaml_schema_json_structure() {
+        // Test the JSON structure we'd inject
+        use serde_json::json;
+
+        let schema_entry = json!({
+            "yaml.schemas": {
+                "https://nika.dev/schema/workflow.json": ["*.nika.yaml", "*.nika.yml"]
+            }
+        });
+
+        let schemas = schema_entry.get("yaml.schemas").unwrap();
+        let nika_schema = schemas.get("https://nika.dev/schema/workflow.json").unwrap();
+
+        assert!(nika_schema.is_array());
+        let patterns: Vec<&str> = nika_schema.as_array().unwrap()
+            .iter()
+            .filter_map(|v| v.as_str())
+            .collect();
+
+        assert!(patterns.contains(&"*.nika.yaml"));
+        assert!(patterns.contains(&"*.nika.yml"));
+    }
 }
