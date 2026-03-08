@@ -6,7 +6,9 @@ mod loader;
 mod schema;
 
 pub use loader::{apis_dir, load_all_apis, load_api};
-pub use schema::{ApiConfig, ApiKeyLocation, AuthConfig, AuthType, ToolDef};
+pub use schema::{
+    ApiConfig, ApiKeyLocation, AuthConfig, AuthType, ParamDef, ParamType, RateLimitConfig, ToolDef,
+};
 
 use crate::error::{Error, Result};
 

@@ -8,7 +8,9 @@ use std::sync::Arc;
 
 use reqwest::Client;
 use rmcp::model::{
-    CallToolResult, Content, PaginatedRequestParams, ServerCapabilities, ServerInfo, Tool,
+    CallToolResult, Content, GetPromptRequestParams, GetPromptResult, ListPromptsResult,
+    PaginatedRequestParams, Prompt, PromptArgument, PromptMessage, PromptMessageRole,
+    ServerCapabilities, ServerInfo, Tool,
 };
 use rmcp::service::{RequestContext, RoleServer};
 use rmcp::transport::stdio;
@@ -126,6 +128,79 @@ impl DynamicHandler {
             });
 
         Tool::new(entry.full_name.clone(), description, input_schema)
+    }
+
+    /// Build an MCP prompt from a tool entry.
+    fn build_prompt(entry: &ToolEntry) -> Prompt {
+        let description = entry
+            .tool_def
+            .description
+            .clone()
+            .unwrap_or_else(|| {
+                format!(
+                    "{} {} {}",
+                    entry.tool_def.method, entry.api_config.base_url, entry.tool_def.path
+                )
+            });
+
+        let arguments: Vec<PromptArgument> = entry
+            .tool_def
+            .params
+            .iter()
+            .map(|param| PromptArgument {
+                name: param.name.clone(),
+                title: None,
+                description: param.description.clone(),
+                required: Some(param.required),
+            })
+            .collect();
+
+        Prompt::new(
+            entry.full_name.clone(),
+            Some(description),
+            if arguments.is_empty() {
+                None
+            } else {
+                Some(arguments)
+            },
+        )
+    }
+
+    /// Build a prompt message with usage instructions for a tool.
+    fn build_prompt_message(entry: &ToolEntry) -> PromptMessage {
+        let mut message = format!(
+            "# Tool: {}\n\n**Endpoint:** {} {}{}\n\n",
+            entry.full_name,
+            entry.tool_def.method,
+            entry.api_config.base_url,
+            entry.tool_def.path
+        );
+
+        if let Some(desc) = &entry.tool_def.description {
+            message.push_str(&format!("**Description:** {}\n\n", desc));
+        }
+
+        if !entry.tool_def.params.is_empty() {
+            message.push_str("## Parameters\n\n");
+            for param in &entry.tool_def.params {
+                let required = if param.required { " (required)" } else { "" };
+                let param_type = format!("{:?}", param.param_type).to_lowercase();
+                message.push_str(&format!("- **{}**: {}{}", param.name, param_type, required));
+                if let Some(desc) = &param.description {
+                    message.push_str(&format!(" - {}", desc));
+                }
+                message.push('\n');
+            }
+            message.push('\n');
+        }
+
+        message.push_str("## Usage\n\n");
+        message.push_str(&format!(
+            "Call this tool with the name `{}` and provide the required parameters.\n",
+            entry.full_name
+        ));
+
+        PromptMessage::new_text(PromptMessageRole::User, message)
     }
 
     /// Execute a tool with the given parameters.
@@ -260,6 +335,7 @@ impl ServerHandler for DynamicHandler {
             ),
             capabilities: ServerCapabilities::builder()
                 .enable_tools()
+                .enable_prompts()
                 .build(),
             ..Default::default()
         }
@@ -303,6 +379,39 @@ impl ServerHandler for DynamicHandler {
                     Ok(CallToolResult::error(vec![Content::text(format!("Error: {}", e))]))
                 }
             }
+        }
+    }
+
+    #[allow(clippy::manual_async_fn)]
+    fn list_prompts(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> impl std::future::Future<Output = std::result::Result<ListPromptsResult, McpError>> + Send + '_ {
+        async move {
+            let prompts: Vec<Prompt> = self.tools.values().map(Self::build_prompt).collect();
+            Ok(ListPromptsResult::with_all_items(prompts))
+        }
+    }
+
+    #[allow(clippy::manual_async_fn)]
+    fn get_prompt(
+        &self,
+        request: GetPromptRequestParams,
+        _context: RequestContext<RoleServer>,
+    ) -> impl std::future::Future<Output = std::result::Result<GetPromptResult, McpError>> + Send + '_ {
+        async move {
+            let name = &request.name;
+            let entry = self.tools.get(name).ok_or_else(|| {
+                McpError::invalid_params(format!("Unknown prompt: {}", name), None)
+            })?;
+
+            let message = Self::build_prompt_message(entry);
+
+            Ok(GetPromptResult {
+                description: entry.tool_def.description.clone(),
+                messages: vec![message],
+            })
         }
     }
 }
@@ -451,6 +560,92 @@ fn extract_json_path(value: &Value, path: &str) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::ParamDef;
+
+    // Helper to create a test handler with tools
+    fn create_test_handler() -> DynamicHandler {
+        let mut tools = HashMap::new();
+
+        // Tool 1: Simple tool with no parameters
+        let api_config1 = Arc::new(ApiConfig {
+            name: "test".to_string(),
+            version: "1.0".to_string(),
+            base_url: "https://api.example.com".to_string(),
+            description: Some("Test API".to_string()),
+            auth: AuthConfig {
+                auth_type: AuthType::Bearer,
+                credential: "test".to_string(),
+                location: None,
+                key_name: None,
+            },
+            rate_limit: None,
+            headers: None,
+            tools: vec![],
+        });
+
+        let tool_def1 = ToolDef {
+            name: "simple".to_string(),
+            description: Some("A simple test tool".to_string()),
+            method: "GET".to_string(),
+            path: "/simple".to_string(),
+            body_template: None,
+            params: vec![],
+            response: None,
+        };
+
+        tools.insert(
+            "test_simple".to_string(),
+            ToolEntry {
+                full_name: "test_simple".to_string(),
+                api_config: Arc::clone(&api_config1),
+                tool_def: tool_def1,
+            },
+        );
+
+        // Tool 2: Tool with parameters
+        let tool_def2 = ToolDef {
+            name: "search".to_string(),
+            description: Some("Search for items".to_string()),
+            method: "POST".to_string(),
+            path: "/search".to_string(),
+            body_template: Some(r#"{"query": "{{ query }}"}"#.to_string()),
+            params: vec![
+                ParamDef {
+                    name: "query".to_string(),
+                    param_type: crate::config::ParamType::String,
+                    items: None,
+                    required: true,
+                    default: None,
+                    description: Some("The search query".to_string()),
+                },
+                ParamDef {
+                    name: "limit".to_string(),
+                    param_type: crate::config::ParamType::Integer,
+                    items: None,
+                    required: false,
+                    default: Some(serde_json::json!(10)),
+                    description: Some("Maximum number of results".to_string()),
+                },
+            ],
+            response: None,
+        };
+
+        tools.insert(
+            "test_search".to_string(),
+            ToolEntry {
+                full_name: "test_search".to_string(),
+                api_config: Arc::clone(&api_config1),
+                tool_def: tool_def2,
+            },
+        );
+
+        DynamicHandler {
+            tools,
+            http_client: Client::new(),
+            tera: Tera::default(),
+            credentials: HashMap::new(),
+        }
+    }
 
     #[test]
     fn test_extract_json_path_simple() {
@@ -594,5 +789,109 @@ mod tests {
         );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "on");
+    }
+
+    // ===== Prompt Tests =====
+
+    #[test]
+    fn test_list_prompts_returns_all_tools() {
+        let handler = create_test_handler();
+
+        // Build prompts from tools
+        let prompts: Vec<Prompt> = handler.tools.values().map(DynamicHandler::build_prompt).collect();
+
+        // Should have 2 prompts (one per tool)
+        assert_eq!(prompts.len(), 2);
+
+        // Verify prompt names match tool names
+        let prompt_names: Vec<&str> = prompts.iter().map(|p| p.name.as_str()).collect();
+        assert!(prompt_names.contains(&"test_simple"));
+        assert!(prompt_names.contains(&"test_search"));
+    }
+
+    #[test]
+    fn test_get_prompt_returns_usage_instructions() {
+        let handler = create_test_handler();
+
+        // Get the simple tool entry
+        let entry = handler.tools.get("test_simple").unwrap();
+        let message = DynamicHandler::build_prompt_message(entry);
+
+        // Verify message content
+        if let rmcp::model::PromptMessageContent::Text { text } = &message.content {
+            assert!(text.contains("test_simple"), "Should contain tool name");
+            assert!(text.contains("GET"), "Should contain HTTP method");
+            assert!(text.contains("/simple"), "Should contain path");
+            assert!(text.contains("https://api.example.com"), "Should contain base URL");
+        } else {
+            panic!("Expected text content");
+        }
+    }
+
+    #[test]
+    fn test_get_prompt_includes_parameters() {
+        let handler = create_test_handler();
+
+        // Get the search tool entry (has parameters)
+        let entry = handler.tools.get("test_search").unwrap();
+        let message = DynamicHandler::build_prompt_message(entry);
+
+        // Verify message content includes parameters
+        if let rmcp::model::PromptMessageContent::Text { text } = &message.content {
+            assert!(text.contains("Parameters"), "Should have Parameters section");
+            assert!(text.contains("query"), "Should contain query parameter");
+            assert!(text.contains("(required)"), "Should indicate required parameter");
+            assert!(text.contains("limit"), "Should contain limit parameter");
+            assert!(text.contains("The search query"), "Should contain parameter description");
+        } else {
+            panic!("Expected text content");
+        }
+    }
+
+    #[test]
+    fn test_get_prompt_rejects_unknown_tool() {
+        let handler = create_test_handler();
+
+        // Try to get a non-existent tool
+        let result = handler.tools.get("unknown_tool");
+        assert!(result.is_none(), "Should not find unknown tool");
+    }
+
+    #[test]
+    fn test_build_prompt_has_correct_structure() {
+        let handler = create_test_handler();
+
+        let entry = handler.tools.get("test_search").unwrap();
+        let prompt = DynamicHandler::build_prompt(entry);
+
+        assert_eq!(prompt.name, "test_search");
+        assert!(prompt.description.is_some());
+        assert_eq!(prompt.description.unwrap(), "Search for items");
+
+        // Should have arguments
+        assert!(prompt.arguments.is_some());
+        let args = prompt.arguments.unwrap();
+        assert_eq!(args.len(), 2);
+
+        // First argument: query (required)
+        assert_eq!(args[0].name, "query");
+        assert_eq!(args[0].required, Some(true));
+        assert_eq!(args[0].description, Some("The search query".to_string()));
+
+        // Second argument: limit (optional)
+        assert_eq!(args[1].name, "limit");
+        assert_eq!(args[1].required, Some(false));
+    }
+
+    #[test]
+    fn test_build_prompt_no_args_when_empty() {
+        let handler = create_test_handler();
+
+        let entry = handler.tools.get("test_simple").unwrap();
+        let prompt = DynamicHandler::build_prompt(entry);
+
+        assert_eq!(prompt.name, "test_simple");
+        // Should be None when no parameters
+        assert!(prompt.arguments.is_none());
     }
 }
