@@ -70,7 +70,8 @@ pub use traces::{ReasoningTrace, TraceId, TraceMetadata, TraceStep, TraceStepKin
 #[allow(unused_imports)]
 pub use autonomy::{
     ApprovalLevel, AutonomousTask, AutonomyLevel, AutonomyOrchestrator, AutonomyPolicy, Decision,
-    DecisionOutcome, OrchestratorState, PolicyViolation, TaskResult,
+    DecisionOutcome, OrchestratorConfig, OrchestratorState, OrchestratorStats, PolicyViolation,
+    TaskResult, TaskSource, TaskStatus,
 };
 pub use model_manager::ModelManager;
 pub use secrets::SecretManager;
