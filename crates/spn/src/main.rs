@@ -456,6 +456,23 @@ enum McpCommands {
         /// Server name (or "all" to test all)
         name: String,
     },
+    /// View MCP server logs
+    Logs {
+        /// Server name (or "all" for all servers)
+        name: Option<String>,
+
+        /// Follow log output (like tail -f)
+        #[arg(short, long)]
+        follow: bool,
+
+        /// Number of lines to show
+        #[arg(short = 'n', long, default_value = "50")]
+        lines: usize,
+
+        /// Filter by log level (debug, info, warn, error)
+        #[arg(short, long)]
+        level: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]

@@ -34,6 +34,12 @@ pub async fn run(command: McpCommands) -> Result<()> {
             json,
         } => run_list(&mcp, global, project, json).await,
         McpCommands::Test { name } => run_test(&npm, &mcp, &name).await,
+        McpCommands::Logs {
+            name,
+            follow,
+            lines,
+            level,
+        } => run_logs(&mcp, name.as_deref(), follow, lines, level.as_deref()).await,
     }
 }
 
@@ -306,6 +312,189 @@ fn test_single_server(npm: &NpmClient, name: &str) {
     }
 }
 
+/// View MCP server logs.
+async fn run_logs(
+    mcp: &McpConfigManager,
+    name: Option<&str>,
+    follow: bool,
+    lines: usize,
+    level: Option<&str>,
+) -> Result<()> {
+    // Get logs directory
+    let logs_dir = dirs::home_dir()
+        .ok_or_else(|| SpnError::ConfigError("Could not find home directory".into()))?
+        .join(".spn/logs/mcp");
+
+    // Validate level filter if provided
+    if let Some(lvl) = level {
+        match lvl.to_lowercase().as_str() {
+            "debug" | "info" | "warn" | "error" | "trace" => {}
+            _ => {
+                return Err(SpnError::InvalidInput(format!(
+                    "Invalid log level '{}'. Use: debug, info, warn, error, trace",
+                    lvl
+                )));
+            }
+        }
+    }
+
+    // Determine which servers to show logs for
+    let servers: Vec<String> = if let Some(server_name) = name {
+        if server_name == "all" {
+            mcp.list_all_servers()?
+                .into_iter()
+                .map(|(n, _)| n)
+                .collect()
+        } else {
+            // Verify server exists
+            if !mcp.has_server(server_name, McpScope::Global)?
+                && !mcp.has_server(server_name, McpScope::Project).unwrap_or(false)
+            {
+                return Err(SpnError::CommandFailed(format!(
+                    "Server not found: {}",
+                    server_name
+                )));
+            }
+            vec![server_name.to_string()]
+        }
+    } else {
+        // Default to all servers
+        mcp.list_all_servers()?
+            .into_iter()
+            .map(|(n, _)| n)
+            .collect()
+    };
+
+    if servers.is_empty() {
+        println!("{}", ds::info_line("No MCP servers configured"));
+        println!();
+        println!("Add servers with: {}", ds::command("spn mcp add <name>"));
+        return Ok(());
+    }
+
+    // Check if logs directory exists
+    if !logs_dir.exists() {
+        println!("{}", ds::section("MCP Logs"));
+        println!();
+        println!("{}", ds::info_line("No log files found"));
+        println!();
+        println!("  Log directory: {}", ds::path(logs_dir.display()));
+        println!();
+        println!("  {}", ds::muted("MCP servers log to stderr when started by Claude Code or Nika."));
+        println!("  {}", ds::muted("To capture logs, run with: spn daemon start --capture-mcp-logs"));
+        return Ok(());
+    }
+
+    // Show logs header
+    let server_display = if servers.len() == 1 {
+        servers[0].clone()
+    } else {
+        format!("{} servers", servers.len())
+    };
+
+    println!(
+        "{}",
+        ds::section(format!("MCP Logs: {}", server_display))
+    );
+
+    if follow {
+        println!(
+            "{}",
+            ds::hint_line("Following logs... Press Ctrl+C to stop")
+        );
+    }
+
+    // Display logs for each server
+    for server in &servers {
+        let log_file = logs_dir.join(format!("{}.log", server));
+
+        if !log_file.exists() {
+            println!(
+                "  {} {} {}",
+                ds::muted("["),
+                ds::highlight(server),
+                ds::muted("] No log file")
+            );
+            continue;
+        }
+
+        // Read and display log lines
+        let content = std::fs::read_to_string(&log_file)?;
+        let all_lines: Vec<&str> = content.lines().collect();
+
+        // Apply level filter if specified
+        let filtered_lines: Vec<&str> = if let Some(lvl) = level {
+            let level_upper = lvl.to_uppercase();
+            all_lines
+                .into_iter()
+                .filter(|line| line.contains(&level_upper))
+                .collect()
+        } else {
+            all_lines
+        };
+
+        // Get last N lines
+        let start = if filtered_lines.len() > lines {
+            filtered_lines.len() - lines
+        } else {
+            0
+        };
+        let display_lines = &filtered_lines[start..];
+
+        if display_lines.is_empty() {
+            println!(
+                "  {} {} {}",
+                ds::muted("["),
+                ds::highlight(server),
+                ds::muted("] Empty log file")
+            );
+            continue;
+        }
+
+        // Print server header
+        println!(
+            "  {} {}",
+            ds::primary("━━━"),
+            ds::highlight(server)
+        );
+
+        // Print log lines with syntax coloring
+        for line in display_lines {
+            print_colored_log_line(line);
+        }
+
+        println!();
+    }
+
+    if follow {
+        // For follow mode, we'd need to implement tail -f behavior
+        // This is a placeholder for now - real implementation would use notify or similar
+        println!(
+            "{}",
+            ds::info_line("Follow mode not yet implemented. Use: tail -f ~/.spn/logs/mcp/*.log")
+        );
+    }
+
+    Ok(())
+}
+
+/// Print a log line with level-based coloring.
+fn print_colored_log_line(line: &str) {
+    let line_upper = line.to_uppercase();
+
+    if line_upper.contains("ERROR") || line_upper.contains("ERR]") {
+        println!("    {}", ds::error(line));
+    } else if line_upper.contains("WARN") {
+        println!("    {}", ds::warning(line));
+    } else if line_upper.contains("DEBUG") {
+        println!("    {}", ds::muted(line));
+    } else if line_upper.contains("TRACE") {
+        println!("    {}", ds::muted(line));
+    } else {
+        println!("    {}", line);
+    }
+}
+
 /// Determine scope from flags (default to global).
 fn determine_scope(_global: bool, project: bool) -> McpScope {
     if project {
@@ -395,5 +584,34 @@ mod tests {
         assert_eq!(server.args, vec!["-y", "@neo4j/mcp-server-neo4j"]);
         assert!(server.enabled);
         assert!(server.description.is_some());
+    }
+
+    // =========================================================================
+    // Log coloring tests
+    // =========================================================================
+
+    #[test]
+    fn test_print_colored_log_line_error() {
+        // Just verify it doesn't panic - output is to stdout
+        print_colored_log_line("2024-01-15 10:30:00 ERROR Failed to connect");
+        print_colored_log_line("[ERR] Connection refused");
+    }
+
+    #[test]
+    fn test_print_colored_log_line_warn() {
+        print_colored_log_line("2024-01-15 10:30:00 WARN Retry attempt 2");
+        print_colored_log_line("WARNING: deprecated config");
+    }
+
+    #[test]
+    fn test_print_colored_log_line_debug() {
+        print_colored_log_line("DEBUG: entering function");
+        print_colored_log_line("2024-01-15 10:30:00 DEBUG variable = 42");
+    }
+
+    #[test]
+    fn test_print_colored_log_line_info() {
+        print_colored_log_line("2024-01-15 10:30:00 INFO Server started");
+        print_colored_log_line("Just a normal log line");
     }
 }
