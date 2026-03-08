@@ -2,6 +2,8 @@
 //!
 //! Proxies commands to the novanet binary with lazy install support.
 
+use std::io::IsTerminal;
+
 use crate::error::{Result, SpnError};
 use crate::interop::binary::{BinaryRunner, BinaryType};
 use crate::interop::detect::{install_novanet, EcosystemTools, InstallMethod};
@@ -19,7 +21,7 @@ pub async fn run(command: NovaNetCommands) -> Result<()> {
 
     if !runner.is_available() {
         // Check if we're in an interactive terminal
-        if atty::is(atty::Stream::Stdin) {
+        if std::io::stdin().is_terminal() {
             eprintln!();
             eprintln!("{}", ds::warning("⚠️  NovaNet is not installed"));
             eprintln!();

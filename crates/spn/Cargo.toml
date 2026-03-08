@@ -11,7 +11,7 @@ documentation = "https://github.com/supernovae-st/supernovae-cli#readme"
 keywords = ["cli", "ai-toolkit", "llm", "mcp", "agentic"]
 categories = ["command-line-utilities", "development-tools"]
 readme = "../../README.md"
-rust-version = "1.85"
+rust-version = "1.88"
 include = [
     "src/**/*",
     "assets/**/*",
@@ -99,7 +99,6 @@ console = "0.15"
 dialoguer = { version = "0.11", features = ["fuzzy-select"] }
 similar = { version = "2.6", features = ["inline"] }
 uuid = { version = "1.11", features = ["v4", "serde"] }
-atty = "0.2"
 
 # Security
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"], optional = true }

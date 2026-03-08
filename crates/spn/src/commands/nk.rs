@@ -2,6 +2,8 @@
 //!
 //! Proxies commands to the nika binary with lazy install support.
 
+use std::io::IsTerminal;
+
 use crate::error::{Result, SpnError};
 use crate::interop::binary::{BinaryRunner, BinaryType};
 use crate::interop::detect::{install_nika, EcosystemTools, InstallMethod};
@@ -16,7 +18,7 @@ pub async fn run(command: NikaCommands) -> Result<()> {
 
     if !runner.is_available() {
         // Check if we're in an interactive terminal
-        if atty::is(atty::Stream::Stdin) {
+        if std::io::stdin().is_terminal() {
             eprintln!();
             eprintln!("{}", ds::warning("⚠️  Nika is not installed"));
             eprintln!();
