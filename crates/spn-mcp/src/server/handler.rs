@@ -133,6 +133,9 @@ impl DynamicHandler {
         let config = &entry.api_config;
         let tool = &entry.tool_def;
 
+        // Security: Validate tool path before building URL
+        validate_tool_path(&tool.path)?;
+
         // Build URL
         let url = format!("{}{}", config.base_url, tool.path);
 
@@ -339,6 +342,49 @@ fn apply_auth(
     }
 }
 
+/// Validate a tool path to prevent URL injection attacks.
+///
+/// # Security
+/// Prevents:
+/// - Path traversal (e.g., `/../../../etc/passwd`)
+/// - Protocol-relative URLs (e.g., `//attacker.com/api`)
+/// - Full URLs in path (e.g., `https://attacker.com`)
+fn validate_tool_path(path: &str) -> Result<()> {
+    // Path must start with /
+    if !path.starts_with('/') {
+        return Err(Error::ConfigValidation(format!(
+            "Tool path '{}' must start with '/'",
+            path
+        )));
+    }
+
+    // Reject path traversal
+    if path.contains("..") {
+        return Err(Error::ConfigValidation(format!(
+            "Tool path '{}' contains path traversal sequence '..'",
+            path
+        )));
+    }
+
+    // Reject protocol-relative URLs (//host)
+    if path.starts_with("//") {
+        return Err(Error::ConfigValidation(format!(
+            "Tool path '{}' looks like a protocol-relative URL",
+            path
+        )));
+    }
+
+    // Reject embedded URLs
+    if path.contains("://") {
+        return Err(Error::ConfigValidation(format!(
+            "Tool path '{}' contains URL scheme",
+            path
+        )));
+    }
+
+    Ok(())
+}
+
 /// Extract a value from JSON using a simple dot-notation path.
 fn extract_json_path(value: &Value, path: &str) -> Result<Value> {
     let mut current = value.clone();
@@ -414,5 +460,38 @@ mod tests {
             key_name: None,
         };
         let _ = apply_auth(request, &auth, "user:pass");
+    }
+
+    #[test]
+    fn test_validate_tool_path_valid() {
+        assert!(validate_tool_path("/api/v1/endpoint").is_ok());
+        assert!(validate_tool_path("/").is_ok());
+        assert!(validate_tool_path("/users/{id}").is_ok());
+        assert!(validate_tool_path("/search?q=test").is_ok());
+    }
+
+    #[test]
+    fn test_validate_tool_path_rejects_no_leading_slash() {
+        assert!(validate_tool_path("api/endpoint").is_err());
+        assert!(validate_tool_path("").is_err());
+    }
+
+    #[test]
+    fn test_validate_tool_path_rejects_path_traversal() {
+        assert!(validate_tool_path("/../etc/passwd").is_err());
+        assert!(validate_tool_path("/api/../../../secret").is_err());
+        assert!(validate_tool_path("/api/..").is_err());
+    }
+
+    #[test]
+    fn test_validate_tool_path_rejects_protocol_relative() {
+        assert!(validate_tool_path("//attacker.com/api").is_err());
+        assert!(validate_tool_path("//evil.com").is_err());
+    }
+
+    #[test]
+    fn test_validate_tool_path_rejects_embedded_url() {
+        assert!(validate_tool_path("/redirect?url=https://evil.com").is_err());
+        assert!(validate_tool_path("/api/http://bad.com").is_err());
     }
 }

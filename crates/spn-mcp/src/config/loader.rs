@@ -20,7 +20,18 @@ pub fn apis_dir() -> Result<PathBuf> {
 }
 
 /// Load a specific API configuration by name.
+///
+/// # Security
+/// The name is validated to prevent path traversal attacks.
 pub fn load_api(name: &str) -> Result<ApiConfig> {
+    // Validate name to prevent path traversal
+    if name.contains("..") || name.contains('/') || name.contains('\\') {
+        return Err(Error::ConfigValidation(format!(
+            "Invalid API name '{}': must not contain path separators",
+            name
+        )));
+    }
+
     let dir = apis_dir()?;
     let path = dir.join(format!("{}.yaml", name));
 
@@ -92,6 +103,21 @@ mod tests {
     fn test_apis_dir() {
         let dir = apis_dir().unwrap();
         assert!(dir.ends_with(".spn/apis"));
+    }
+
+    #[test]
+    fn test_load_api_rejects_path_traversal() {
+        // Should reject directory traversal attempts
+        assert!(load_api("../../../etc/passwd").is_err());
+        assert!(load_api("test/../secret").is_err());
+        assert!(load_api("..").is_err());
+    }
+
+    #[test]
+    fn test_load_api_rejects_path_separators() {
+        // Should reject forward and back slashes
+        assert!(load_api("path/to/config").is_err());
+        assert!(load_api("path\\to\\config").is_err());
     }
 
     #[test]
