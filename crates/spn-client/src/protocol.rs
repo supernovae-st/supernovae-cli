@@ -100,6 +100,24 @@ pub enum Request {
     /// Delete a model.
     #[serde(rename = "MODEL_DELETE")]
     ModelDelete { name: String },
+
+    /// Run inference on a model.
+    #[serde(rename = "MODEL_RUN")]
+    ModelRun {
+        /// Model name (e.g., llama3.2)
+        model: String,
+        /// User prompt
+        prompt: String,
+        /// System prompt (optional)
+        #[serde(default)]
+        system: Option<String>,
+        /// Temperature (0.0 - 2.0)
+        #[serde(default)]
+        temperature: Option<f32>,
+        /// Enable streaming (not yet supported via IPC)
+        #[serde(default)]
+        stream: bool,
+    },
 }
 
 /// Response from the daemon.
@@ -141,6 +159,15 @@ pub enum Response {
 
     /// Generic success response.
     Success { success: bool },
+
+    /// Model run result with generated content.
+    ModelRunResult {
+        /// Generated content from the model.
+        content: String,
+        /// Optional stats (tokens_per_second, etc.)
+        #[serde(default)]
+        stats: Option<serde_json::Value>,
+    },
 
     /// Error response.
     Error { message: String },

@@ -902,6 +902,32 @@ pub enum ModelCommands {
         #[arg(value_name = "USE_CASE")]
         use_case: Option<String>,
     },
+
+    /// Run inference on a model
+    #[command(visible_alias = "r")]
+    Run {
+        /// Model name (e.g., llama3.2, mistral:7b)
+        model: String,
+
+        /// Prompt text (use - for stdin, @file for file input)
+        prompt: String,
+
+        /// Stream output tokens as they arrive
+        #[arg(short, long)]
+        stream: bool,
+
+        /// Temperature (0.0 - 2.0)
+        #[arg(long, short = 't', default_value = "0.7")]
+        temperature: f32,
+
+        /// System prompt
+        #[arg(long, short = 's')]
+        system: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1162,7 +1188,7 @@ async fn main() {
         Commands::Secrets { command } => commands::secrets::run(command).await,
         Commands::Setup { quick, command } => commands::setup::run(command, quick).await,
         Commands::Daemon { command } => commands::daemon::run(command).await,
-        Commands::Model { command } => commands::model::run(command).await,
+        Commands::Model { command } => commands::model::execute(command).await,
         Commands::Completion { shell, output } => commands::completion::run(&shell, output).await,
     };
 

@@ -6,7 +6,7 @@
 
 #![allow(dead_code)]
 
-use spn_client::{BackendError, LoadConfig, ModelInfo, RunningModel};
+use spn_client::{BackendError, ChatMessage, ChatOptions, ChatResponse, LoadConfig, ModelInfo, RunningModel};
 use spn_ollama::{DynModelBackend, OllamaBackend};
 use std::sync::Arc;
 use tracing::{debug, info};
@@ -81,6 +81,17 @@ impl ModelManager {
     pub async fn delete(&self, name: &str) -> Result<(), BackendError> {
         info!(model = %name, "Deleting model");
         self.backend.delete(name).await
+    }
+
+    /// Run chat inference on a model.
+    pub async fn chat(
+        &self,
+        model: &str,
+        messages: Vec<ChatMessage>,
+        options: Option<ChatOptions>,
+    ) -> Result<ChatResponse, BackendError> {
+        info!(model = %model, "Running chat inference");
+        self.backend.chat(model, messages, options).await
     }
 
     /// Get backend identifier.

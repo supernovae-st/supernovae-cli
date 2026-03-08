@@ -62,6 +62,11 @@ pub use spn_core::{
     providers_by_category,
     validate_key_format,
     BackendError,
+    // Chat types
+    ChatMessage,
+    ChatOptions,
+    ChatResponse,
+    ChatRole,
     GpuInfo,
     LoadConfig,
     McpConfig,

@@ -21,6 +21,24 @@ pub async fn run(command: ModelCommands) -> Result<()> {
         ModelCommands::Search { query, category } => search(&query, category.as_deref()).await,
         ModelCommands::Info { name, json } => info(&name, json).await,
         ModelCommands::Recommend { use_case } => recommend(use_case.as_deref()).await,
+        ModelCommands::Run {
+            model,
+            prompt,
+            stream,
+            temperature,
+            system,
+            json,
+        } => {
+            super::run::run(super::run::RunArgs {
+                model,
+                prompt,
+                stream,
+                temperature,
+                system,
+                json,
+            })
+            .await
+        }
     }
 }
 

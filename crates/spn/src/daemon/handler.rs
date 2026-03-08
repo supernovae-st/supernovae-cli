@@ -1,7 +1,7 @@
 //! Request handler for daemon commands.
 
 use secrecy::ExposeSecret;
-use spn_client::{Request, Response, PROTOCOL_VERSION};
+use spn_client::{ChatMessage, ChatOptions, Request, Response, PROTOCOL_VERSION};
 use std::sync::Arc;
 use tracing::{debug, warn};
 
@@ -46,6 +46,13 @@ impl RequestHandler {
             Request::ModelUnload { name } => self.handle_model_unload(&name).await,
             Request::ModelStatus => self.handle_model_status().await,
             Request::ModelDelete { name } => self.handle_model_delete(&name).await,
+            Request::ModelRun {
+                model,
+                prompt,
+                system,
+                temperature,
+                stream: _,
+            } => self.handle_model_run(&model, &prompt, system, temperature).await,
         }
     }
 
@@ -142,6 +149,44 @@ impl RequestHandler {
     async fn handle_model_delete(&self, name: &str) -> Response {
         match self.models.delete(name).await {
             Ok(()) => Response::Success { success: true },
+            Err(e) => Response::Error {
+                message: e.to_string(),
+            },
+        }
+    }
+
+    async fn handle_model_run(
+        &self,
+        model: &str,
+        prompt: &str,
+        system: Option<String>,
+        temperature: Option<f32>,
+    ) -> Response {
+        // Build messages
+        let mut messages = Vec::new();
+        if let Some(sys) = system {
+            messages.push(ChatMessage::system(sys));
+        }
+        messages.push(ChatMessage::user(prompt));
+
+        // Build options
+        let options = temperature.map(|temp| ChatOptions::new().with_temperature(temp));
+
+        match self.models.chat(model, messages, options).await {
+            Ok(response) => {
+                // Build stats JSON
+                let stats = serde_json::json!({
+                    "tokens_per_second": response.tokens_per_second(),
+                    "eval_count": response.eval_count,
+                    "prompt_eval_count": response.prompt_eval_count,
+                    "total_duration_ns": response.total_duration,
+                });
+
+                Response::ModelRunResult {
+                    content: response.message.content,
+                    stats: Some(stats),
+                }
+            }
             Err(e) => Response::Error {
                 message: e.to_string(),
             },
