@@ -895,7 +895,7 @@ async fn run_wrap(
             println!();
             println!(
                 "{}",
-                ds::hint_line(&format!("Run: spn mcp apis start {}", api_name))
+                ds::hint_line(format!("Run: spn mcp apis start {}", api_name))
             );
         }
     }
