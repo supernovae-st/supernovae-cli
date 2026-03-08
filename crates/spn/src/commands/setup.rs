@@ -8,6 +8,7 @@
 //! 5. Shows next steps and what spn can do
 
 use crate::error::{Result, SpnError};
+use crate::interop::detect::{EcosystemTools, InstallMethod};
 use crate::secrets::{
     mask_api_key, migrate_env_to_keyring, resolve_api_key, run_wizard, security_audit, SecretSource,
 };
@@ -159,10 +160,41 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
 
     println!();
 
-    // Step 2: Detect existing keys
+    // Step 2: Ecosystem tools status
     println!(
         "{}",
-        ds::highlight("STEP 1/3: Detecting Existing Keys").underlined()
+        ds::highlight("STEP 1/4: Ecosystem Tools").underlined()
+    );
+    println!();
+
+    let tools = EcosystemTools::detect();
+    print_ecosystem_status(&tools);
+
+    // Offer to install missing tools
+    if !tools.all_installed() {
+        let missing = tools.missing();
+        println!();
+
+        for tool in &missing {
+            let prompt = format!("Install {} now?", tool);
+            let install = Confirm::with_theme(&theme)
+                .with_prompt(&prompt)
+                .default(true)
+                .interact()
+                .map_err(dialog_err)?;
+
+            if install {
+                install_ecosystem_tool(tool)?;
+            }
+        }
+    }
+
+    println!();
+
+    // Step 3: Detect existing keys
+    println!(
+        "{}",
+        ds::highlight("STEP 2/4: Detecting Existing Keys").underlined()
     );
     println!();
 
@@ -341,10 +373,10 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
 
     println!();
 
-    // Step 3: Set up providers
+    // Step 4: Set up providers
     println!(
         "{}",
-        ds::highlight("STEP 2/3: Set Up LLM Providers").underlined()
+        ds::highlight("STEP 3/4: Set Up LLM Providers").underlined()
     );
     println!();
     println!(
@@ -449,10 +481,10 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
 
     println!();
 
-    // Step 4: Summary & Next Steps
+    // Step 5: Summary & Next Steps
     println!(
         "{}",
-        ds::highlight("STEP 3/3: Setup Complete!").underlined()
+        ds::highlight("STEP 4/4: Setup Complete!").underlined()
     );
     println!();
 
@@ -1796,6 +1828,110 @@ fn print_claude_code_success(newly_installed: bool) {
         ds::muted("Documentation: https://github.com/supernovae-st/claude-code-supernovae")
     );
     println!();
+}
+
+// ============================================================================
+// Ecosystem Tools
+// ============================================================================
+
+/// Print ecosystem tools status.
+fn print_ecosystem_status(tools: &EcosystemTools) {
+    // Nika status
+    match &tools.nika {
+        crate::interop::detect::InstallStatus::Installed { version, .. } => {
+            println!(
+                "  {} Nika {} {}",
+                ds::command("✓"),
+                ds::highlight("v".to_string() + version),
+                ds::muted("installed")
+            );
+        }
+        crate::interop::detect::InstallStatus::NotInstalled => {
+            println!(
+                "  {} Nika {}",
+                ds::warning("○"),
+                ds::muted("not installed")
+            );
+        }
+        crate::interop::detect::InstallStatus::Outdated { current, latest } => {
+            println!(
+                "  {} Nika {} {} {}",
+                ds::warning("↑"),
+                ds::muted(current),
+                ds::primary("→"),
+                ds::highlight(latest)
+            );
+        }
+    }
+
+    // NovaNet status
+    match &tools.novanet {
+        crate::interop::detect::InstallStatus::Installed { version, .. } => {
+            println!(
+                "  {} NovaNet {} {}",
+                ds::command("✓"),
+                ds::highlight("v".to_string() + version),
+                ds::muted("installed")
+            );
+        }
+        crate::interop::detect::InstallStatus::NotInstalled => {
+            println!(
+                "  {} NovaNet {}",
+                ds::warning("○"),
+                ds::muted("not installed")
+            );
+        }
+        crate::interop::detect::InstallStatus::Outdated { current, latest } => {
+            println!(
+                "  {} NovaNet {} {} {}",
+                ds::warning("↑"),
+                ds::muted(current),
+                ds::primary("→"),
+                ds::highlight(latest)
+            );
+        }
+    }
+}
+
+/// Install an ecosystem tool interactively.
+fn install_ecosystem_tool(tool: &str) -> Result<()> {
+    let method = InstallMethod::best_available().ok_or_else(|| {
+        SpnError::NotFound("No installation method available (cargo or brew required)".into())
+    })?;
+
+    println!();
+    println!(
+        "  {} Installing {} via {}...",
+        ds::primary("→"),
+        ds::highlight(tool),
+        ds::muted(method.display_name())
+    );
+
+    let result = match tool {
+        "nika" => crate::interop::detect::install_nika(method),
+        "novanet" => crate::interop::detect::install_novanet(method),
+        _ => return Err(SpnError::NotFound(format!("Unknown tool: {}", tool))),
+    };
+
+    match result {
+        Ok(()) => {
+            println!(
+                "  {} {} installed successfully",
+                ds::command("✓"),
+                ds::highlight(tool)
+            );
+            Ok(())
+        }
+        Err(e) => {
+            println!(
+                "  {} Installation failed: {}",
+                ds::error("✗"),
+                e
+            );
+            // Don't fail the entire setup, just warn
+            Ok(())
+        }
+    }
 }
 
 #[cfg(test)]
