@@ -232,12 +232,13 @@ impl WatcherService {
         true
     }
 
-    /// Mark that we're about to write to a file.
-    pub fn mark_our_write(&mut self, path: &Path) {
-        if let Ok(content) = std::fs::read(path) {
-            let checksum = Self::compute_checksum(&content);
-            self.our_writes.insert(path.to_path_buf(), checksum);
-        }
+    /// Mark that we're about to write content to a file.
+    ///
+    /// Call this BEFORE writing, passing the exact content you're about to write.
+    /// This allows `is_our_write` to correctly identify our own changes.
+    pub fn mark_our_write(&mut self, path: &Path, content: &[u8]) {
+        let checksum = Self::compute_checksum(content);
+        self.our_writes.insert(path.to_path_buf(), checksum);
     }
 
     /// Check if this change was caused by us.
