@@ -57,7 +57,8 @@ mod server;
 pub mod service;
 mod socket;
 pub mod traces;
-// pub mod watcher;  // Phase 2
+#[allow(dead_code)] // Phase 2 - integration pending
+mod watcher;
 
 #[allow(unused_imports)]
 pub use agents::{
@@ -98,6 +99,8 @@ pub use foreign::{ForeignMcp, ForeignMcpServer, ForeignScope, ForeignSource, For
 pub use notifications::NotificationService;
 #[allow(unused_imports)]
 pub use recent::{RecentProject, RecentProjects};
+#[allow(unused_imports)]
+pub use watcher::{WatchEvent, WatcherService};
 
 /// Default daemon configuration paths.
 ///
