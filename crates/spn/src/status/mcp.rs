@@ -338,4 +338,34 @@ mod tests {
         assert_eq!(sync.windsurf, SyncState::Pending);
         assert_eq!(sync.nika, SyncState::Pending);
     }
+
+    #[test]
+    fn test_mcp_emoji_aliases() {
+        // Test alternative names map to same emoji
+        assert_eq!(mcp_emoji("@neo4j/mcp-neo4j"), "🔷");
+        assert_eq!(mcp_emoji("github-mcp"), "🐙");
+        assert_eq!(mcp_emoji("slack-mcp"), "💬");
+        assert_eq!(mcp_emoji("firecrawl-mcp"), "🔥");
+    }
+
+    #[test]
+    fn test_server_status_labels() {
+        assert_eq!(ServerStatus::Connected.label(), "connected");
+        assert_eq!(ServerStatus::Ready.label(), "ready");
+        assert_eq!(ServerStatus::Disabled.label(), "disabled");
+        assert_eq!(ServerStatus::Error.label(), "error");
+        assert_eq!(ServerStatus::Starting.label(), "starting");
+    }
+
+    #[test]
+    fn test_transport_serialization() {
+        // Test that transport serializes correctly
+        let stdio = Transport::Stdio;
+        let json = serde_json::to_string(&stdio).unwrap();
+        assert_eq!(json, "\"stdio\"");
+
+        let http = Transport::Http;
+        let json = serde_json::to_string(&http).unwrap();
+        assert_eq!(json, "\"http\"");
+    }
 }
