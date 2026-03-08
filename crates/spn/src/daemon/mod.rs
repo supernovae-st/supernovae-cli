@@ -46,12 +46,15 @@ mod secrets;
 mod server;
 pub mod service;
 mod socket;
+pub mod traces;
 
 pub use error::DaemonError;
 #[allow(unused_imports)]
 pub use jobs::{Job, JobId, JobScheduler, JobState, JobStatus, JobStore};
 #[allow(unused_imports)]
 pub use memory::{MemoryEntry, MemoryKey, MemoryNamespace, MemoryStore};
+#[allow(unused_imports)]
+pub use traces::{ReasoningTrace, TraceId, TraceMetadata, TraceStep, TraceStepKind, TraceStore};
 pub use model_manager::ModelManager;
 pub use secrets::SecretManager;
 pub use server::{DaemonConfig, DaemonServer};
