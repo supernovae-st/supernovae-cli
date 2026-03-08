@@ -99,7 +99,7 @@
 │              │                                               │                  │
 │              ▼                                               ▼                  │
 │  ┌────────────────────────┐                   ┌────────────────────────┐        │
-│  │  spn-cli (v0.14.2)     │                   │  Nika (v0.21.1)        │        │
+│  │  spn-cli (v0.14.3)     │                   │  Nika (v0.21.1)        │        │
 │  │  • provider set/get    │                   │  • spn-daemon feature  │        │
 │  │  • model pull/load     │                   │  • KNOWN_PROVIDERS     │        │
 │  │  • setup wizard        │                   │  • Unified secrets     │        │
@@ -362,8 +362,8 @@ cargo install --path crates/spn
 |-------|---------|-----------|
 | spn-core | 0.1.1 | [Published](https://crates.io/crates/spn-core) |
 | spn-keyring | 0.1.3 | [Published](https://crates.io/crates/spn-keyring) |
-| spn-ollama | 0.1.3 | [Published](https://crates.io/crates/spn-ollama) |
-| spn-client | 0.2.4 | [Published](https://crates.io/crates/spn-client) |
+| spn-ollama | 0.1.4 | [Published](https://crates.io/crates/spn-ollama) |
+| spn-client | 0.3.0 | [Published](https://crates.io/crates/spn-client) |
 | spn-cli | 0.14.3 | [Published](https://crates.io/crates/spn-cli) |
 
 ## Storage Layout
