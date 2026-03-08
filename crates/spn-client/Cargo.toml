@@ -1,6 +1,6 @@
 [package]
 name = "spn-client"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "Client library for communicating with the spn daemon - secure secret management for AI applications"
@@ -15,7 +15,7 @@ rust-version = "1.75"
 
 [dependencies]
 # Core types (providers, validation, backend types)
-spn-core = { version = "0.1.1", path = "../spn-core", features = ["serde"] }
+spn-core = { version = "0.1.2", path = "../spn-core", features = ["serde"] }
 
 # Async runtime (minimal features)
 tokio = { version = "1.36", features = ["net", "io-util", "sync", "time"] }

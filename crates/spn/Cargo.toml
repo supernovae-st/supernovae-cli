@@ -1,6 +1,6 @@
 [package]
 name = "spn-cli"
-version = "0.15.0"
+version = "0.15.1"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "The Agentic AI Toolkit - unified CLI for models, secrets, MCP servers, workflows, and AI agents"
@@ -41,11 +41,11 @@ docker = []
 
 [dependencies]
 # Workspace crates
-spn-client = { version = "0.3.1", path = "../spn-client" }
-spn-core = { version = "0.1.1", path = "../spn-core" }
-spn-keyring = { version = "0.1.3", path = "../spn-keyring", default-features = false }
-spn-mcp = { version = "0.1.2", path = "../spn-mcp" }
-spn-ollama = { version = "0.1.4", path = "../spn-ollama" }
+spn-client = { version = "0.3.2", path = "../spn-client" }
+spn-core = { version = "0.1.2", path = "../spn-core" }
+spn-keyring = { version = "0.1.4", path = "../spn-keyring", default-features = false }
+spn-mcp = { version = "0.1.3", path = "../spn-mcp" }
+spn-ollama = { version = "0.1.5", path = "../spn-ollama" }
 
 # CLI framework
 clap = { version = "4.5", features = ["derive", "env"] }
