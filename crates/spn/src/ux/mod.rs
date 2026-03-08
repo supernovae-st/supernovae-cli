@@ -37,7 +37,9 @@
 
 pub mod design_system;
 pub mod help_screen;
+pub mod help_tui;
 pub mod progress;
+pub mod stats;
 pub mod tables;
 pub mod themes;
 pub mod trees;

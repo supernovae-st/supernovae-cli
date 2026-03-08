@@ -5,6 +5,8 @@
 
 use console::style;
 
+use super::stats::Stats;
+
 /// Print the full help screen with ASCII art and all features.
 pub fn print() {
     print_header();
@@ -606,6 +608,9 @@ fn print_two_columns(
 // ============================================================================
 
 fn print_capabilities() {
+    // Collect dynamic stats (fast, <100ms)
+    let stats = Stats::collect();
+
     println!(
         "{}",
         style("┌─ CAPABILITIES ───────────────────────────────────────────────────────────────┐").white().bold()
@@ -616,78 +621,77 @@ fn print_capabilities() {
         style("│").white()
     );
 
-    let capabilities = [
+    // Build capabilities with dynamic stats
+    let providers_label = if stats.total_providers() > 0 {
+        format!("{} configured", stats.total_providers())
+    } else {
+        "run spn provider set".to_string()
+    };
+
+    let mcp_label = if stats.mcp_servers > 0 {
+        format!("{} server{}", stats.mcp_servers, if stats.mcp_servers == 1 { "" } else { "s" })
+    } else {
+        "44 aliases".to_string()
+    };
+
+    let ollama_label = if stats.ollama_running {
+        match stats.ollama_models {
+            Some(0) => "running, no models".to_string(),
+            Some(n) => format!("{} model{}", n, if n == 1 { "" } else { "s" }),
+            None => "running".to_string(),
+        }
+    } else {
+        "not running".to_string()
+    };
+
+    // Dynamic capabilities
+    let capabilities: Vec<(&str, String, &str)> = vec![
         (
             "🔐",
-            "13 Providers",
-            "7 LLM (Anthropic OpenAI Mistral Groq DeepSeek Gemini",
-        ),
-        (
-            "",
-            "",
-            "Ollama) + 6 MCP (Neo4j GitHub Slack Perplexity",
-        ),
-        (
-            "",
-            "",
-            "Firecrawl Supadata)",
+            format!("Providers: {}", providers_label),
+            "7 LLM + 6 MCP services (OS Keychain secured)",
         ),
         (
             "🔌",
-            "44 MCP Aliases",
-            "Pre-configured npm packages (neo4j github postgres",
-        ),
-        (
-            "",
-            "",
-            "sqlite memory puppeteer brave-search fetch...)",
+            format!("MCP: {}", mcp_label),
+            "Pre-configured npm packages (neo4j github postgres...)",
         ),
         (
             "🦙",
-            "Ollama Backend",
+            format!("Ollama: {}", ollama_label),
             "Local models with VRAM tracking and GPU allocation",
         ),
         (
             "🔒",
-            "OS Keychain",
+            "OS Keychain".to_string(),
             "macOS/Windows/Linux + Daemon (zero popup fatigue)",
         ),
         (
             "📝",
-            "4 Editors",
+            "4 Editors".to_string(),
             "Claude Code, Cursor, Windsurf, VS Code sync",
         ),
         (
             "⚡",
-            "Job Queue",
+            "Job Queue".to_string(),
             "Background Nika workflows (4 concurrent, priority)",
         ),
         (
             "🎯",
-            "57K+ Skills",
+            "57K+ Skills".to_string(),
             "From skills.sh ecosystem",
         ),
     ];
 
-    for (icon, name, desc) in capabilities {
-        if icon.is_empty() {
-            // Continuation line
-            println!(
-                "{}                  {}{}",
-                style("│").white(),
-                style(desc).dim(),
-                style(" ".repeat(56 - desc.len())).dim(),
-            );
-        } else {
-            println!(
-                "{}  {} {}  {}{}",
-                style("│").white(),
-                icon,
-                style(format!("{:<14}", name)).cyan().bold(),
-                style(desc).dim(),
-                style(" ".repeat(44 - desc.len().min(44))).dim(),
-            );
-        }
+    for (icon, name, desc) in &capabilities {
+        println!(
+            "{}  {} {}  {}{}",
+            style("│").white(),
+            icon,
+            style(format!("{:<20}", name)).cyan().bold(),
+            style(desc).dim(),
+            style(" ".repeat(38_usize.saturating_sub(desc.len()))).dim(),
+        );
     }
 
     println!(

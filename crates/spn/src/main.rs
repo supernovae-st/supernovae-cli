@@ -1250,9 +1250,22 @@ async fn main() {
         .with_env_filter(format!("spn={}", log_level))
         .init();
 
+    // Check for interactive TUI mode (--interactive or -i flag)
+    // This runs the help TUI instead of printing static help
+    let args: Vec<String> = std::env::args().collect();
+    let has_interactive = args.iter().any(|a| a == "--interactive" || a == "-i");
+    if has_interactive && args.len() <= 2 {
+        // Only run TUI for "spn -i" or "spn --interactive", not with other commands
+        if let Err(e) = ux::help_tui::run() {
+            eprintln!("Error running interactive help: {}", e);
+            std::process::exit(1);
+        }
+        return;
+    }
+
     // Check if user just typed "spn" with no args
     // Show the comprehensive help screen directly
-    let has_no_args = std::env::args().count() == 1;
+    let has_no_args = args.len() == 1;
     if has_no_args {
         ux::help_screen::print();
         return;
