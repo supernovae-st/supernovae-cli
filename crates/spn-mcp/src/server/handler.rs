@@ -249,6 +249,12 @@ impl DynamicHandler {
         let config = &entry.api_config;
         let tool = &entry.tool_def;
 
+        // Security: Check payload size before processing
+        validate_payload_size(&params)?;
+
+        // Security: Validate parameter types match schema
+        validate_parameters(&tool.params, &params)?;
+
         // Check rate limit before making request
         if let Some(limiter) = self.rate_limiters.get(&config.name) {
             check_limit(limiter, &config.name)?;
@@ -691,6 +697,113 @@ fn extract_json_path(value: &Value, path: &str) -> Result<Value> {
     Ok(current)
 }
 
+/// Maximum payload size in bytes (10 MB).
+const MAX_PAYLOAD_SIZE: usize = 10 * 1024 * 1024;
+
+/// Maximum string parameter length (100 KB).
+const MAX_STRING_LENGTH: usize = 100 * 1024;
+
+/// Validate payload size to prevent DoS via large requests.
+fn validate_payload_size(params: &Value) -> Result<()> {
+    let size = serde_json::to_string(params)
+        .map(|s| s.len())
+        .unwrap_or(0);
+
+    if size > MAX_PAYLOAD_SIZE {
+        return Err(Error::ConfigValidation(format!(
+            "Payload too large: {} bytes (max: {} bytes)",
+            size, MAX_PAYLOAD_SIZE
+        )));
+    }
+
+    Ok(())
+}
+
+/// Validate parameter types match their definitions.
+///
+/// # Security
+/// Ensures type safety before passing data to APIs, preventing:
+/// - Type confusion attacks
+/// - Injection via unexpected types
+/// - DoS via oversized strings
+fn validate_parameters(param_defs: &[crate::config::ParamDef], params: &Value) -> Result<()> {
+    let obj = match params.as_object() {
+        Some(o) => o,
+        None if param_defs.is_empty() => return Ok(()),
+        None => {
+            return Err(Error::ConfigValidation(
+                "Parameters must be an object".into(),
+            ))
+        }
+    };
+
+    for def in param_defs {
+        match obj.get(&def.name) {
+            Some(value) => {
+                // Validate type matches
+                validate_param_type(&def.name, &def.param_type, value)?;
+
+                // Validate string length
+                if let Value::String(s) = value {
+                    if s.len() > MAX_STRING_LENGTH {
+                        return Err(Error::ConfigValidation(format!(
+                            "Parameter '{}' too long: {} chars (max: {})",
+                            def.name,
+                            s.len(),
+                            MAX_STRING_LENGTH
+                        )));
+                    }
+                }
+            }
+            None if def.required => {
+                return Err(Error::ConfigValidation(format!(
+                    "Missing required parameter: {}",
+                    def.name
+                )));
+            }
+            None => {} // Optional parameter not provided, OK
+        }
+    }
+
+    Ok(())
+}
+
+/// Validate a single parameter value matches its expected type.
+fn validate_param_type(
+    name: &str,
+    expected: &crate::config::ParamType,
+    value: &Value,
+) -> Result<()> {
+    use crate::config::ParamType;
+
+    let type_matches = match (expected, value) {
+        (ParamType::String, Value::String(_)) => true,
+        (ParamType::Integer, Value::Number(n)) => n.is_i64(),
+        (ParamType::Number, Value::Number(_)) => true,
+        (ParamType::Boolean, Value::Bool(_)) => true,
+        (ParamType::Array, Value::Array(_)) => true,
+        (ParamType::Object, Value::Object(_)) => true,
+        _ => false,
+    };
+
+    if !type_matches {
+        let got_type = match value {
+            Value::Null => "null",
+            Value::Bool(_) => "boolean",
+            Value::Number(_) => "number",
+            Value::String(_) => "string",
+            Value::Array(_) => "array",
+            Value::Object(_) => "object",
+        };
+        return Err(Error::ConfigValidation(format!(
+            "Parameter '{}' has wrong type: expected {:?}, got {}",
+            name, expected, got_type
+        )));
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1043,5 +1156,156 @@ mod tests {
         assert_eq!(prompt.name, "test_simple");
         // Should be None when no parameters
         assert!(prompt.arguments.is_none());
+    }
+
+    // ===== Validation Tests =====
+
+    #[test]
+    fn test_validate_payload_size_accepts_normal_payload() {
+        let params = serde_json::json!({
+            "query": "test search",
+            "limit": 10
+        });
+        assert!(validate_payload_size(&params).is_ok());
+    }
+
+    #[test]
+    fn test_validate_payload_size_rejects_oversized() {
+        // Create a large payload (> 10MB)
+        let large_string = "x".repeat(11 * 1024 * 1024);
+        let params = serde_json::json!({ "data": large_string });
+        let result = validate_payload_size(&params);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Payload too large"));
+    }
+
+    #[test]
+    fn test_validate_parameters_accepts_correct_types() {
+        let params = vec![
+            ParamDef {
+                name: "query".into(),
+                param_type: crate::config::ParamType::String,
+                items: None,
+                required: true,
+                default: None,
+                description: None,
+            },
+            ParamDef {
+                name: "limit".into(),
+                param_type: crate::config::ParamType::Integer,
+                items: None,
+                required: false,
+                default: None,
+                description: None,
+            },
+        ];
+
+        let args = serde_json::json!({
+            "query": "test",
+            "limit": 10
+        });
+
+        assert!(validate_parameters(&params, &args).is_ok());
+    }
+
+    #[test]
+    fn test_validate_parameters_rejects_wrong_type() {
+        let params = vec![ParamDef {
+            name: "count".into(),
+            param_type: crate::config::ParamType::Integer,
+            items: None,
+            required: true,
+            default: None,
+            description: None,
+        }];
+
+        let args = serde_json::json!({ "count": "not-an-integer" });
+        let result = validate_parameters(&params, &args);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("wrong type"));
+    }
+
+    #[test]
+    fn test_validate_parameters_rejects_missing_required() {
+        let params = vec![ParamDef {
+            name: "required_field".into(),
+            param_type: crate::config::ParamType::String,
+            items: None,
+            required: true,
+            default: None,
+            description: None,
+        }];
+
+        let args = serde_json::json!({});
+        let result = validate_parameters(&params, &args);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Missing required"));
+    }
+
+    #[test]
+    fn test_validate_parameters_accepts_missing_optional() {
+        let params = vec![ParamDef {
+            name: "optional_field".into(),
+            param_type: crate::config::ParamType::String,
+            items: None,
+            required: false,
+            default: None,
+            description: None,
+        }];
+
+        let args = serde_json::json!({});
+        assert!(validate_parameters(&params, &args).is_ok());
+    }
+
+    #[test]
+    fn test_validate_parameters_rejects_oversized_string() {
+        let params = vec![ParamDef {
+            name: "query".into(),
+            param_type: crate::config::ParamType::String,
+            items: None,
+            required: true,
+            default: None,
+            description: None,
+        }];
+
+        // Create string > 100KB
+        let large_string = "x".repeat(101 * 1024);
+        let args = serde_json::json!({ "query": large_string });
+        let result = validate_parameters(&params, &args);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("too long"));
+    }
+
+    #[test]
+    fn test_validate_param_type_all_types() {
+        use crate::config::ParamType;
+
+        // String
+        assert!(validate_param_type("s", &ParamType::String, &serde_json::json!("test")).is_ok());
+        assert!(validate_param_type("s", &ParamType::String, &serde_json::json!(123)).is_err());
+
+        // Integer
+        assert!(validate_param_type("i", &ParamType::Integer, &serde_json::json!(42)).is_ok());
+        assert!(validate_param_type("i", &ParamType::Integer, &serde_json::json!(3.14)).is_err());
+
+        // Number
+        assert!(validate_param_type("n", &ParamType::Number, &serde_json::json!(3.14)).is_ok());
+        assert!(validate_param_type("n", &ParamType::Number, &serde_json::json!(42)).is_ok());
+        assert!(validate_param_type("n", &ParamType::Number, &serde_json::json!("42")).is_err());
+
+        // Boolean
+        assert!(validate_param_type("b", &ParamType::Boolean, &serde_json::json!(true)).is_ok());
+        assert!(validate_param_type("b", &ParamType::Boolean, &serde_json::json!("true")).is_err());
+
+        // Array
+        assert!(validate_param_type("a", &ParamType::Array, &serde_json::json!([1, 2, 3])).is_ok());
+        assert!(validate_param_type("a", &ParamType::Array, &serde_json::json!("array")).is_err());
+
+        // Object
+        assert!(
+            validate_param_type("o", &ParamType::Object, &serde_json::json!({"key": "value"}))
+                .is_ok()
+        );
+        assert!(validate_param_type("o", &ParamType::Object, &serde_json::json!([1, 2])).is_err());
     }
 }
