@@ -1036,11 +1036,26 @@ fn print_nika_success() {
 
     // Setup summary box
     println!("┌───────────────────────────────────────────────────────────┐");
-    println!("│  {} Nika CLI installed                               │", ds::command("✓"));
-    println!("│  {} Nika LSP configured                              │", ds::command("✓"));
-    println!("│  {} spn daemon running (unified secrets)             │", ds::command("✓"));
-    println!("│  {} Provider keys verified                           │", ds::command("✓"));
-    println!("│  {} Editors configured                               │", ds::command("✓"));
+    println!(
+        "│  {} Nika CLI installed                               │",
+        ds::command("✓")
+    );
+    println!(
+        "│  {} Nika LSP configured                              │",
+        ds::command("✓")
+    );
+    println!(
+        "│  {} spn daemon running (unified secrets)             │",
+        ds::command("✓")
+    );
+    println!(
+        "│  {} Provider keys verified                           │",
+        ds::command("✓")
+    );
+    println!(
+        "│  {} Editors configured                               │",
+        ds::command("✓")
+    );
     println!("└───────────────────────────────────────────────────────────┘");
     println!();
 
@@ -1049,10 +1064,7 @@ fn print_nika_success() {
         "{}",
         ds::muted("Note: If you haven't configured providers yet, run:")
     );
-    println!(
-        "      {}",
-        ds::primary("spn provider set anthropic")
-    );
+    println!("      {}", ds::primary("spn provider set anthropic"));
     println!();
 
     println!("{}", ds::highlight("WHAT'S NEXT?"));
@@ -1959,10 +1971,14 @@ mod tests {
         });
 
         let schemas = schema_entry.get("yaml.schemas").unwrap();
-        let nika_schema = schemas.get("https://nika.dev/schema/workflow.json").unwrap();
+        let nika_schema = schemas
+            .get("https://nika.dev/schema/workflow.json")
+            .unwrap();
 
         assert!(nika_schema.is_array());
-        let patterns: Vec<&str> = nika_schema.as_array().unwrap()
+        let patterns: Vec<&str> = nika_schema
+            .as_array()
+            .unwrap()
             .iter()
             .filter_map(|v| v.as_str())
             .collect();
