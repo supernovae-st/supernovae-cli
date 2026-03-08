@@ -317,16 +317,64 @@ enum Commands {
     /// Generate shell completions
     #[command(visible_alias = "comp")]
     #[command(
-        after_help = "Examples:\n  spn completion bash >> ~/.bashrc\n  spn completion zsh >> ~/.zshrc\n  spn completion fish > ~/.config/fish/completions/spn.fish"
+        after_help = "Examples:\n  spn completion install            # Auto-detect and install\n  spn completion install --shell zsh\n  spn completion bash >> ~/.bashrc  # Manual generation\n  spn completion status             # Check installation"
     )]
     Completion {
-        /// Shell (bash, zsh, fish, powershell, elvish)
-        shell: String,
+        #[command(subcommand)]
+        command: CompletionCommands,
+    },
+}
 
+#[derive(Subcommand)]
+pub enum CompletionCommands {
+    /// Generate bash completions to stdout
+    Bash {
         /// Output to file instead of stdout
         #[arg(short, long)]
         output: Option<std::path::PathBuf>,
     },
+    /// Generate zsh completions to stdout
+    Zsh {
+        /// Output to file instead of stdout
+        #[arg(short, long)]
+        output: Option<std::path::PathBuf>,
+    },
+    /// Generate fish completions to stdout
+    Fish {
+        /// Output to file instead of stdout
+        #[arg(short, long)]
+        output: Option<std::path::PathBuf>,
+    },
+    /// Generate PowerShell completions to stdout
+    #[command(visible_alias = "pwsh")]
+    PowerShell {
+        /// Output to file instead of stdout
+        #[arg(short, long)]
+        output: Option<std::path::PathBuf>,
+    },
+    /// Generate elvish completions to stdout
+    Elvish {
+        /// Output to file instead of stdout
+        #[arg(short, long)]
+        output: Option<std::path::PathBuf>,
+    },
+    /// Install completions to shell config file
+    Install {
+        /// Target shell (auto-detect if omitted)
+        #[arg(short, long)]
+        shell: Option<String>,
+        /// Show what would be done without making changes
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Remove installed completions
+    Uninstall {
+        /// Target shell (auto-detect if omitted)
+        #[arg(short, long)]
+        shell: Option<String>,
+    },
+    /// Show completion installation status
+    Status,
 }
 
 #[derive(Subcommand)]
@@ -913,7 +961,7 @@ pub enum ModelCommands {
         prompt: String,
 
         /// Stream output tokens as they arrive
-        #[arg(short, long)]
+        #[arg(long)]
         stream: bool,
 
         /// Temperature (0.0 - 2.0)
@@ -1189,7 +1237,20 @@ async fn main() {
         Commands::Setup { quick, command } => commands::setup::run(command, quick).await,
         Commands::Daemon { command } => commands::daemon::run(command).await,
         Commands::Model { command } => commands::model::execute(command).await,
-        Commands::Completion { shell, output } => commands::completion::run(&shell, output).await,
+        Commands::Completion { command } => match command {
+            CompletionCommands::Bash { output } => commands::completion::run("bash", output).await,
+            CompletionCommands::Zsh { output } => commands::completion::run("zsh", output).await,
+            CompletionCommands::Fish { output } => commands::completion::run("fish", output).await,
+            CompletionCommands::PowerShell { output } => commands::completion::run("powershell", output).await,
+            CompletionCommands::Elvish { output } => commands::completion::run("elvish", output).await,
+            CompletionCommands::Install { shell, dry_run } => {
+                commands::completion::install(shell.as_deref(), dry_run).await
+            }
+            CompletionCommands::Uninstall { shell } => {
+                commands::completion::uninstall(shell.as_deref()).await
+            }
+            CompletionCommands::Status => commands::completion::status().await,
+        },
     };
 
     // Handle errors with helpful messages
