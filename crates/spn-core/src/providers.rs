@@ -158,6 +158,24 @@ pub static KNOWN_PROVIDERS: &[Provider] = &[
         requires_key: true,
         description: "Video transcription and web scraping",
     },
+    Provider {
+        id: "dataforseo",
+        name: "DataForSEO",
+        env_var: "DATAFORSEO_API_KEY",
+        key_prefix: None,
+        category: ProviderCategory::Mcp,
+        requires_key: true,
+        description: "SEO data, keyword research, SERP analysis",
+    },
+    Provider {
+        id: "ahrefs",
+        name: "Ahrefs API",
+        env_var: "AHREFS_API_KEY",
+        key_prefix: None,
+        category: ProviderCategory::Mcp,
+        requires_key: true,
+        description: "Backlink analysis and SEO metrics",
+    },
 ];
 
 /// Find a provider by ID (case-insensitive).
@@ -254,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_provider_count() {
-        // Ensure we have at least 13 providers (7 LLM + 6 MCP)
-        assert!(KNOWN_PROVIDERS.len() >= 13);
+        // Ensure we have at least 15 providers (7 LLM + 8 MCP)
+        assert!(KNOWN_PROVIDERS.len() >= 15);
     }
 }

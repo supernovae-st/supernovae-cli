@@ -293,12 +293,21 @@ impl IdeAdapter for WindsurfAdapter {
         IdeTarget::Windsurf
     }
 
-    fn is_available(&self, project_root: &Path) -> bool {
-        project_root.join(".windsurf").exists()
+    fn is_available(&self, _project_root: &Path) -> bool {
+        // Windsurf only supports global config at ~/.codeium/windsurf/
+        // Check if the Windsurf config directory exists
+        dirs::home_dir()
+            .map(|h| h.join(".codeium").join("windsurf").exists())
+            .unwrap_or(false)
     }
 
-    fn config_path(&self, project_root: &Path) -> PathBuf {
-        project_root.join(".windsurf").join("settings.json")
+    fn config_path(&self, _project_root: &Path) -> PathBuf {
+        // Windsurf only supports global config - no project-level config
+        dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".codeium")
+            .join("windsurf")
+            .join("mcp_config.json")
     }
 
     fn sync_package(

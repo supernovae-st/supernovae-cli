@@ -83,6 +83,8 @@ pub const MCP_SECRET_TYPES: &[&str] = &[
     "perplexity", // PERPLEXITY_API_KEY
     "firecrawl",  // FIRECRAWL_API_KEY
     "supadata",   // SUPADATA_API_KEY
+    "dataforseo", // DATAFORSEO_API_KEY
+    "ahrefs",     // AHREFS_API_KEY
 ];
 
 /// Provider API key with maximum secure handling.

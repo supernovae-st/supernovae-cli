@@ -118,16 +118,14 @@ fn sync_to_cursor(mcp_config: &McpConfig, project_root: Option<&Path>) -> McpSyn
 }
 
 /// Sync MCP servers to Windsurf.
-fn sync_to_windsurf(mcp_config: &McpConfig, project_root: Option<&Path>) -> McpSyncResult {
-    // Windsurf uses similar format to Claude Code
-    let config_path = if let Some(root) = project_root {
-        root.join(".windsurf").join("mcp.json")
-    } else {
-        dirs::home_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join(".windsurf")
-            .join("mcp.json")
-    };
+fn sync_to_windsurf(mcp_config: &McpConfig, _project_root: Option<&Path>) -> McpSyncResult {
+    // Windsurf ONLY supports global config at ~/.codeium/windsurf/mcp_config.json
+    // There is no project-level config support, so we ignore project_root
+    let config_path = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".codeium")
+        .join("windsurf")
+        .join("mcp_config.json");
 
     sync_to_json_mcp(IdeTarget::Windsurf, &config_path, mcp_config)
 }
@@ -306,7 +304,12 @@ pub fn config_path_for_target(target: IdeTarget, project_root: Option<&Path>) ->
         IdeTarget::ClaudeCode => base.join(".claude").join("settings.json"),
         IdeTarget::Cursor => base.join(".cursor").join("mcp.json"),
         IdeTarget::VsCode => base.join(".vscode").join("settings.json"),
-        IdeTarget::Windsurf => base.join(".windsurf").join("mcp.json"),
+        // Windsurf only has global config at ~/.codeium/windsurf/mcp_config.json
+        IdeTarget::Windsurf => dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".codeium")
+            .join("windsurf")
+            .join("mcp_config.json"),
     }
 }
 
