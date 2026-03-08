@@ -172,13 +172,9 @@ pub enum ParamType {
 /// Response handling configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponseConfig {
-    /// JSON path to extract from response
+    /// JSON path to extract from response (e.g., "tasks[0].result")
     #[serde(default)]
     pub extract: Option<String>,
-
-    /// Template to transform response
-    #[serde(default)]
-    pub transform: Option<String>,
 }
 
 impl ToolDef {

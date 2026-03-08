@@ -7,7 +7,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// Errors that can occur in spn-mcp.
 #[derive(Debug, Error)]
-#[allow(clippy::enum_variant_names)]
 pub enum Error {
     /// Configuration file not found.
     #[error("API configuration not found: {0}")]
@@ -44,19 +43,4 @@ pub enum Error {
     /// MCP protocol error.
     #[error("MCP error: {0}")]
     Mcp(String),
-
-    /// Tool not found.
-    #[error("Tool not found: {0}")]
-    #[allow(dead_code)]
-    ToolNotFound(String),
-
-    /// Missing required parameter.
-    #[error("Missing required parameter: {0}")]
-    #[allow(dead_code)]
-    MissingParam(String),
-
-    /// Rate limit exceeded.
-    #[error("Rate limit exceeded for API: {0}")]
-    #[allow(dead_code)]
-    RateLimited(String),
 }

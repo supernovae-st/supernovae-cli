@@ -178,7 +178,10 @@ impl DynamicHandler {
         // Check status
         let status = response.status();
         if !status.is_success() {
-            let body = response.text().await.unwrap_or_default();
+            let body = response.text().await.unwrap_or_else(|e| {
+                tracing::warn!("Failed to read error response body: {}", e);
+                String::new()
+            });
             return Err(Error::Mcp(format!(
                 "API returned {}: {}",
                 status, body
@@ -203,7 +206,33 @@ impl DynamicHandler {
     }
 
     /// Render a Tera template with parameters.
+    ///
+    /// # Security
+    /// Validates template doesn't contain dangerous directives that could
+    /// lead to file inclusion or code execution.
     fn render_template(&self, template: &str, params: &Value) -> Result<String> {
+        // Security: Prevent template injection attacks
+        const FORBIDDEN_DIRECTIVES: &[&str] = &[
+            "{% include",
+            "{% import",
+            "{% extends",
+            "{% macro",
+            "{%include",
+            "{%import",
+            "{%extends",
+            "{%macro",
+        ];
+
+        let template_lower = template.to_lowercase();
+        for directive in FORBIDDEN_DIRECTIVES {
+            if template_lower.contains(directive) {
+                return Err(Error::ConfigValidation(format!(
+                    "Template contains forbidden directive: {}",
+                    directive
+                )));
+            }
+        }
+
         let mut context = TeraContext::new();
 
         // Add all params to context
@@ -493,5 +522,77 @@ mod tests {
     fn test_validate_tool_path_rejects_embedded_url() {
         assert!(validate_tool_path("/redirect?url=https://evil.com").is_err());
         assert!(validate_tool_path("/api/http://bad.com").is_err());
+    }
+
+    #[test]
+    fn test_render_template_rejects_include_directive() {
+        let handler = DynamicHandler {
+            tools: HashMap::new(),
+            http_client: Client::new(),
+            tera: Tera::default(),
+            credentials: HashMap::new(),
+        };
+
+        // Should reject {% include %}
+        let result = handler.render_template(
+            r#"{% include "secret.txt" %}"#,
+            &serde_json::json!({}),
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("forbidden directive"));
+
+        // Should reject {% import %}
+        let result = handler.render_template(
+            r#"{% import "macros.html" as macros %}"#,
+            &serde_json::json!({}),
+        );
+        assert!(result.is_err());
+
+        // Should reject {% extends %}
+        let result = handler.render_template(
+            r#"{% extends "base.html" %}"#,
+            &serde_json::json!({}),
+        );
+        assert!(result.is_err());
+
+        // Should reject case variations
+        let result = handler.render_template(
+            r#"{% INCLUDE "secret.txt" %}"#,
+            &serde_json::json!({}),
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_render_template_allows_safe_directives() {
+        let handler = DynamicHandler {
+            tools: HashMap::new(),
+            http_client: Client::new(),
+            tera: Tera::default(),
+            credentials: HashMap::new(),
+        };
+
+        // Should allow {{ }} variable substitution
+        let result = handler.render_template(
+            r#"{"name": "{{ name }}"}"#,
+            &serde_json::json!({"name": "test"}),
+        );
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), r#"{"name": "test"}"#);
+
+        // Should allow {% for %} loops
+        let result = handler.render_template(
+            r#"[{% for item in items %}"{{ item }}"{% if not loop.last %},{% endif %}{% endfor %}]"#,
+            &serde_json::json!({"items": ["a", "b"]}),
+        );
+        assert!(result.is_ok());
+
+        // Should allow {% if %} conditions
+        let result = handler.render_template(
+            r#"{% if enabled %}on{% else %}off{% endif %}"#,
+            &serde_json::json!({"enabled": true}),
+        );
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "on");
     }
 }
