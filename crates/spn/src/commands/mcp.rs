@@ -665,21 +665,9 @@ async fn run_wrap(
     use dialoguer::{Confirm, Input, Select};
     use spn_mcp::config::{ApiConfig, ApiKeyLocation, AuthConfig, AuthType, ToolDef};
 
-    // OpenAPI import not yet implemented
+    // OpenAPI import mode
     if let Some(spec_path) = from_openapi {
-        println!("{}", ds::section("OpenAPI Import"));
-        println!();
-        println!(
-            "{}",
-            ds::warning("OpenAPI import is coming soon. For now, use the interactive wizard.")
-        );
-        println!("  {} {}", ds::muted("Spec file:"), spec_path.display());
-        println!();
-        println!(
-            "  {}",
-            ds::hint_line("Run 'spn mcp wrap' without --from-openapi for interactive mode.")
-        );
-        return Ok(());
+        return run_openapi_import(&spec_path, name, yes).await;
     }
 
     // Print banner
@@ -898,6 +886,214 @@ async fn run_wrap(
                 ds::hint_line(format!("Run: spn mcp apis start {}", api_name))
             );
         }
+    }
+
+    Ok(())
+}
+
+/// Import endpoints from an OpenAPI spec file.
+async fn run_openapi_import(
+    spec_path: &std::path::Path,
+    name: Option<String>,
+    yes: bool,
+) -> Result<()> {
+    use dialoguer::{Input, MultiSelect, Select};
+
+    // Print banner
+    println!();
+    println!("╔═══════════════════════════════════════════════════════════════════════════════╗");
+    println!(
+        "║  {}  MCP WRAPPER — OpenAPI Import                                              ║",
+        ds::primary("🛠️")
+    );
+    println!("╚═══════════════════════════════════════════════════════════════════════════════╝");
+    println!();
+
+    // Parse the OpenAPI spec
+    println!("{}...", ds::muted("Parsing OpenAPI spec"));
+
+    let spec = spn_mcp::parse_openapi(spec_path).map_err(|e| {
+        SpnError::CommandFailed(format!("Failed to parse OpenAPI spec: {}", e))
+    })?;
+
+    // Show what we found
+    println!(
+        "Found: {} {}",
+        ds::primary(&spec.info.title),
+        ds::muted(format!("v{}", spec.info.version))
+    );
+    if let Some(server) = spec.servers.first() {
+        println!("Base URL: {}", ds::path(&server.url));
+    }
+    println!();
+
+    let endpoint_count = spec.endpoint_count();
+    println!(
+        "Discovered {} endpoints:",
+        ds::primary(endpoint_count.to_string())
+    );
+
+    // Show sample endpoints
+    let tools = spec.to_api_config(None).tools;
+    for tool in tools.iter().take(5) {
+        println!(
+            "  • {} {} → {}",
+            ds::muted(&tool.method),
+            ds::path(&tool.path),
+            ds::primary(&tool.name)
+        );
+    }
+    if endpoint_count > 5 {
+        println!("  ... ({} more)", endpoint_count - 5);
+    }
+    println!();
+
+    // Selection mode
+    let import_options = vec![
+        format!("All ({} endpoints)", endpoint_count),
+        "Select interactively".to_string(),
+        "Filter by tag".to_string(),
+    ];
+
+    let selected_tools: Vec<spn_mcp::config::ToolDef>;
+
+    if yes {
+        // Non-interactive: import all
+        selected_tools = tools;
+    } else {
+        let selection = Select::new()
+            .with_prompt("Import endpoints")
+            .items(&import_options)
+            .default(0)
+            .interact()
+            .map_err(|e| SpnError::CommandFailed(format!("Select error: {}", e)))?;
+
+        match selection {
+            0 => {
+                // All endpoints
+                selected_tools = tools;
+            }
+            1 => {
+                // Select interactively
+                let tool_labels: Vec<_> = tools
+                    .iter()
+                    .map(|t| format!("{} {} - {}", t.method, t.path, t.name))
+                    .collect();
+
+                let selections = MultiSelect::new()
+                    .with_prompt("Select endpoints (space to toggle)")
+                    .items(&tool_labels)
+                    .interact()
+                    .map_err(|e| SpnError::CommandFailed(format!("MultiSelect error: {}", e)))?;
+
+                if selections.is_empty() {
+                    println!("{}", ds::warning("No endpoints selected."));
+                    return Ok(());
+                }
+
+                selected_tools = selections.into_iter().map(|i| tools[i].clone()).collect();
+            }
+            2 => {
+                // Filter by tag
+                let tags = spec.tags();
+                if tags.is_empty() {
+                    println!("{}", ds::warning("No tags found in spec. Importing all."));
+                    selected_tools = tools;
+                } else {
+                    let tag_selection = Select::new()
+                        .with_prompt("Select tag")
+                        .items(&tags)
+                        .interact()
+                        .map_err(|e| SpnError::CommandFailed(format!("Select error: {}", e)))?;
+
+                    let selected_tag = &tags[tag_selection];
+
+                    // Filter tools by tag
+                    let tag_tools = spec.tools_by_tag(selected_tag);
+                    selected_tools = tag_tools
+                        .iter()
+                        .map(|(path, method, op)| {
+                            let tool_name = op
+                                .operation_id
+                                .clone()
+                                .unwrap_or_else(|| generate_tool_name("api", method, path));
+                            spn_mcp::config::ToolDef {
+                                name: tool_name,
+                                description: op.summary.clone().or_else(|| op.description.clone()),
+                                method: method.to_string(),
+                                path: path.to_string(),
+                                body_template: None,
+                                params: Vec::new(),
+                                response: None,
+                            }
+                        })
+                        .collect();
+
+                    if selected_tools.is_empty() {
+                        println!(
+                            "{}",
+                            ds::warning(format!(
+                                "No endpoints found with tag '{}'.",
+                                selected_tag
+                            ))
+                        );
+                        return Ok(());
+                    }
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    // Get API name
+    let api_name = name.unwrap_or_else(|| {
+        spec.info
+            .title
+            .to_lowercase()
+            .chars()
+            .map(|c| if c.is_alphanumeric() { c } else { '_' })
+            .collect::<String>()
+            .split('_')
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join("_")
+    });
+
+    // Build config
+    let mut config = spec.to_api_config(Some(&api_name));
+    config.tools = selected_tools;
+
+    // Prompt for credential name if not in non-interactive mode
+    if !yes {
+        let credential: String = Input::new()
+            .with_prompt("Auth credential name")
+            .default(api_name.clone())
+            .interact_text()
+            .map_err(|e| SpnError::CommandFailed(format!("Input error: {}", e)))?;
+        config.auth.credential = credential;
+    }
+
+    // Save config
+    let apis_dir = apis_dir().map_err(|e| SpnError::CommandFailed(e.to_string()))?;
+    std::fs::create_dir_all(&apis_dir)?;
+    let config_path = apis_dir.join(format!("{}.yaml", api_name));
+
+    let yaml = serde_yaml::to_string(&config)
+        .map_err(|e| SpnError::CommandFailed(format!("YAML serialization error: {}", e)))?;
+    std::fs::write(&config_path, &yaml)?;
+
+    println!();
+    println!(
+        "{} Created {} ({} tools)",
+        ds::success("✓"),
+        ds::path(config_path.display()),
+        config.tools.len()
+    );
+
+    // Validate by re-loading
+    match spn_mcp::config::load_api(&api_name) {
+        Ok(_) => println!("{} Validated configuration", ds::success("✓")),
+        Err(e) => println!("{} Validation warning: {}", ds::warning("⚠"), e),
     }
 
     Ok(())
