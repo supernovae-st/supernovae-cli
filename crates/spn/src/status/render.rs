@@ -55,7 +55,10 @@ fn render_header() {
 }
 
 fn render_ollama(ollama: &OllamaStatus) {
-    println!("┌─ {} ────────────────────────────────────────────────────────────────┐", ds::primary("🦙 LOCAL MODELS"));
+    println!(
+        "┌─ {} ────────────────────────────────────────────────────────────────┐",
+        ds::primary("🦙 LOCAL MODELS")
+    );
     println!("│{:width$}│", "", width = WIDTH);
 
     if ollama.running {
@@ -82,9 +85,19 @@ fn render_ollama(ollama: &OllamaStatus) {
         println!("│{:width$}│", "", width = WIDTH);
 
         if ollama.models.is_empty() {
-            println!("│  {}│", ds::muted("No models installed. Run: spn model pull llama3.2                       "));
+            println!(
+                "│  {}│",
+                ds::muted(
+                    "No models installed. Run: spn model pull llama3.2                       "
+                )
+            );
         } else {
-            println!("│  {}│", ds::highlight("Models                                                                    "));
+            println!(
+                "│  {}│",
+                ds::highlight(
+                    "Models                                                                    "
+                )
+            );
             for (i, model) in ollama.models.iter().enumerate() {
                 let prefix = if i == ollama.models.len() - 1 {
                     "└──"
@@ -113,7 +126,10 @@ fn render_ollama(ollama: &OllamaStatus) {
             ds::warning("❌ not running")
         );
         println!("│{:width$}│", "", width = WIDTH);
-        println!("│  {}│", ds::muted("Start with: ollama serve                                                  "));
+        println!(
+            "│  {}│",
+            ds::muted("Start with: ollama serve                                                  ")
+        );
     }
 
     println!("│{:width$}│", "", width = WIDTH);
@@ -121,7 +137,10 @@ fn render_ollama(ollama: &OllamaStatus) {
 }
 
 fn render_credentials(credentials: &[CredentialStatus]) {
-    println!("┌─ {} ─────────────────────────────────────────────────────────────────┐", ds::primary("🔑 CREDENTIALS"));
+    println!(
+        "┌─ {} ─────────────────────────────────────────────────────────────────┐",
+        ds::primary("🔑 CREDENTIALS")
+    );
     println!("│{:width$}│", "", width = WIDTH);
     println!(
         "│  {:<14}{:<7}{:<12}{:<12}{:<30}│",
@@ -131,7 +150,10 @@ fn render_credentials(credentials: &[CredentialStatus]) {
         ds::muted("Source"),
         ds::muted("Endpoint")
     );
-    println!("│  {}│", ds::muted("──────────────────────────────────────────────────────────────────────────"));
+    println!(
+        "│  {}│",
+        ds::muted("──────────────────────────────────────────────────────────────────────────")
+    );
 
     // Separate LLM and MCP credentials
     let llm_creds: Vec<_> = credentials
@@ -148,7 +170,10 @@ fn render_credentials(credentials: &[CredentialStatus]) {
     }
 
     if !llm_creds.is_empty() && !mcp_creds.is_empty() {
-        println!("│  {}│", ds::muted("──────────────────────────────────────────────────────────────────────────"));
+        println!(
+            "│  {}│",
+            ds::muted("──────────────────────────────────────────────────────────────────────────")
+        );
     }
 
     for cred in &mcp_creds {
@@ -203,10 +228,7 @@ fn render_credential_line(cred: &CredentialStatus) {
         .map(|s| format!("{} {}", s.icon(), s.label()))
         .unwrap_or_else(|| "──".to_string());
 
-    let endpoint = cred
-        .endpoint
-        .as_deref()
-        .unwrap_or("──");
+    let endpoint = cred.endpoint.as_deref().unwrap_or("──");
 
     let type_str = match cred.credential_type {
         CredentialType::Llm => "LLM",
@@ -221,11 +243,17 @@ fn render_credential_line(cred: &CredentialStatus) {
 }
 
 fn render_mcp_servers(servers: &[McpServerStatus]) {
-    println!("┌─ {} ───────────────────────────────────────────────────────────────┐", ds::primary("🔌 MCP SERVERS"));
+    println!(
+        "┌─ {} ───────────────────────────────────────────────────────────────┐",
+        ds::primary("🔌 MCP SERVERS")
+    );
     println!("│{:width$}│", "", width = WIDTH);
 
     if servers.is_empty() {
-        println!("│  {}│", ds::muted("No MCP servers configured. Run: spn mcp add neo4j                        "));
+        println!(
+            "│  {}│",
+            ds::muted("No MCP servers configured. Run: spn mcp add neo4j                        ")
+        );
     } else {
         println!(
             "│  {:<14}{:<12}{:<12}{:<20}{:<16}│",
@@ -235,7 +263,10 @@ fn render_mcp_servers(servers: &[McpServerStatus]) {
             ds::muted("Command"),
             ds::muted("Credential")
         );
-        println!("│  {}│", ds::muted("──────────────────────────────────────────────────────────────────────────"));
+        println!(
+            "│  {}│",
+            ds::muted("──────────────────────────────────────────────────────────────────────────")
+        );
 
         for server in servers {
             let status_str = format!("{} {}", server.status.icon(), server.status.label());
@@ -271,7 +302,13 @@ fn render_mcp_servers(servers: &[McpServerStatus]) {
             .filter(|s| !matches!(s.status, super::mcp::ServerStatus::Disabled))
             .count();
         let total = servers.len();
-        println!("│  {}/{} active{:width$}│", active, total, "", width = WIDTH - 12);
+        println!(
+            "│  {}/{} active{:width$}│",
+            active,
+            total,
+            "",
+            width = WIDTH - 12
+        );
     }
 
     println!("│{:width$}│", "", width = WIDTH);
@@ -279,11 +316,17 @@ fn render_mcp_servers(servers: &[McpServerStatus]) {
 }
 
 fn render_daemon(daemon: &DaemonStatus) {
-    println!("┌─ {} ──────────────────────────────────────────────────────────────────┐", ds::primary("📡 DAEMON"));
+    println!(
+        "┌─ {} ──────────────────────────────────────────────────────────────────┐",
+        ds::primary("📡 DAEMON")
+    );
     println!("│{:width$}│", "", width = WIDTH);
 
     if daemon.running {
-        let pid_str = daemon.pid.map(|p| p.to_string()).unwrap_or_else(|| "?".to_string());
+        let pid_str = daemon
+            .pid
+            .map(|p| p.to_string())
+            .unwrap_or_else(|| "?".to_string());
         let line = format!(
             "  spn daemon {} {}   PID {}   {}   Uptime {}",
             ds::success("✅"),

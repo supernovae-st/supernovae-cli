@@ -113,11 +113,12 @@ pub async fn collect() -> Vec<McpServerStatus> {
         };
 
         // Determine transport (most MCP servers use stdio)
-        let transport = if server.command.contains("http") || server.args.iter().any(|a| a.contains("http")) {
-            Transport::Http
-        } else {
-            Transport::Stdio
-        };
+        let transport =
+            if server.command.contains("http") || server.args.iter().any(|a| a.contains("http")) {
+                Transport::Http
+            } else {
+                Transport::Stdio
+            };
 
         let credential = infer_credential(&name);
 

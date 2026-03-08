@@ -181,8 +181,12 @@ mod tests {
         let credentials = collect().await;
         assert!(!credentials.is_empty());
         // Should have both LLM and MCP types
-        assert!(credentials.iter().any(|c| c.credential_type == CredentialType::Llm));
-        assert!(credentials.iter().any(|c| c.credential_type == CredentialType::Mcp));
+        assert!(credentials
+            .iter()
+            .any(|c| c.credential_type == CredentialType::Llm));
+        assert!(credentials
+            .iter()
+            .any(|c| c.credential_type == CredentialType::Mcp));
     }
 
     #[test]

@@ -56,7 +56,10 @@ pub async fn run(shell: &str, output: Option<PathBuf>) -> Result<()> {
     if let Some(path) = output {
         let mut file = std::fs::File::create(&path)?;
         generate(shell, &mut cmd, "spn", &mut file);
-        println!("{}", ds::success_line(format!("Completions written to: {}", path.display())));
+        println!(
+            "{}",
+            ds::success_line(format!("Completions written to: {}", path.display()))
+        );
     } else {
         generate(shell, &mut cmd, "spn", &mut io::stdout());
     }
@@ -68,27 +71,34 @@ pub async fn run(shell: &str, output: Option<PathBuf>) -> Result<()> {
 pub async fn install(shell: Option<&str>, dry_run: bool) -> Result<()> {
     let shell = match shell {
         Some(s) => parse_shell(s)?,
-        None => detect_shell()
-            .ok_or_else(|| SpnError::InvalidInput("Could not detect shell. Specify --shell".into()))?,
+        None => detect_shell().ok_or_else(|| {
+            SpnError::InvalidInput("Could not detect shell. Specify --shell".into())
+        })?,
     };
 
     let config_path = get_shell_config_path(&shell)?;
 
     if dry_run {
-        println!("{}", ds::info_line(format!(
-            "Would install {} completions to: {}",
-            shell_name(&shell),
-            config_path.display()
-        )));
+        println!(
+            "{}",
+            ds::info_line(format!(
+                "Would install {} completions to: {}",
+                shell_name(&shell),
+                config_path.display()
+            ))
+        );
         return Ok(());
     }
 
     // Check if already installed
     if is_installed(&config_path)? {
-        println!("{}", ds::info_line(format!(
-            "Completions already installed in: {}",
-            config_path.display()
-        )));
+        println!(
+            "{}",
+            ds::info_line(format!(
+                "Completions already installed in: {}",
+                config_path.display()
+            ))
+        );
         return Ok(());
     }
 
@@ -101,15 +111,21 @@ pub async fn install(shell: Option<&str>, dry_run: bool) -> Result<()> {
         _ => install_source(&config_path, &script)?,
     }
 
-    println!("{}", ds::success_line(format!(
-        "Installed {} completions to: {}",
-        shell_name(&shell),
-        config_path.display()
-    )));
-    println!("{}", ds::hint_line(format!(
-        "Restart your shell or run: source {}",
-        config_path.display()
-    )));
+    println!(
+        "{}",
+        ds::success_line(format!(
+            "Installed {} completions to: {}",
+            shell_name(&shell),
+            config_path.display()
+        ))
+    );
+    println!(
+        "{}",
+        ds::hint_line(format!(
+            "Restart your shell or run: source {}",
+            config_path.display()
+        ))
+    );
 
     Ok(())
 }
@@ -118,25 +134,32 @@ pub async fn install(shell: Option<&str>, dry_run: bool) -> Result<()> {
 pub async fn uninstall(shell: Option<&str>) -> Result<()> {
     let shell = match shell {
         Some(s) => parse_shell(s)?,
-        None => detect_shell()
-            .ok_or_else(|| SpnError::InvalidInput("Could not detect shell. Specify --shell".into()))?,
+        None => detect_shell().ok_or_else(|| {
+            SpnError::InvalidInput("Could not detect shell. Specify --shell".into())
+        })?,
     };
 
     let config_path = get_shell_config_path(&shell)?;
 
     if !config_path.exists() {
-        println!("{}", ds::info_line(format!(
-            "Config file does not exist: {}",
-            config_path.display()
-        )));
+        println!(
+            "{}",
+            ds::info_line(format!(
+                "Config file does not exist: {}",
+                config_path.display()
+            ))
+        );
         return Ok(());
     }
 
     if !is_installed(&config_path)? {
-        println!("{}", ds::info_line(format!(
-            "No completions installed in: {}",
-            config_path.display()
-        )));
+        println!(
+            "{}",
+            ds::info_line(format!(
+                "No completions installed in: {}",
+                config_path.display()
+            ))
+        );
         return Ok(());
     }
 
@@ -145,11 +168,14 @@ pub async fn uninstall(shell: Option<&str>) -> Result<()> {
         _ => remove_completion_block(&config_path)?,
     }
 
-    println!("{}", ds::success_line(format!(
-        "Removed {} completions from: {}",
-        shell_name(&shell),
-        config_path.display()
-    )));
+    println!(
+        "{}",
+        ds::success_line(format!(
+            "Removed {} completions from: {}",
+            shell_name(&shell),
+            config_path.display()
+        ))
+    );
 
     Ok(())
 }
@@ -169,12 +195,7 @@ pub async fn status() -> Result<()> {
             } else {
                 ds::muted("not installed")
             };
-            println!(
-                "  {:<12} {} ({})",
-                name,
-                status,
-                path.display()
-            );
+            println!("  {:<12} {} ({})", name, status, path.display());
         } else {
             println!(
                 "  {:<12} {} (config path not found)",
@@ -187,10 +208,10 @@ pub async fn status() -> Result<()> {
     // Show detected shell
     if let Some(detected) = detect_shell() {
         println!();
-        println!("{}", ds::info_line(format!(
-            "Detected shell: {}",
-            shell_name(&detected)
-        )));
+        println!(
+            "{}",
+            ds::info_line(format!("Detected shell: {}", shell_name(&detected)))
+        );
     }
 
     Ok(())
@@ -447,7 +468,11 @@ mod tests {
     fn test_is_installed_with_marker() {
         let dir = tempdir().unwrap();
         let path = dir.path().join(".bashrc");
-        std::fs::write(&path, format!("stuff\n{}\ncode\n{}", COMPLETION_START, COMPLETION_END)).unwrap();
+        std::fs::write(
+            &path,
+            format!("stuff\n{}\ncode\n{}", COMPLETION_START, COMPLETION_END),
+        )
+        .unwrap();
         assert!(is_installed(&path).unwrap());
     }
 

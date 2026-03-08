@@ -52,7 +52,10 @@ impl RequestHandler {
                 system,
                 temperature,
                 stream: _,
-            } => self.handle_model_run(&model, &prompt, system, temperature).await,
+            } => {
+                self.handle_model_run(&model, &prompt, system, temperature)
+                    .await
+            }
         }
     }
 

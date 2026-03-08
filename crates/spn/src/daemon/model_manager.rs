@@ -6,7 +6,9 @@
 
 #![allow(dead_code)]
 
-use spn_client::{BackendError, ChatMessage, ChatOptions, ChatResponse, LoadConfig, ModelInfo, RunningModel};
+use spn_client::{
+    BackendError, ChatMessage, ChatOptions, ChatResponse, LoadConfig, ModelInfo, RunningModel,
+};
 use spn_ollama::{DynModelBackend, OllamaBackend};
 use std::sync::Arc;
 use tracing::{debug, info};

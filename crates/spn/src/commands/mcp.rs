@@ -348,7 +348,9 @@ async fn run_logs(
         } else {
             // Verify server exists
             if !mcp.has_server(server_name, McpScope::Global)?
-                && !mcp.has_server(server_name, McpScope::Project).unwrap_or(false)
+                && !mcp
+                    .has_server(server_name, McpScope::Project)
+                    .unwrap_or(false)
             {
                 return Err(SpnError::CommandFailed(format!(
                     "Server not found: {}",
@@ -380,8 +382,14 @@ async fn run_logs(
         println!();
         println!("  Log directory: {}", ds::path(logs_dir.display()));
         println!();
-        println!("  {}", ds::muted("MCP servers log to stderr when started by Claude Code or Nika."));
-        println!("  {}", ds::muted("To capture logs, run with: spn daemon start --capture-mcp-logs"));
+        println!(
+            "  {}",
+            ds::muted("MCP servers log to stderr when started by Claude Code or Nika.")
+        );
+        println!(
+            "  {}",
+            ds::muted("To capture logs, run with: spn daemon start --capture-mcp-logs")
+        );
         return Ok(());
     }
 
@@ -392,10 +400,7 @@ async fn run_logs(
         format!("{} servers", servers.len())
     };
 
-    println!(
-        "{}",
-        ds::section(format!("MCP Logs: {}", server_display))
-    );
+    println!("{}", ds::section(format!("MCP Logs: {}", server_display)));
 
     if follow {
         println!(
@@ -452,11 +457,7 @@ async fn run_logs(
         }
 
         // Print server header
-        println!(
-            "  {} {}",
-            ds::primary("━━━"),
-            ds::highlight(server)
-        );
+        println!("  {} {}", ds::primary("━━━"), ds::highlight(server));
 
         // Print log lines with syntax coloring
         for line in display_lines {
@@ -486,9 +487,7 @@ fn print_colored_log_line(line: &str) {
         println!("    {}", ds::error(line));
     } else if line_upper.contains("WARN") {
         println!("    {}", ds::warning(line));
-    } else if line_upper.contains("DEBUG") {
-        println!("    {}", ds::muted(line));
-    } else if line_upper.contains("TRACE") {
+    } else if line_upper.contains("DEBUG") || line_upper.contains("TRACE") {
         println!("    {}", ds::muted(line));
     } else {
         println!("    {}", line);

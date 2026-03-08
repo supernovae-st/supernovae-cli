@@ -63,11 +63,7 @@ pub async fn collect() -> DaemonStatus {
             .metadata()
             .ok()
             .and_then(|m| m.modified().ok())
-            .and_then(|modified| {
-                std::time::SystemTime::now()
-                    .duration_since(modified)
-                    .ok()
-            })
+            .and_then(|modified| std::time::SystemTime::now().duration_since(modified).ok())
     } else {
         None
     };

@@ -134,12 +134,7 @@ pub async fn collect() -> OllamaStatus {
 
     let memory_used: u64 = ps
         .as_ref()
-        .map(|p| {
-            p.models
-                .iter()
-                .map(|m| m.size_vram.unwrap_or(m.size))
-                .sum()
-        })
+        .map(|p| p.models.iter().map(|m| m.size_vram.unwrap_or(m.size)).sum())
         .unwrap_or(0);
 
     let loaded_model = running_models.first().cloned();

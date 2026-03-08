@@ -76,7 +76,9 @@ pub async fn run(args: RunArgs) -> Result<()> {
     let prompt = resolve_prompt(&args.prompt)?;
 
     if prompt.is_empty() {
-        return Err(SpnError::CommandFailed("Prompt cannot be empty".to_string()));
+        return Err(SpnError::CommandFailed(
+            "Prompt cannot be empty".to_string(),
+        ));
     }
 
     // Connect to daemon

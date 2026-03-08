@@ -1258,8 +1258,12 @@ async fn main() {
             CompletionCommands::Bash { output } => commands::completion::run("bash", output).await,
             CompletionCommands::Zsh { output } => commands::completion::run("zsh", output).await,
             CompletionCommands::Fish { output } => commands::completion::run("fish", output).await,
-            CompletionCommands::PowerShell { output } => commands::completion::run("powershell", output).await,
-            CompletionCommands::Elvish { output } => commands::completion::run("elvish", output).await,
+            CompletionCommands::PowerShell { output } => {
+                commands::completion::run("powershell", output).await
+            }
+            CompletionCommands::Elvish { output } => {
+                commands::completion::run("elvish", output).await
+            }
             CompletionCommands::Install { shell, dry_run } => {
                 commands::completion::install(shell.as_deref(), dry_run).await
             }
