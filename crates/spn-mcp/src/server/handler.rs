@@ -1287,10 +1287,10 @@ mod tests {
 
         // Integer
         assert!(validate_param_type("i", &ParamType::Integer, &serde_json::json!(42)).is_ok());
-        assert!(validate_param_type("i", &ParamType::Integer, &serde_json::json!(3.14)).is_err());
+        assert!(validate_param_type("i", &ParamType::Integer, &serde_json::json!(3.5)).is_err());
 
         // Number
-        assert!(validate_param_type("n", &ParamType::Number, &serde_json::json!(3.14)).is_ok());
+        assert!(validate_param_type("n", &ParamType::Number, &serde_json::json!(3.5)).is_ok());
         assert!(validate_param_type("n", &ParamType::Number, &serde_json::json!(42)).is_ok());
         assert!(validate_param_type("n", &ParamType::Number, &serde_json::json!("42")).is_err());
 
