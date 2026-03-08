@@ -44,7 +44,7 @@ docker = []
 spn-client = { version = "0.3.1", path = "../spn-client" }
 spn-core = { version = "0.1.1", path = "../spn-core" }
 spn-keyring = { version = "0.1.3", path = "../spn-keyring", default-features = false }
-spn-mcp = { version = "0.1.1", path = "../spn-mcp" }
+spn-mcp = { version = "0.1.2", path = "../spn-mcp" }
 spn-ollama = { version = "0.1.4", path = "../spn-ollama" }
 
 # CLI framework
