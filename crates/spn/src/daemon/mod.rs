@@ -37,6 +37,7 @@
 //! - PID file with flock for single instance
 
 pub mod agents;
+pub mod autonomy;
 mod error;
 mod handler;
 pub mod jobs;
@@ -66,6 +67,11 @@ pub use proactive::{
 };
 #[allow(unused_imports)]
 pub use traces::{ReasoningTrace, TraceId, TraceMetadata, TraceStep, TraceStepKind, TraceStore};
+#[allow(unused_imports)]
+pub use autonomy::{
+    ApprovalLevel, AutonomousTask, AutonomyLevel, AutonomyOrchestrator, AutonomyPolicy, Decision,
+    DecisionOutcome, OrchestratorState, PolicyViolation, TaskResult,
+};
 pub use model_manager::ModelManager;
 pub use secrets::SecretManager;
 pub use server::{DaemonConfig, DaemonServer};
