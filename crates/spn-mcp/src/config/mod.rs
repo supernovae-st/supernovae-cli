@@ -7,8 +7,11 @@ mod schema;
 
 pub use loader::{apis_dir, load_all_apis, load_api};
 pub use schema::{
-    ApiConfig, ApiKeyLocation, AuthConfig, AuthType, ParamDef, ParamType, RateLimitConfig, ToolDef,
+    ApiConfig, ApiKeyLocation, AuthConfig, AuthType, RateLimitConfig, ToolDef,
 };
+// These are only used in tests across the crate
+#[allow(unused_imports)]
+pub use schema::{ParamDef, ParamType};
 
 use crate::error::{Error, Result};
 

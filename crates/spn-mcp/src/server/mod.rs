@@ -3,6 +3,7 @@
 //! Implements the MCP protocol handler with dynamic tool registration.
 
 mod handler;
+mod rate_limit;
 
 use crate::config::ApiConfig;
 use crate::error::Result;

@@ -3,14 +3,15 @@
 //! Registers tools at runtime based on YAML configurations.
 //! Uses rmcp 0.16 API with macro-free dynamic registration.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use reqwest::Client;
 use rmcp::model::{
-    CallToolResult, Content, GetPromptRequestParams, GetPromptResult, ListPromptsResult,
-    PaginatedRequestParams, Prompt, PromptArgument, PromptMessage, PromptMessageRole,
-    ServerCapabilities, ServerInfo, Tool,
+    AnnotateAble, CallToolResult, Content, GetPromptRequestParams, GetPromptResult,
+    ListPromptsResult, ListResourcesResult, PaginatedRequestParams, Prompt, PromptArgument,
+    PromptMessage, PromptMessageRole, RawResource, ReadResourceRequestParams, ReadResourceResult,
+    Resource, ResourceContents, ServerCapabilities, ServerInfo, Tool,
 };
 use rmcp::service::{RequestContext, RoleServer};
 use rmcp::transport::stdio;
@@ -21,6 +22,8 @@ use tera::{Context as TeraContext, Tera};
 
 use crate::config::{ApiConfig, ApiKeyLocation, AuthConfig, AuthType, ToolDef};
 use crate::error::{Error, Result};
+
+use super::rate_limit::{check_limit, create_limiter, ApiRateLimiter};
 
 /// Tool registration entry.
 struct ToolEntry {
@@ -42,6 +45,8 @@ pub struct DynamicHandler {
     tera: Tera,
     /// Resolved credentials cache (api_name -> credential value)
     credentials: HashMap<String, String>,
+    /// Per-API rate limiters
+    rate_limiters: HashMap<String, Arc<ApiRateLimiter>>,
 }
 
 impl DynamicHandler {
@@ -55,11 +60,24 @@ impl DynamicHandler {
         let tera = Tera::default();
         let mut tools = HashMap::new();
         let mut credentials = HashMap::new();
+        let mut rate_limiters = HashMap::new();
 
         for config in configs {
             // Resolve credential for this API
             let credential = resolve_credential(&config.auth).await?;
             credentials.insert(config.name.clone(), credential);
+
+            // Create rate limiter if configured
+            if let Some(ref rate_limit) = config.rate_limit {
+                let limiter = create_limiter(rate_limit);
+                rate_limiters.insert(config.name.clone(), limiter);
+                tracing::debug!(
+                    "Rate limiter for '{}': {} req/min, burst {}",
+                    config.name,
+                    rate_limit.requests_per_minute,
+                    rate_limit.burst
+                );
+            }
 
             let config = Arc::new(config);
 
@@ -83,12 +101,46 @@ impl DynamicHandler {
             http_client,
             tera,
             credentials,
+            rate_limiters,
         })
     }
 
     /// Get list of registered tool names.
     pub fn tool_names(&self) -> Vec<String> {
         self.tools.keys().cloned().collect()
+    }
+
+    /// Get deduplicated list of API configs.
+    ///
+    /// Multiple tools may share the same API config, so we deduplicate by name.
+    fn api_configs(&self) -> Vec<&ApiConfig> {
+        let mut seen = HashSet::new();
+        self.tools
+            .values()
+            .filter_map(|entry| {
+                if seen.insert(&entry.api_config.name) {
+                    Some(entry.api_config.as_ref())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Create a sanitized version of an API config (no credentials exposed).
+    fn sanitized_api_config(config: &ApiConfig) -> serde_json::Value {
+        let tool_names: Vec<&str> = config.tools.iter().map(|t| t.name.as_str()).collect();
+        serde_json::json!({
+            "name": config.name,
+            "version": config.version,
+            "base_url": config.base_url,
+            "description": config.description,
+            "tools": tool_names,
+            "rate_limit": config.rate_limit.as_ref().map(|rl| serde_json::json!({
+                "requests_per_minute": rl.requests_per_minute,
+                "burst": rl.burst
+            }))
+        })
     }
 
     /// Run MCP server on stdio transport.
@@ -207,6 +259,11 @@ impl DynamicHandler {
     async fn execute_tool(&self, entry: &ToolEntry, params: Value) -> Result<Value> {
         let config = &entry.api_config;
         let tool = &entry.tool_def;
+
+        // Check rate limit before making request
+        if let Some(limiter) = self.rate_limiters.get(&config.name) {
+            check_limit(limiter, &config.name)?;
+        }
 
         // Security: Validate tool path before building URL
         validate_tool_path(&tool.path)?;
@@ -336,6 +393,7 @@ impl ServerHandler for DynamicHandler {
             capabilities: ServerCapabilities::builder()
                 .enable_tools()
                 .enable_prompts()
+                .enable_resources()
                 .build(),
             ..Default::default()
         }
@@ -411,6 +469,74 @@ impl ServerHandler for DynamicHandler {
             Ok(GetPromptResult {
                 description: entry.tool_def.description.clone(),
                 messages: vec![message],
+            })
+        }
+    }
+
+    #[allow(clippy::manual_async_fn)]
+    fn list_resources(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> impl std::future::Future<Output = std::result::Result<ListResourcesResult, McpError>> + Send + '_
+    {
+        async move {
+            let resources: Vec<Resource> = self
+                .api_configs()
+                .into_iter()
+                .map(|config| {
+                    let uri = format!("api://{}", config.name);
+                    let description = config
+                        .description
+                        .clone()
+                        .unwrap_or_else(|| format!("{} API configuration", config.name));
+
+                    let mut raw = RawResource::new(uri, config.name.clone());
+                    raw.description = Some(description);
+                    raw.mime_type = Some("application/json".into());
+
+                    raw.optional_annotate(None)
+                })
+                .collect();
+
+            Ok(ListResourcesResult::with_all_items(resources))
+        }
+    }
+
+    #[allow(clippy::manual_async_fn)]
+    fn read_resource(
+        &self,
+        request: ReadResourceRequestParams,
+        _context: RequestContext<RoleServer>,
+    ) -> impl std::future::Future<Output = std::result::Result<ReadResourceResult, McpError>> + Send + '_
+    {
+        async move {
+            let uri: &str = request.uri.as_ref();
+
+            // Parse URI: api://{name}
+            let api_name = uri.strip_prefix("api://").ok_or_else(|| {
+                McpError::invalid_params(
+                    format!("Invalid resource URI: {}. Expected format: api://{{name}}", uri),
+                    None,
+                )
+            })?;
+
+            // Find the API config
+            let config = self
+                .api_configs()
+                .into_iter()
+                .find(|c| c.name == api_name)
+                .ok_or_else(|| {
+                    McpError::invalid_params(format!("Unknown API: {}", api_name), None)
+                })?;
+
+            // Return sanitized config (no credentials!)
+            let sanitized = Self::sanitized_api_config(config);
+            let json = serde_json::to_string_pretty(&sanitized)
+                .map_err(|e| McpError::internal_error(format!("Serialization error: {}", e), None))?;
+
+            Ok(ReadResourceResult {
+                contents: vec![ResourceContents::text(json, uri)],
             })
         }
     }
@@ -644,6 +770,7 @@ mod tests {
             http_client: Client::new(),
             tera: Tera::default(),
             credentials: HashMap::new(),
+            rate_limiters: HashMap::new(),
         }
     }
 
@@ -726,6 +853,7 @@ mod tests {
             http_client: Client::new(),
             tera: Tera::default(),
             credentials: HashMap::new(),
+            rate_limiters: HashMap::new(),
         };
 
         // Should reject {% include %}
@@ -765,6 +893,7 @@ mod tests {
             http_client: Client::new(),
             tera: Tera::default(),
             credentials: HashMap::new(),
+            rate_limiters: HashMap::new(),
         };
 
         // Should allow {{ }} variable substitution
