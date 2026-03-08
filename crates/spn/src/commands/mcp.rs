@@ -1549,8 +1549,12 @@ async fn run_adopt(mcp: &McpConfigManager, all: bool, json: bool) -> Result<()> 
     // Helper to convert spn_core::McpServer to crate::mcp::McpServer
     let convert_server = |server: &spn_core::McpServer| -> McpServer {
         let cmd = server.command.as_deref().unwrap_or("npx");
+        // Convert Vec<(String, String)> to FxHashMap<String, String>
+        let env: rustc_hash::FxHashMap<String, String> =
+            server.env.iter().cloned().collect();
         McpServer::new(cmd)
             .with_args(server.args.clone())
+            .with_env(env)
             .with_enabled(server.enabled)
     };
 
