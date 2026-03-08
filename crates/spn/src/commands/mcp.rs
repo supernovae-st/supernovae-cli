@@ -6,9 +6,12 @@
 use crate::error::{Result, SpnError};
 use crate::interop::npm::{mcp_aliases, NpmClient};
 use crate::mcp::{config_manager, McpConfigManager, McpScope, McpServer};
-use crate::McpCommands;
+use crate::{ApisCommands, McpCommands};
 
 use crate::ux::design_system as ds;
+
+// Re-export spn-mcp config types for the apis subcommand
+use spn_mcp::config::{load_all_apis, load_api, validate, apis_dir};
 
 /// Run an MCP server management command.
 pub async fn run(command: McpCommands) -> Result<()> {
@@ -40,6 +43,8 @@ pub async fn run(command: McpCommands) -> Result<()> {
             lines,
             level,
         } => run_logs(&mcp, name.as_deref(), follow, lines, level.as_deref()).await,
+        McpCommands::Serve { api } => run_serve(api.as_deref()).await,
+        McpCommands::Apis { command } => run_apis(command).await,
     }
 }
 
@@ -538,6 +543,327 @@ fn sync_to_editors(_name: &str, sync_to: Option<&str>) {
             ds::muted("Will sync to configured editors on next `spn sync`")
         );
     }
+}
+
+// ============================================================================
+// DYNAMIC REST-TO-MCP SERVER (spn-mcp integration)
+// ============================================================================
+
+/// Start the dynamic REST-to-MCP server.
+async fn run_serve(api: Option<&str>) -> Result<()> {
+    use spn_mcp::server::DynamicHandler;
+
+    println!(
+        "{} {}",
+        ds::primary("Starting"),
+        ds::highlight("spn-mcp dynamic server")
+    );
+
+    // Load API configurations
+    let configs = if let Some(api_name) = api {
+        println!(
+            "{} {}",
+            ds::muted("Loading API:"),
+            ds::highlight(api_name)
+        );
+        let config = load_api(api_name).map_err(|e| {
+            SpnError::CommandFailed(format!("Failed to load API '{}': {}", api_name, e))
+        })?;
+
+        // Validate the config
+        validate(&config)
+            .map_err(|e| SpnError::CommandFailed(format!("Invalid config '{}': {}", api_name, e)))?;
+
+        vec![config]
+    } else {
+        println!(
+            "{} {}",
+            ds::muted("Loading all APIs from:"),
+            ds::path(apis_dir().unwrap_or_default().display())
+        );
+        let configs = load_all_apis()
+            .map_err(|e| SpnError::CommandFailed(format!("Failed to load APIs: {}", e)))?;
+
+        if configs.is_empty() {
+            println!();
+            println!("{}", ds::warning("No API configurations found"));
+            println!();
+            println!("Create a config file in: {}", ds::path("~/.spn/apis/"));
+            println!();
+            println!("Example: {}", ds::path("~/.spn/apis/dataforseo.yaml"));
+            println!();
+            println!("See: {}", ds::primary("spn topic mcp-apis"));
+            return Ok(());
+        }
+
+        // Validate all configs
+        for config in &configs {
+            validate(config).map_err(|e| {
+                SpnError::CommandFailed(format!("Invalid config '{}': {}", config.name, e))
+            })?;
+        }
+
+        configs
+    };
+
+    // Show loaded APIs
+    println!();
+    println!(
+        "{} {} API(s) loaded:",
+        ds::success("✓"),
+        configs.len()
+    );
+    for config in &configs {
+        let tool_count = config.tools.len();
+        println!(
+            "  {} {} {}",
+            ds::primary("•"),
+            ds::highlight(&config.name),
+            ds::muted(format!("({} tools)", tool_count))
+        );
+    }
+    println!();
+
+    // Create and run the MCP server
+    println!(
+        "{} {}",
+        ds::primary("→"),
+        ds::muted("Starting MCP server on stdio...")
+    );
+
+    let handler = DynamicHandler::new(configs).await.map_err(|e| {
+        SpnError::CommandFailed(format!("Failed to create handler: {}", e))
+    })?;
+
+    handler.run().await.map_err(|e| {
+        SpnError::CommandFailed(format!("MCP server error: {}", e))
+    })?;
+
+    Ok(())
+}
+
+/// Handle APIs subcommand.
+async fn run_apis(command: ApisCommands) -> Result<()> {
+    match command {
+        ApisCommands::List { json } => run_apis_list(json).await,
+        ApisCommands::Validate { name } => run_apis_validate(&name).await,
+        ApisCommands::Info { name } => run_apis_info(&name).await,
+    }
+}
+
+/// List configured REST API wrappers.
+async fn run_apis_list(json: bool) -> Result<()> {
+    let dir = apis_dir().map_err(|e| SpnError::CommandFailed(e.to_string()))?;
+    let configs =
+        load_all_apis().map_err(|e| SpnError::CommandFailed(format!("Failed to load APIs: {}", e)))?;
+
+    if json {
+        let json_output: Vec<_> = configs
+            .iter()
+            .map(|c| {
+                serde_json::json!({
+                    "name": c.name,
+                    "base_url": c.base_url,
+                    "description": c.description,
+                    "tools": c.tools.iter().map(|t| &t.name).collect::<Vec<_>>(),
+                })
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&json_output).unwrap());
+        return Ok(());
+    }
+
+    if configs.is_empty() {
+        println!("{}", ds::warning("No REST API wrappers configured"));
+        println!();
+        println!(
+            "Create YAML configs in: {}",
+            ds::path(dir.display())
+        );
+        println!();
+        println!("Example:");
+        println!(
+            "  {}",
+            ds::muted("# ~/.spn/apis/example.yaml")
+        );
+        println!("  {}", ds::muted("name: example"));
+        println!("  {}", ds::muted("base_url: https://api.example.com"));
+        println!("  {}", ds::muted("auth:"));
+        println!("  {}", ds::muted("  type: bearer"));
+        println!("  {}", ds::muted("  credential: example"));
+        println!("  {}", ds::muted("tools:"));
+        println!("  {}", ds::muted("  - name: get_data"));
+        println!("  {}", ds::muted("    path: /data"));
+        return Ok(());
+    }
+
+    println!(
+        "{} {} {}",
+        ds::primary("REST API Wrappers"),
+        ds::muted(format!("({})", dir.display())),
+        ds::muted(format!("[{} total]", configs.len()))
+    );
+    println!();
+
+    for config in &configs {
+        let tool_names: Vec<_> = config.tools.iter().map(|t| t.name.as_str()).collect();
+        println!(
+            "  {} {} {}",
+            ds::success("•"),
+            ds::highlight(&config.name),
+            ds::muted(format!("→ {}", config.base_url))
+        );
+
+        if let Some(desc) = &config.description {
+            println!("    {}", ds::muted(desc));
+        }
+
+        println!(
+            "    {} {}",
+            ds::muted("Tools:"),
+            ds::primary(tool_names.join(", "))
+        );
+        println!();
+    }
+
+    println!(
+        "{} {}",
+        ds::muted("Start server:"),
+        ds::command("spn mcp serve")
+    );
+
+    Ok(())
+}
+
+/// Validate an API configuration.
+async fn run_apis_validate(name: &str) -> Result<()> {
+    println!(
+        "{} {}",
+        ds::primary("Validating:"),
+        ds::highlight(name)
+    );
+
+    let config = load_api(name).map_err(|e| {
+        SpnError::CommandFailed(format!("Failed to load '{}': {}", name, e))
+    })?;
+
+    match validate(&config) {
+        Ok(()) => {
+            println!();
+            println!("{} {}", ds::success("✓"), ds::success("Configuration is valid"));
+            println!();
+            println!("  {} {}", ds::muted("Name:"), ds::highlight(&config.name));
+            println!("  {} {}", ds::muted("Base URL:"), config.base_url);
+            println!(
+                "  {} {}",
+                ds::muted("Auth:"),
+                format!("{:?}", config.auth.auth_type).to_lowercase()
+            );
+            println!("  {} {}", ds::muted("Tools:"), config.tools.len());
+
+            for tool in &config.tools {
+                println!(
+                    "    {} {} {}",
+                    ds::primary("•"),
+                    ds::highlight(&tool.name),
+                    ds::muted(format!("{} {}", tool.method, tool.path))
+                );
+            }
+        }
+        Err(e) => {
+            println!();
+            println!("{} {}", ds::error("✗"), ds::error("Validation failed"));
+            println!("  {}", ds::error(e.to_string()));
+        }
+    }
+
+    Ok(())
+}
+
+/// Show API configuration details.
+async fn run_apis_info(name: &str) -> Result<()> {
+    let config = load_api(name).map_err(|e| {
+        SpnError::CommandFailed(format!("Failed to load '{}': {}", name, e))
+    })?;
+
+    println!("{}", ds::section(format!("API: {}", config.name)));
+    println!();
+
+    // Basic info
+    println!("  {} {}", ds::muted("Version:"), config.version);
+    println!("  {} {}", ds::muted("Base URL:"), ds::primary(&config.base_url));
+
+    if let Some(desc) = &config.description {
+        println!("  {} {}", ds::muted("Description:"), desc);
+    }
+
+    // Auth info
+    println!();
+    println!("{}", ds::section("Authentication"));
+    println!(
+        "  {} {}",
+        ds::muted("Type:"),
+        format!("{:?}", config.auth.auth_type).to_lowercase()
+    );
+    println!(
+        "  {} {}",
+        ds::muted("Credential:"),
+        ds::highlight(&config.auth.credential)
+    );
+
+    // Rate limit info
+    if let Some(rate) = &config.rate_limit {
+        println!();
+        println!("{}", ds::section("Rate Limits"));
+        println!("  {} {}/min", ds::muted("Requests:"), rate.requests_per_minute);
+        if rate.burst > 1 {
+            println!("  {} {}", ds::muted("Burst:"), rate.burst);
+        }
+    }
+
+    // Tools
+    println!();
+    println!(
+        "{} {}",
+        ds::section("Tools"),
+        ds::muted(format!("[{}]", config.tools.len()))
+    );
+
+    for tool in &config.tools {
+        println!();
+        println!(
+            "  {} {}",
+            ds::primary("•"),
+            ds::highlight(format!("{}_{}", config.name, tool.name))
+        );
+        println!(
+            "    {} {} {}",
+            ds::muted("Endpoint:"),
+            ds::primary(&tool.method),
+            tool.path
+        );
+
+        if let Some(desc) = &tool.description {
+            println!("    {} {}", ds::muted("Description:"), desc);
+        }
+
+        if !tool.params.is_empty() {
+            let param_names: Vec<_> = tool.params.iter().map(|p| {
+                if p.required {
+                    format!("{}*", p.name)
+                } else {
+                    p.name.clone()
+                }
+            }).collect();
+            println!(
+                "    {} {}",
+                ds::muted("Params:"),
+                param_names.join(", ")
+            );
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

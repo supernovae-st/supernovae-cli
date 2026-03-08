@@ -29,6 +29,7 @@ mod status;
 mod storage;
 mod suggest;
 mod sync;
+mod tui;
 mod ux;
 mod welcome;
 
@@ -260,6 +261,11 @@ enum Commands {
         json: bool,
     },
 
+    /// Interactive TUI browser for exploring resources
+    #[command(visible_alias = "ex")]
+    #[command(after_help = "Navigate: Tab to switch categories, arrows to select, q to quit")]
+    Explore,
+
     /// Initialize a new project
     Init {
         /// Create local config template
@@ -472,6 +478,39 @@ enum McpCommands {
         /// Filter by log level (debug, info, warn, error)
         #[arg(short, long)]
         level: Option<String>,
+    },
+    /// Start dynamic REST-to-MCP server (loads from ~/.spn/apis/)
+    #[command(visible_alias = "s")]
+    Serve {
+        /// Only load specific API config
+        #[arg(long)]
+        api: Option<String>,
+    },
+    /// Manage REST API wrapper configurations
+    Apis {
+        #[command(subcommand)]
+        command: ApisCommands,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ApisCommands {
+    /// List configured REST API wrappers
+    #[command(visible_alias = "l", visible_alias = "ls")]
+    List {
+        /// Show as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Validate an API configuration
+    Validate {
+        /// API name to validate
+        name: String,
+    },
+    /// Show API configuration details
+    Info {
+        /// API name
+        name: String,
     },
 }
 
@@ -1244,6 +1283,7 @@ async fn main() {
         }
         Commands::Provider { command } => commands::provider::run(command).await,
         Commands::Status { json } => commands::status::run(json).await,
+        Commands::Explore => commands::explore::run().await,
         Commands::Init {
             local,
             mcp,
