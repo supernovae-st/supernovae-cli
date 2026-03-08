@@ -1,12 +1,9 @@
-//! Interactive prompts for v0.14.0 "The Delight Release".
+//! Interactive prompts for v0.15.0 "The Delight Release".
 //!
 //! Provides guided selection when required arguments are missing,
 //! turning errors into helpful interactions.
 //!
-//! Note: These prompts will be integrated into commands in v0.14.1+
-//! when we update provider/mcp/model commands to use interactive fallback.
-
-#![allow(dead_code)] // Functions prepared for upcoming command integration
+//! Integrated into: provider, mcp, model commands (v0.15.0+)
 
 use crate::ux;
 use crate::ux::design_system as ds;

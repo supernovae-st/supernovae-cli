@@ -11,6 +11,7 @@
 //! - Debug/Display implementations are redacted
 
 use crate::error::{Result, SpnError};
+use crate::prompts;
 use crate::secrets::{
     global_secrets_path, is_gitignored, mask_api_key, migrate_env_to_keyring, mlock_available,
     mlock_limit, project_env_path, provider_env_var, resolve_api_key, run_quick_setup, run_wizard,
@@ -32,11 +33,35 @@ pub async fn run(command: ProviderCommands) -> Result<()> {
             provider,
             key,
             storage,
-        } => run_set(&provider, key, storage).await,
-        ProviderCommands::Get { provider, unmask } => run_get(&provider, unmask).await,
-        ProviderCommands::Delete { provider } => run_delete(&provider).await,
+        } => {
+            let provider = match provider {
+                Some(p) => p,
+                None => prompts::select_provider()?,
+            };
+            run_set(&provider, key, storage).await
+        }
+        ProviderCommands::Get { provider, unmask } => {
+            let provider = match provider {
+                Some(p) => p,
+                None => prompts::select_provider()?,
+            };
+            run_get(&provider, unmask).await
+        }
+        ProviderCommands::Delete { provider } => {
+            let provider = match provider {
+                Some(p) => p,
+                None => prompts::select_provider()?,
+            };
+            run_delete(&provider).await
+        }
         ProviderCommands::Migrate { yes } => run_migrate(yes).await,
-        ProviderCommands::Test { provider } => run_test(&provider).await,
+        ProviderCommands::Test { provider } => {
+            let provider = match provider {
+                Some(p) => p,
+                None => prompts::select_provider()?,
+            };
+            run_test(&provider).await
+        }
         ProviderCommands::Status { json } => run_status(json).await,
     }
 }

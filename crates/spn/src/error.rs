@@ -108,6 +108,12 @@ impl From<dialoguer::Error> for SpnError {
     }
 }
 
+impl From<spn_core::backup::BackupError> for SpnError {
+    fn from(e: spn_core::backup::BackupError) -> Self {
+        SpnError::Other(e.into())
+    }
+}
+
 impl SpnError {
     /// Returns a helpful suggestion for resolving this error.
     pub fn help(&self) -> Option<String> {

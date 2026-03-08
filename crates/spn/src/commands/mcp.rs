@@ -6,6 +6,7 @@
 use crate::error::{Result, SpnError};
 use crate::interop::npm::{mcp_aliases, NpmClient};
 use crate::mcp::{config_manager, McpConfigManager, McpScope, McpServer};
+use crate::prompts;
 use crate::{ApisCommands, McpCommands};
 
 use crate::ux::design_system as ds;
@@ -25,12 +26,24 @@ pub async fn run(command: McpCommands) -> Result<()> {
             project,
             no_sync,
             sync_to,
-        } => run_add(&npm, &mcp, &name, global, project, no_sync, sync_to).await,
+        } => {
+            let name = match name {
+                Some(n) => n,
+                None => prompts::select_mcp_server()?,
+            };
+            run_add(&npm, &mcp, &name, global, project, no_sync, sync_to).await
+        }
         McpCommands::Remove {
             name,
             global,
             project,
-        } => run_remove(&mcp, &name, global, project).await,
+        } => {
+            let name = match name {
+                Some(n) => n,
+                None => prompts::select_mcp_server()?,
+            };
+            run_remove(&mcp, &name, global, project).await
+        }
         McpCommands::List {
             global,
             project,

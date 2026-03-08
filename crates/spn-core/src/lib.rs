@@ -43,6 +43,7 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
+pub mod backup;
 mod backend;
 mod mcp;
 mod providers;

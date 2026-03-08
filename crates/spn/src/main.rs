@@ -339,6 +339,15 @@ enum Commands {
         command: ModelCommands,
     },
 
+    // TODO: Re-enable when backup module is complete
+    // /// Unified backup system for SuperNovae ecosystem
+    // #[command(visible_alias = "b")]
+    // #[command(after_help = "Related: spn setup, spn nv seed, spn provider migrate")]
+    // Backup {
+    //     #[command(subcommand)]
+    //     command: commands::backup::BackupCommands,
+    // },
+
     /// Generate shell completions
     #[command(visible_alias = "comp")]
     #[command(
@@ -428,8 +437,8 @@ enum McpCommands {
     /// Add an MCP server from npm
     #[command(visible_alias = "a")]
     Add {
-        /// Server alias or npm package
-        name: String,
+        /// Server alias or npm package - prompts if omitted
+        name: Option<String>,
 
         /// Install to global config (~/.spn/mcp.yaml)
         #[arg(short, long)]
@@ -450,8 +459,8 @@ enum McpCommands {
     /// Remove an MCP server
     #[command(visible_alias = "rm")]
     Remove {
-        /// Server name
-        name: String,
+        /// Server name - prompts if omitted
+        name: Option<String>,
 
         /// Remove from global config
         #[arg(short, long)]
@@ -1028,14 +1037,14 @@ pub enum ModelCommands {
     /// Pull/download a model from Ollama registry
     #[command(visible_alias = "get", visible_alias = "download")]
     Pull {
-        /// Model name (e.g., llama3.2:7b, mistral:latest)
-        name: String,
+        /// Model name (e.g., llama3.2:7b, mistral:latest) - prompts if omitted
+        name: Option<String>,
     },
 
     /// Load a model into memory
     Load {
-        /// Model name
-        name: String,
+        /// Model name - prompts if omitted
+        name: Option<String>,
 
         /// Keep model loaded indefinitely
         #[arg(long)]
@@ -1044,15 +1053,15 @@ pub enum ModelCommands {
 
     /// Unload a model from memory
     Unload {
-        /// Model name
-        name: String,
+        /// Model name - prompts if omitted
+        name: Option<String>,
     },
 
     /// Delete a model
     #[command(visible_alias = "rm")]
     Delete {
-        /// Model name
-        name: String,
+        /// Model name - prompts if omitted
+        name: Option<String>,
 
         /// Skip confirmation prompt
         #[arg(long, short)]
@@ -1166,8 +1175,8 @@ enum ProviderCommands {
     /// Set API key for a provider
     #[command(visible_alias = "add")]
     Set {
-        /// Provider name (anthropic, openai, gemini, etc.)
-        provider: String,
+        /// Provider name (anthropic, openai, gemini, etc.) - prompts if omitted
+        provider: Option<String>,
         /// API key value (prompts securely if omitted)
         #[arg(long)]
         key: Option<String>,
@@ -1177,16 +1186,16 @@ enum ProviderCommands {
     },
     /// Get masked API key for a provider
     Get {
-        /// Provider name
-        provider: String,
+        /// Provider name - prompts if omitted
+        provider: Option<String>,
         /// Show full key (DANGEROUS - only for scripts)
         #[arg(long)]
         unmask: bool,
     },
     /// Delete API key for a provider
     Delete {
-        /// Provider name
-        provider: String,
+        /// Provider name - prompts if omitted
+        provider: Option<String>,
     },
     /// Migrate keys from env vars to OS keychain
     Migrate {
@@ -1196,8 +1205,8 @@ enum ProviderCommands {
     },
     /// Test provider connection
     Test {
-        /// Provider name (or "all")
-        provider: String,
+        /// Provider name (or "all") - prompts if omitted
+        provider: Option<String>,
     },
     /// Show full diagnostic status of all secrets and providers
     Status {
@@ -1386,6 +1395,7 @@ async fn main() {
         Commands::Daemon { command } => commands::daemon::run(command).await,
         Commands::Jobs { command } => commands::jobs::run(command).await,
         Commands::Model { command } => commands::model::execute(command).await,
+        // Commands::Backup { command } => commands::backup::run(command).await,
         Commands::Completion { command } => match command {
             CompletionCommands::Bash { output } => commands::completion::run("bash", output).await,
             CompletionCommands::Zsh { output } => commands::completion::run("zsh", output).await,

@@ -5,6 +5,7 @@
 
 use crate::error::{Result, SpnError};
 use crate::interop::model_registry::ModelRegistry;
+use crate::prompts;
 use crate::ux::design_system as ds;
 use crate::ux::progress::transforming_spinner;
 use crate::ModelCommands;
@@ -14,10 +15,34 @@ use spn_client::{LoadConfig, Request, Response, SpnClient};
 pub async fn run(command: ModelCommands) -> Result<()> {
     match command {
         ModelCommands::List { json, running } => list(json, running).await,
-        ModelCommands::Pull { name } => pull(&name).await,
-        ModelCommands::Load { name, keep_alive } => load(&name, keep_alive).await,
-        ModelCommands::Unload { name } => unload(&name).await,
-        ModelCommands::Delete { name, yes } => delete(&name, yes).await,
+        ModelCommands::Pull { name } => {
+            let name = match name {
+                Some(n) => n,
+                None => prompts::select_model()?,
+            };
+            pull(&name).await
+        }
+        ModelCommands::Load { name, keep_alive } => {
+            let name = match name {
+                Some(n) => n,
+                None => prompts::select_model()?,
+            };
+            load(&name, keep_alive).await
+        }
+        ModelCommands::Unload { name } => {
+            let name = match name {
+                Some(n) => n,
+                None => prompts::select_model()?,
+            };
+            unload(&name).await
+        }
+        ModelCommands::Delete { name, yes } => {
+            let name = match name {
+                Some(n) => n,
+                None => prompts::select_model()?,
+            };
+            delete(&name, yes).await
+        }
         ModelCommands::Status { json } => status(json).await,
         ModelCommands::Search { query, category } => search(&query, category.as_deref()).await,
         ModelCommands::Info { name, json } => info(&name, json).await,
