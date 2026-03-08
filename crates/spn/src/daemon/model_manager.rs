@@ -7,9 +7,10 @@
 #![allow(dead_code)]
 
 use spn_client::{
-    BackendError, ChatMessage, ChatOptions, ChatResponse, LoadConfig, ModelInfo, RunningModel,
+    BackendError, ChatMessage, ChatOptions, ChatResponse, LoadConfig, ModelInfo, PullProgress,
+    RunningModel,
 };
-use spn_ollama::{DynModelBackend, OllamaBackend};
+use spn_ollama::{BoxedProgressCallback, DynModelBackend, OllamaBackend};
 use std::sync::Arc;
 use tracing::{debug, info};
 
@@ -58,6 +59,18 @@ impl ModelManager {
     pub async fn pull(&self, name: &str) -> Result<(), BackendError> {
         info!(model = %name, "Pulling model");
         self.backend.pull(name, None).await
+    }
+
+    /// Pull a model with progress callback.
+    ///
+    /// The callback is invoked for each progress update during the download.
+    pub async fn pull_with_progress<F>(&self, name: &str, on_progress: F) -> Result<(), BackendError>
+    where
+        F: Fn(PullProgress) + Send + Sync + 'static,
+    {
+        info!(model = %name, "Pulling model with progress");
+        let callback: BoxedProgressCallback = Box::new(on_progress);
+        self.backend.pull(name, Some(callback)).await
     }
 
     /// Load a model into memory.
@@ -139,6 +152,7 @@ impl Default for ModelManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU32, Ordering};
 
     #[test]
     fn test_model_manager_creation() {
@@ -150,5 +164,23 @@ mod tests {
     fn test_model_manager_default() {
         let manager = ModelManager::default();
         assert_eq!(manager.backend_id(), "ollama");
+    }
+
+    #[test]
+    fn test_pull_with_progress_callback_signature() {
+        // Test that the callback signature compiles correctly
+        let call_count = Arc::new(AtomicU32::new(0));
+        let call_count_clone = call_count.clone();
+
+        // Create a callback that increments a counter
+        let callback = move |_progress: PullProgress| {
+            call_count_clone.fetch_add(1, Ordering::SeqCst);
+        };
+
+        // Verify the callback type is correct by checking it can be boxed
+        let _boxed: BoxedProgressCallback = Box::new(callback);
+
+        // If this compiles, the signature is correct
+        assert_eq!(call_count.load(Ordering::SeqCst), 0);
     }
 }
