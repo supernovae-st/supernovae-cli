@@ -6,6 +6,7 @@
 use crate::error::{Result, SpnError};
 use crate::interop::model_registry::ModelRegistry;
 use crate::ux::design_system as ds;
+use crate::ux::progress::transforming_spinner;
 use crate::ModelCommands;
 use dialoguer::Confirm;
 use spn_client::{LoadConfig, Request, Response, SpnClient};
@@ -144,34 +145,35 @@ async fn list(json: bool, running_only: bool) -> Result<()> {
 async fn pull(name: &str) -> Result<()> {
     let mut client = connect_to_daemon().await?;
 
-    println!(
-        "{} Pulling model: {}",
-        ds::primary("->"),
-        ds::highlight(name)
-    );
-    println!("   This may take a while...");
+    let spinner = transforming_spinner(&format!("Pulling model: {} (this may take a while)", name));
 
     let response = client
         .send_request(Request::ModelPull {
             name: name.to_string(),
         })
-        .await
-        .map_err(|e| anyhow::anyhow!("Daemon request failed: {}", e))?;
+        .await;
 
     match response {
-        Response::Success { success: true } => {
-            println!("{} Model '{}' pulled successfully", ds::success("*"), name);
+        Ok(Response::Success { success: true }) => {
+            spinner.finish_success(&format!("Model '{}' pulled successfully", name));
         }
-        Response::Success { success: false } => {
+        Ok(Response::Success { success: false }) => {
+            spinner.finish_error("Pull failed");
             return Err(SpnError::CommandFailed("Pull failed".to_string()));
         }
-        Response::Error { message } => {
+        Ok(Response::Error { message }) => {
+            spinner.finish_error(&format!("Pull failed: {}", message));
             return Err(SpnError::CommandFailed(message));
         }
-        _ => {
+        Ok(_) => {
+            spinner.finish_error("Unexpected response from daemon");
             return Err(SpnError::CommandFailed(
                 "Unexpected response from daemon".to_string(),
             ));
+        }
+        Err(e) => {
+            spinner.finish_error(&format!("Daemon request failed: {}", e));
+            return Err(SpnError::CommandFailed(format!("Daemon request failed: {}", e)));
         }
     }
 
@@ -185,11 +187,7 @@ async fn pull(name: &str) -> Result<()> {
 async fn load(name: &str, keep_alive: bool) -> Result<()> {
     let mut client = connect_to_daemon().await?;
 
-    println!(
-        "{} Loading model: {}",
-        ds::primary("->"),
-        ds::highlight(name)
-    );
+    let spinner = transforming_spinner(&format!("Loading model: {}", name));
 
     let config = if keep_alive {
         Some(LoadConfig {
@@ -207,23 +205,30 @@ async fn load(name: &str, keep_alive: bool) -> Result<()> {
             name: name.to_string(),
             config,
         })
-        .await
-        .map_err(|e| anyhow::anyhow!("Daemon request failed: {}", e))?;
+        .await;
 
     match response {
-        Response::Success { success: true } => {
-            println!("{} Model '{}' loaded", ds::success("*"), name);
-            if keep_alive {
-                println!("   Model will stay loaded until manually unloaded");
-            }
+        Ok(Response::Success { success: true }) => {
+            let msg = if keep_alive {
+                format!("Model '{}' loaded (will stay loaded until manually unloaded)", name)
+            } else {
+                format!("Model '{}' loaded", name)
+            };
+            spinner.finish_success(&msg);
         }
-        Response::Error { message } => {
+        Ok(Response::Error { message }) => {
+            spinner.finish_error(&format!("Load failed: {}", message));
             return Err(SpnError::CommandFailed(message));
         }
-        _ => {
+        Ok(_) => {
+            spinner.finish_error("Unexpected response from daemon");
             return Err(SpnError::CommandFailed(
                 "Unexpected response from daemon".to_string(),
             ));
+        }
+        Err(e) => {
+            spinner.finish_error(&format!("Daemon request failed: {}", e));
+            return Err(SpnError::CommandFailed(format!("Daemon request failed: {}", e)));
         }
     }
 
@@ -237,30 +242,31 @@ async fn load(name: &str, keep_alive: bool) -> Result<()> {
 async fn unload(name: &str) -> Result<()> {
     let mut client = connect_to_daemon().await?;
 
-    println!(
-        "{} Unloading model: {}",
-        ds::primary("->"),
-        ds::highlight(name)
-    );
+    let spinner = transforming_spinner(&format!("Unloading model: {}", name));
 
     let response = client
         .send_request(Request::ModelUnload {
             name: name.to_string(),
         })
-        .await
-        .map_err(|e| anyhow::anyhow!("Daemon request failed: {}", e))?;
+        .await;
 
     match response {
-        Response::Success { success: true } => {
-            println!("{} Model '{}' unloaded", ds::success("*"), name);
+        Ok(Response::Success { success: true }) => {
+            spinner.finish_success(&format!("Model '{}' unloaded", name));
         }
-        Response::Error { message } => {
+        Ok(Response::Error { message }) => {
+            spinner.finish_error(&format!("Unload failed: {}", message));
             return Err(SpnError::CommandFailed(message));
         }
-        _ => {
+        Ok(_) => {
+            spinner.finish_error("Unexpected response from daemon");
             return Err(SpnError::CommandFailed(
                 "Unexpected response from daemon".to_string(),
             ));
+        }
+        Err(e) => {
+            spinner.finish_error(&format!("Daemon request failed: {}", e));
+            return Err(SpnError::CommandFailed(format!("Daemon request failed: {}", e)));
         }
     }
 
@@ -287,30 +293,31 @@ async fn delete(name: &str, skip_confirm: bool) -> Result<()> {
 
     let mut client = connect_to_daemon().await?;
 
-    println!(
-        "{} Deleting model: {}",
-        ds::primary("->"),
-        ds::highlight(name)
-    );
+    let spinner = transforming_spinner(&format!("Deleting model: {}", name));
 
     let response = client
         .send_request(Request::ModelDelete {
             name: name.to_string(),
         })
-        .await
-        .map_err(|e| anyhow::anyhow!("Daemon request failed: {}", e))?;
+        .await;
 
     match response {
-        Response::Success { success: true } => {
-            println!("{} Model '{}' deleted", ds::success("*"), name);
+        Ok(Response::Success { success: true }) => {
+            spinner.finish_success(&format!("Model '{}' deleted", name));
         }
-        Response::Error { message } => {
+        Ok(Response::Error { message }) => {
+            spinner.finish_error(&format!("Delete failed: {}", message));
             return Err(SpnError::CommandFailed(message));
         }
-        _ => {
+        Ok(_) => {
+            spinner.finish_error("Unexpected response from daemon");
             return Err(SpnError::CommandFailed(
                 "Unexpected response from daemon".to_string(),
             ));
+        }
+        Err(e) => {
+            spinner.finish_error(&format!("Daemon request failed: {}", e));
+            return Err(SpnError::CommandFailed(format!("Daemon request failed: {}", e)));
         }
     }
 
