@@ -1,31 +1,95 @@
 //! NovaNet wrapper command implementation.
 //!
-//! Proxies commands to the novanet binary.
+//! Proxies commands to the novanet binary with lazy install support.
 
-use crate::error::Result;
+use crate::error::{Result, SpnError};
 use crate::interop::binary::{BinaryRunner, BinaryType};
+use crate::interop::detect::{install_novanet, EcosystemTools, InstallMethod};
 use crate::{
     DbCommands, EntityCommands, KnowledgeCommands, LocaleCommands, McpServerCommands,
     NovaNetCommands,
 };
 
 use crate::ux::design_system as ds;
+use dialoguer::Confirm;
 
 /// Run a novanet command via the binary proxy.
 pub async fn run(command: NovaNetCommands) -> Result<()> {
     let runner = BinaryRunner::new(BinaryType::NovaNet);
 
     if !runner.is_available() {
-        eprintln!("{}", ds::error("Error: novanet not found"));
-        eprintln!(
-            "Install with: {}",
-            ds::primary("brew install supernovae-st/tap/novanet")
-        );
-        eprintln!(
-            "Or download from: {}",
-            ds::primary("https://github.com/supernovae-st/novanet/releases")
-        );
-        return Ok(());
+        // Check if we're in an interactive terminal
+        if atty::is(atty::Stream::Stdin) {
+            eprintln!();
+            eprintln!("{}", ds::warning("⚠️  NovaNet is not installed"));
+            eprintln!();
+
+            let install = Confirm::new()
+                .with_prompt("Install NovaNet now?")
+                .default(true)
+                .interact()
+                .map_err(|e| SpnError::InvalidInput(e.to_string()))?;
+
+            if install {
+                let method = InstallMethod::best_available().ok_or_else(|| {
+                    SpnError::NotFound(
+                        "No installation method available (cargo or brew required)".into(),
+                    )
+                })?;
+
+                eprintln!();
+                eprintln!(
+                    "  {} Installing NovaNet via {}...",
+                    ds::primary("→"),
+                    ds::muted(method.display_name())
+                );
+
+                match install_novanet(method) {
+                    Ok(()) => {
+                        eprintln!(
+                            "  {} NovaNet installed successfully",
+                            ds::command("✓")
+                        );
+                        eprintln!();
+                        // Re-detect after install
+                        let tools = EcosystemTools::detect();
+                        if !tools.novanet.is_installed() {
+                            eprintln!(
+                                "{} Installation completed but novanet not found in PATH.",
+                                ds::warning("⚠️")
+                            );
+                            eprintln!(
+                                "  You may need to restart your shell or run: {}",
+                                ds::primary("source ~/.bashrc")
+                            );
+                            return Ok(());
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "  {} Installation failed: {}",
+                            ds::error("✗"),
+                            e
+                        );
+                        return Ok(());
+                    }
+                }
+            } else {
+                eprintln!(
+                    "{}",
+                    ds::muted("Install later with: spn setup novanet")
+                );
+                return Ok(());
+            }
+        } else {
+            // Non-interactive mode - show error
+            eprintln!("{}", ds::error("Error: novanet not found"));
+            eprintln!(
+                "Install with: {}",
+                ds::primary("spn setup novanet")
+            );
+            return Ok(());
+        }
     }
 
     let args: Vec<String> = match &command {
