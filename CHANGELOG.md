@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.1](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.15.1) - 2026-03-08
+
+### Added
+
+- **cli**: Add lazy install prompt to spn nv command
+- **cli**: Add lazy install prompt to spn nk command
+- **cli**: Add ecosystem status to setup wizard
+- **cli**: Add ecosystem tool detection module
+- **cli**: Add --from-openapi flag to mcp wrap command
+- **mcp**: Add wrap wizard for REST-to-MCP tool generation
+- **cli**: Add unified backup system
+- **spn-mcp**: Add OpenAPI 3.0 parser module
+
+### Changed
+
+- Apply cargo fmt
+
+### Documentation
+
+- Fix env vars, versions, and add Code of Conduct
+- Complete v0.15.0 release preparation
+
+### Fixed
+
+- **deps**: Replace atty with std::io::IsTerminal
+- **security**: Harden backup system against multiple vulnerabilities
+- **test**: Avoid clippy approx_constant warning
+
+### Security
+
+- **mcp**: Remove unnecessary borrow in hint_line call
+
+### Security
+
+- **mcp**: Add payload size and parameter type validation
+
+
 ## [0.15.0](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.15.0) - 2026-03-08
 
 ╔═══════════════════════════════════════════════════════════════════════════════╗

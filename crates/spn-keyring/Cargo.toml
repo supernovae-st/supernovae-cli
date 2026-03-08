@@ -1,6 +1,6 @@
 [package]
 name = "spn-keyring"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 rust-version = "1.75"
 description = "OS keychain wrapper for SuperNovae CLI"
@@ -17,7 +17,7 @@ default = ["os-keychain"]
 os-keychain = ["dep:keyring"]
 
 [dependencies]
-spn-core = { version = "0.1.1", path = "../spn-core" }
+spn-core = { version = "0.1.2", path = "../spn-core" }
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"], optional = true }
 secrecy = "0.10"
 zeroize = { version = "1", features = ["derive"] }
