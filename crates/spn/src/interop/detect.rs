@@ -33,7 +33,10 @@ pub enum InstallStatus {
 impl InstallStatus {
     /// Returns true if the tool is installed (any version).
     pub fn is_installed(&self) -> bool {
-        matches!(self, InstallStatus::Installed { .. } | InstallStatus::Outdated { .. })
+        matches!(
+            self,
+            InstallStatus::Installed { .. } | InstallStatus::Outdated { .. }
+        )
     }
 
     /// Returns the version if installed.
@@ -164,10 +167,7 @@ fn get_binary_version(path: &PathBuf) -> String {
         .and_then(|o| String::from_utf8(o.stdout).ok())
         .map(|s| {
             // Parse version from output like "nika 0.21.1" or "novanet 0.17.2"
-            s.split_whitespace()
-                .nth(1)
-                .unwrap_or(s.trim())
-                .to_string()
+            s.split_whitespace().nth(1).unwrap_or(s.trim()).to_string()
         })
         .unwrap_or_else(|| "unknown".to_string())
 }

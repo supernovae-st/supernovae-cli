@@ -194,13 +194,12 @@ pub fn parse_openapi(path: &Path) -> Result<OpenApiSpec> {
     let content = std::fs::read_to_string(path)?;
 
     // Detect format by extension or content
-    let spec: OpenApiSpec = if path.extension().is_some_and(|e| e == "json")
-        || content.trim().starts_with('{')
-    {
-        serde_json::from_str(&content)?
-    } else {
-        serde_yaml::from_str(&content)?
-    };
+    let spec: OpenApiSpec =
+        if path.extension().is_some_and(|e| e == "json") || content.trim().starts_with('{') {
+            serde_json::from_str(&content)?
+        } else {
+            serde_yaml::from_str(&content)?
+        };
 
     // Validate version
     if !spec.openapi.starts_with("3.") {
@@ -343,10 +342,7 @@ impl OpenApiSpec {
         }
 
         // Use summary or description
-        let description = op
-            .summary
-            .clone()
-            .or_else(|| op.description.clone());
+        let description = op.summary.clone().or_else(|| op.description.clone());
 
         ToolDef {
             name,

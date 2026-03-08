@@ -43,10 +43,7 @@ pub async fn run(command: NikaCommands) -> Result<()> {
 
                 match install_nika(method) {
                     Ok(()) => {
-                        eprintln!(
-                            "  {} Nika installed successfully",
-                            ds::command("✓")
-                        );
+                        eprintln!("  {} Nika installed successfully", ds::command("✓"));
                         eprintln!();
                         // Re-detect after install
                         let tools = EcosystemTools::detect();
@@ -63,28 +60,18 @@ pub async fn run(command: NikaCommands) -> Result<()> {
                         }
                     }
                     Err(e) => {
-                        eprintln!(
-                            "  {} Installation failed: {}",
-                            ds::error("✗"),
-                            e
-                        );
+                        eprintln!("  {} Installation failed: {}", ds::error("✗"), e);
                         return Ok(());
                     }
                 }
             } else {
-                eprintln!(
-                    "{}",
-                    ds::muted("Install later with: spn setup nika")
-                );
+                eprintln!("{}", ds::muted("Install later with: spn setup nika"));
                 return Ok(());
             }
         } else {
             // Non-interactive mode - show error
             eprintln!("{}", ds::error("Error: nika not found"));
-            eprintln!(
-                "Install with: {}",
-                ds::primary("spn setup nika")
-            );
+            eprintln!("Install with: {}", ds::primary("spn setup nika"));
             return Ok(());
         }
     }

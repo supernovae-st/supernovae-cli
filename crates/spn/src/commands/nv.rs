@@ -46,10 +46,7 @@ pub async fn run(command: NovaNetCommands) -> Result<()> {
 
                 match install_novanet(method) {
                     Ok(()) => {
-                        eprintln!(
-                            "  {} NovaNet installed successfully",
-                            ds::command("✓")
-                        );
+                        eprintln!("  {} NovaNet installed successfully", ds::command("✓"));
                         eprintln!();
                         // Re-detect after install
                         let tools = EcosystemTools::detect();
@@ -66,28 +63,18 @@ pub async fn run(command: NovaNetCommands) -> Result<()> {
                         }
                     }
                     Err(e) => {
-                        eprintln!(
-                            "  {} Installation failed: {}",
-                            ds::error("✗"),
-                            e
-                        );
+                        eprintln!("  {} Installation failed: {}", ds::error("✗"), e);
                         return Ok(());
                     }
                 }
             } else {
-                eprintln!(
-                    "{}",
-                    ds::muted("Install later with: spn setup novanet")
-                );
+                eprintln!("{}", ds::muted("Install later with: spn setup novanet"));
                 return Ok(());
             }
         } else {
             // Non-interactive mode - show error
             eprintln!("{}", ds::error("Error: novanet not found"));
-            eprintln!(
-                "Install with: {}",
-                ds::primary("spn setup novanet")
-            );
+            eprintln!("Install with: {}", ds::primary("spn setup novanet"));
             return Ok(());
         }
     }

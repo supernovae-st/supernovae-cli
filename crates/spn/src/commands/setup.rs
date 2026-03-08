@@ -1847,11 +1847,7 @@ fn print_ecosystem_status(tools: &EcosystemTools) {
             );
         }
         crate::interop::detect::InstallStatus::NotInstalled => {
-            println!(
-                "  {} Nika {}",
-                ds::warning("○"),
-                ds::muted("not installed")
-            );
+            println!("  {} Nika {}", ds::warning("○"), ds::muted("not installed"));
         }
         crate::interop::detect::InstallStatus::Outdated { current, latest } => {
             println!(
@@ -1923,11 +1919,7 @@ fn install_ecosystem_tool(tool: &str) -> Result<()> {
             Ok(())
         }
         Err(e) => {
-            println!(
-                "  {} Installation failed: {}",
-                ds::error("✗"),
-                e
-            );
+            println!("  {} Installation failed: {}", ds::error("✗"), e);
             // Don't fail the entire setup, just warn
             Ok(())
         }

@@ -673,7 +673,10 @@ async fn run_wrap(
     // Print banner
     println!();
     println!("╔═══════════════════════════════════════════════════════════════════════════════╗");
-    println!("║  {}  MCP WRAPPER WIZARD                                                        ║", ds::primary("🛠️"));
+    println!(
+        "║  {}  MCP WRAPPER WIZARD                                                        ║",
+        ds::primary("🛠️")
+    );
     println!("╚═══════════════════════════════════════════════════════════════════════════════╝");
     println!();
 
@@ -912,9 +915,8 @@ async fn run_openapi_import(
     // Parse the OpenAPI spec
     println!("{}...", ds::muted("Parsing OpenAPI spec"));
 
-    let spec = spn_mcp::parse_openapi(spec_path).map_err(|e| {
-        SpnError::CommandFailed(format!("Failed to parse OpenAPI spec: {}", e))
-    })?;
+    let spec = spn_mcp::parse_openapi(spec_path)
+        .map_err(|e| SpnError::CommandFailed(format!("Failed to parse OpenAPI spec: {}", e)))?;
 
     // Show what we found
     println!(
@@ -1032,10 +1034,7 @@ async fn run_openapi_import(
                     if selected_tools.is_empty() {
                         println!(
                             "{}",
-                            ds::warning(format!(
-                                "No endpoints found with tag '{}'.",
-                                selected_tag
-                            ))
+                            ds::warning(format!("No endpoints found with tag '{}'.", selected_tag))
                         );
                         return Ok(());
                     }
