@@ -17,6 +17,7 @@ pub type PromptResult<T> = std::result::Result<T, dialoguer::Error>;
 // ============================================================================
 
 /// Provider option with description
+#[allow(dead_code)]
 struct ProviderOption {
     id: &'static str,
     name: &'static str,
@@ -153,6 +154,7 @@ pub fn select_provider() -> PromptResult<String> {
 }
 
 /// Prompt for API key input (secure, hidden)
+#[allow(dead_code)]
 pub fn prompt_api_key(provider: &str) -> PromptResult<String> {
     let hint = LLM_PROVIDERS
         .iter()
@@ -320,6 +322,7 @@ pub fn select_model() -> PromptResult<String> {
 // ============================================================================
 
 /// Confirm a destructive operation
+#[allow(dead_code)]
 pub fn confirm_delete(name: &str, details: Option<&str>) -> PromptResult<bool> {
     let prompt = match details {
         Some(d) => format!("Delete {} ({})? This cannot be undone", name, d),
@@ -330,6 +333,7 @@ pub fn confirm_delete(name: &str, details: Option<&str>) -> PromptResult<bool> {
 }
 
 /// Confirm overwriting existing data
+#[allow(dead_code)]
 pub fn confirm_overwrite(name: &str) -> PromptResult<bool> {
     ux::confirm(&format!("{} already exists. Overwrite?", name), false)
 }
