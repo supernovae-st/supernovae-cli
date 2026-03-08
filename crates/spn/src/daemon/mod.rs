@@ -36,6 +36,7 @@
 //! - Secrets cached in mlock'd memory
 //! - PID file with flock for single instance
 
+pub mod agents;
 mod error;
 mod handler;
 pub mod jobs;
@@ -49,6 +50,10 @@ mod socket;
 pub mod traces;
 
 pub use error::DaemonError;
+#[allow(unused_imports)]
+pub use agents::{
+    Agent, AgentConfig, AgentId, AgentManager, AgentRole, AgentState, AgentStatus, DelegatedTask,
+};
 #[allow(unused_imports)]
 pub use jobs::{Job, JobId, JobScheduler, JobState, JobStatus, JobStore};
 #[allow(unused_imports)]
