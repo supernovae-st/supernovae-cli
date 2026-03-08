@@ -339,14 +339,6 @@ enum Commands {
         command: ModelCommands,
     },
 
-    /// Unified backup system for SuperNovae ecosystem
-    #[command(visible_alias = "b")]
-    #[command(after_help = "Related: spn setup, spn nv seed, spn provider migrate")]
-    Backup {
-        #[command(subcommand)]
-        command: commands::backup::BackupCommands,
-    },
-
     /// Generate shell completions
     #[command(visible_alias = "comp")]
     #[command(
@@ -1394,7 +1386,6 @@ async fn main() {
         Commands::Daemon { command } => commands::daemon::run(command).await,
         Commands::Jobs { command } => commands::jobs::run(command).await,
         Commands::Model { command } => commands::model::execute(command).await,
-        Commands::Backup { command } => commands::backup::run(command).await,
         Commands::Completion { command } => match command {
             CompletionCommands::Bash { output } => commands::completion::run("bash", output).await,
             CompletionCommands::Zsh { output } => commands::completion::run("zsh", output).await,

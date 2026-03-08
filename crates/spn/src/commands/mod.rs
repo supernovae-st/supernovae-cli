@@ -6,7 +6,6 @@
 #![allow(clippy::unused_async)]
 
 pub mod add;
-pub mod backup;
 pub mod completion;
 pub mod config;
 pub mod daemon;

@@ -44,7 +44,6 @@
 #![warn(clippy::all)]
 
 mod backend;
-pub mod backup;
 mod mcp;
 mod providers;
 mod registry;

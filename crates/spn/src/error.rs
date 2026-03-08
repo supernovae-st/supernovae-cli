@@ -108,11 +108,12 @@ impl From<dialoguer::Error> for SpnError {
     }
 }
 
-impl From<spn_core::backup::BackupError> for SpnError {
-    fn from(e: spn_core::backup::BackupError) -> Self {
-        SpnError::Other(e.into())
-    }
-}
+// TODO: Re-enable when backup module implementation is complete
+// impl From<spn_core::backup::BackupError> for SpnError {
+//     fn from(e: spn_core::backup::BackupError) -> Self {
+//         SpnError::Other(e.into())
+//     }
+// }
 
 impl SpnError {
     /// Returns a helpful suggestion for resolving this error.
