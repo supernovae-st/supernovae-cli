@@ -90,11 +90,11 @@ pub async fn run(command: BackupCommands) -> Result<()> {
 }
 
 /// Get the backup directory (~/.spn/backups/).
-fn backup_dir() -> PathBuf {
-    dirs::home_dir()
-        .expect("home dir should exist")
+fn backup_dir() -> Result<PathBuf> {
+    Ok(dirs::home_dir()
+        .ok_or_else(|| SpnError::Other(anyhow::anyhow!("$HOME environment variable not set")))?
         .join(".spn")
-        .join("backups")
+        .join("backups"))
 }
 
 /// Generate a backup filename with timestamp and optional label.
@@ -117,7 +117,7 @@ fn sanitize_label(label: &str) -> String {
 
 /// Create a new backup.
 async fn create_backup(label: Option<String>, only: Option<Vec<String>>) -> Result<()> {
-    let backup_path = backup_dir();
+    let backup_path = backup_dir()?;
     fs::create_dir_all(&backup_path).context("Failed to create backup directory")?;
 
     let timestamp = Utc::now();
@@ -305,7 +305,7 @@ async fn restore_backup(backup: &str, force: bool) -> Result<()> {
 
 /// List available backups.
 async fn list_backups(detailed: bool, limit: usize, json: bool) -> Result<()> {
-    let backup_path = backup_dir();
+    let backup_path = backup_dir()?;
 
     if !backup_path.exists() {
         if json {
@@ -404,7 +404,7 @@ async fn list_backups(detailed: bool, limit: usize, json: bool) -> Result<()> {
 
 /// Prune old backups.
 async fn prune_backups(keep: usize, execute: bool) -> Result<()> {
-    let backup_path = backup_dir();
+    let backup_path = backup_dir()?;
 
     if !backup_path.exists() {
         println!("{} No backups to prune", style("").green());
@@ -480,33 +480,33 @@ async fn prune_backups(keep: usize, execute: bool) -> Result<()> {
 fn collect_novanet(staging: &Path) -> Result<NovaNetContents> {
     let mut contents = NovaNetContents::default();
 
-    // Look for brain/ in common locations
-    let brain_paths = [
-        dirs::home_dir().map(|h| h.join("dev/supernovae/brain")),
-        std::env::current_dir().ok().map(|p| p.join("../brain")),
+    // Look for private-data/ in common locations
+    let private_data_paths = [
+        dirs::home_dir().map(|h| h.join("dev/supernovae/private-data")),
+        std::env::current_dir().ok().map(|p| p.join("../private-data")),
     ];
 
-    let brain_path = brain_paths
+    let private_data_path = private_data_paths
         .into_iter()
         .flatten()
         .find(|p| p.join("models").exists());
 
-    if let Some(brain) = brain_path {
+    if let Some(private_data) = private_data_path {
         let novanet_staging = staging.join("novanet");
         fs::create_dir_all(&novanet_staging)?;
 
         // Copy models/
-        let models_src = brain.join("models");
+        let models_src = private_data.join("models");
         if models_src.exists() {
-            let models_dst = novanet_staging.join("brain/models");
+            let models_dst = novanet_staging.join("private-data/models");
             copy_dir_recursive(&models_src, &models_dst)?;
             contents.schema_files = count_yaml_files(&models_dst);
         }
 
         // Copy seed/
-        let seed_src = brain.join("seed");
+        let seed_src = private_data.join("seed");
         if seed_src.exists() {
-            let seed_dst = novanet_staging.join("brain/seed");
+            let seed_dst = novanet_staging.join("private-data/seed");
             copy_dir_recursive(&seed_src, &seed_dst)?;
             contents.seed_files = count_yaml_files(&seed_dst);
         }
@@ -562,7 +562,7 @@ fn collect_spn(staging: &Path) -> Result<SpnContents> {
     let mut contents = SpnContents::default();
 
     let spn_dir = dirs::home_dir()
-        .expect("home dir")
+        .ok_or_else(|| SpnError::Other(anyhow::anyhow!("$HOME environment variable not set")))?
         .join(".spn");
 
     if !spn_dir.exists() {
@@ -606,28 +606,28 @@ fn restore_novanet(staging: &Path) -> Result<()> {
         return Ok(());
     }
 
-    // Find brain/ destination
-    let brain_paths = [
-        dirs::home_dir().map(|h| h.join("dev/supernovae/brain")),
+    // Find private-data/ destination
+    let private_data_paths = [
+        dirs::home_dir().map(|h| h.join("dev/supernovae/private-data")),
     ];
 
-    let brain_path = brain_paths
+    let private_data_path = private_data_paths
         .into_iter()
         .flatten()
         .find(|p| p.exists());
 
-    if let Some(brain) = brain_path {
+    if let Some(private_data) = private_data_path {
         // Restore models/
-        let models_src = novanet_staging.join("brain/models");
+        let models_src = novanet_staging.join("private-data/models");
         if models_src.exists() {
-            let models_dst = brain.join("models");
+            let models_dst = private_data.join("models");
             copy_dir_recursive(&models_src, &models_dst)?;
         }
 
         // Restore seed/
-        let seed_src = novanet_staging.join("brain/seed");
+        let seed_src = novanet_staging.join("private-data/seed");
         if seed_src.exists() {
-            let seed_dst = brain.join("seed");
+            let seed_dst = private_data.join("seed");
             copy_dir_recursive(&seed_src, &seed_dst)?;
         }
     }
@@ -667,7 +667,7 @@ fn restore_spn(staging: &Path) -> Result<()> {
     }
 
     let spn_dir = dirs::home_dir()
-        .expect("home dir")
+        .ok_or_else(|| SpnError::Other(anyhow::anyhow!("$HOME environment variable not set")))?
         .join(".spn");
     fs::create_dir_all(&spn_dir)?;
 
@@ -697,7 +697,8 @@ fn restore_spn(staging: &Path) -> Result<()> {
 fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
     fs::create_dir_all(dst)?;
 
-    for entry in WalkDir::new(src).min_depth(1) {
+    // Security: Don't follow symlinks to prevent infinite loops and data exfiltration
+    for entry in WalkDir::new(src).min_depth(1).follow_links(false) {
         let entry = entry.map_err(|e| SpnError::Other(e.into()))?;
         let path = entry.path();
         let relative = path
@@ -804,12 +805,41 @@ fn extract_tar_gz(archive_path: &Path, dest: &Path) -> Result<()> {
     let file = File::open(archive_path)?;
     let decoder = GzDecoder::new(file);
     let mut archive = Archive::new(decoder);
-    archive.unpack(dest)?;
+
+    // Security: Validate each entry before extraction to prevent path traversal
+    for entry in archive.entries().map_err(|e| SpnError::Other(e.into()))? {
+        let mut entry = entry.map_err(|e| SpnError::Other(e.into()))?;
+        let path = entry.path().map_err(|e| SpnError::Other(e.into()))?;
+
+        // Reject absolute paths
+        if path.is_absolute() {
+            return Err(SpnError::Other(anyhow::anyhow!(
+                "Security: Absolute path in archive rejected: {}",
+                path.display()
+            )));
+        }
+
+        // Reject path traversal attempts (../)
+        if path
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+        {
+            return Err(SpnError::Other(anyhow::anyhow!(
+                "Security: Path traversal attempt rejected: {}",
+                path.display()
+            )));
+        }
+
+        // Safe to extract
+        entry
+            .unpack_in(dest)
+            .map_err(|e| SpnError::Other(e.into()))?;
+    }
     Ok(())
 }
 
 fn find_latest_backup() -> Result<PathBuf> {
-    let backup_path = backup_dir();
+    let backup_path = backup_dir()?;
 
     if !backup_path.exists() {
         return Err(SpnError::NotFound("No backups found".to_string()));
