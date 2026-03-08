@@ -160,7 +160,7 @@ docker run --rm \
 ### Verify Installation
 
 ```bash
-spn --version  # spn-cli 0.14.3
+spn --version  # spn-cli 0.15.0
 spn doctor     # System diagnostic
 
 # Enable shell completions
@@ -2106,7 +2106,7 @@ spn doctor
 🏥 SuperNovae System Diagnostic
 
 Installation:
-  ✅ spn v0.14.0 installed
+  ✅ spn v0.15.0 installed
   ✅ nika v0.17.5 available
   ✅ novanet v0.14.0 available
 
@@ -2376,7 +2376,7 @@ Resolved package versions (committed to git).
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#6366f1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818cf8', 'lineColor': '#a5b4fc', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#312e81'}}}%%
 flowchart TB
-    subgraph SPN["🌟 spn — The Agentic AI Toolkit v0.14.3"]
+    subgraph SPN["🌟 spn — The Agentic AI Toolkit v0.15.0"]
         direction LR
         subgraph OWNED["We Own"]
             W["📋 workflows/<br/>YAML DAGs"]
