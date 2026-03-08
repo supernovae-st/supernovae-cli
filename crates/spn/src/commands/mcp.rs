@@ -64,6 +64,8 @@ pub async fn run(command: McpCommands) -> Result<()> {
             base_url,
             yes,
         } => run_wrap(from_openapi, name, base_url, yes).await,
+        McpCommands::Adopt { all, json } => run_adopt(&mcp, all, json).await,
+        McpCommands::Status { json } => run_status(&mcp, json).await,
     }
 }
 
@@ -1374,6 +1376,380 @@ async fn run_apis_info(name: &str) -> Result<()> {
             println!("    {} {}", ds::muted("Params:"), param_names.join(", "));
         }
     }
+
+    Ok(())
+}
+
+// ============================================================================
+// MCP STATUS
+// ============================================================================
+
+/// Show MCP server status with client sync details.
+async fn run_status(_mcp: &McpConfigManager, json: bool) -> Result<()> {
+    use crate::status::mcp::{collect, SyncState};
+
+    let statuses = collect().await;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&statuses)?);
+        return Ok(());
+    }
+
+    println!(
+        "{}",
+        ds::primary(
+            "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
+        )
+    );
+    println!(
+        "{}",
+        ds::primary(
+            "┃  🔌 MCP SERVER STATUS                                                        ┃"
+        )
+    );
+    println!(
+        "{}",
+        ds::primary(
+            "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
+        )
+    );
+    println!();
+
+    if statuses.is_empty() {
+        println!(
+            "{}",
+            ds::muted("  No MCP servers configured. Run: spn mcp add <name>")
+        );
+        println!();
+        return Ok(());
+    }
+
+    // Header
+    println!(
+        "  {:<18}{:<12}{:<10}{:<20}{}",
+        ds::muted("Server"),
+        ds::muted("Status"),
+        ds::muted("Trans"),
+        ds::muted("Client Sync"),
+        ds::muted("Credential")
+    );
+    println!(
+        "  {}",
+        ds::muted("─".repeat(74))
+    );
+
+    // Server rows
+    for status in &statuses {
+        let name_with_emoji = format!("{} {}", status.emoji, status.name);
+        let status_str = format!("{} {}", status.status.icon(), status.status.label());
+        let transport = match status.transport {
+            crate::status::mcp::Transport::Stdio => "stdio",
+            crate::status::mcp::Transport::Http => "http",
+            crate::status::mcp::Transport::Websocket => "ws",
+        };
+
+        // Client sync icons with labels
+        let sync = &status.client_sync;
+        let sync_str = format!(
+            "CC:{} Cu:{} WS:{} Nk:{}",
+            sync.claude_code.icon(),
+            sync.cursor.icon(),
+            sync.windsurf.icon(),
+            sync.nika.icon()
+        );
+
+        let cred = status
+            .credential
+            .as_ref()
+            .map(|c| format!("→ {}", c))
+            .unwrap_or_else(|| "──".to_string());
+
+        println!(
+            "  {:<18}{:<12}{:<10}{:<20}{}",
+            name_with_emoji, status_str, transport, sync_str, cred
+        );
+    }
+
+    println!();
+
+    // Summary
+    let total = statuses.len();
+    let active = statuses
+        .iter()
+        .filter(|s| !matches!(s.status, crate::status::mcp::ServerStatus::Disabled))
+        .count();
+    let fully_synced = statuses
+        .iter()
+        .filter(|s| {
+            let sync = &s.client_sync;
+            (sync.claude_code == SyncState::Synced || sync.claude_code == SyncState::Disabled)
+                && (sync.cursor == SyncState::Synced || sync.cursor == SyncState::Disabled)
+                && (sync.windsurf == SyncState::Synced || sync.windsurf == SyncState::Disabled)
+                && (sync.nika == SyncState::Synced || sync.nika == SyncState::Disabled)
+        })
+        .count();
+
+    println!(
+        "  {}/{} active  •  {}/{} synced",
+        ds::highlight(active.to_string()),
+        total,
+        ds::highlight(fully_synced.to_string()),
+        total
+    );
+    println!();
+
+    // Legend
+    println!("  {}", ds::muted("Legend: ● synced  ○ pending  ⊘ disabled"));
+    println!(
+        "  {}",
+        ds::muted("        CC=Claude Code  Cu=Cursor  WS=Windsurf  Nk=Nika")
+    );
+    println!();
+
+    // Hint for foreign MCPs
+    println!(
+        "  {} {}",
+        ds::muted("Tip:"),
+        ds::muted("Run `spn mcp adopt` to adopt MCPs configured directly in editors")
+    );
+
+    Ok(())
+}
+
+// ============================================================================
+// FOREIGN MCP ADOPTION
+// ============================================================================
+
+/// Adopt foreign MCPs from editors.
+async fn run_adopt(mcp: &McpConfigManager, all: bool, json: bool) -> Result<()> {
+    use crate::daemon::{diff_mcp_configs, parse_client_config};
+    use crate::sync::adapters::{ClaudeCodeAdapter, CursorAdapter, IdeAdapter, WindsurfAdapter};
+    use dialoguer::{Confirm, MultiSelect};
+
+    let home = dirs::home_dir().ok_or_else(|| SpnError::ConfigError("HOME not set".into()))?;
+
+    // Get spn's MCP servers and convert to spn_core::McpServer for diff_mcp_configs
+    let spn_servers_internal = mcp.list_all_servers()?;
+    let spn_servers: Vec<(String, spn_core::McpServer)> = spn_servers_internal
+        .iter()
+        .map(|(name, server)| {
+            let core_server = spn_core::McpServer::stdio(
+                name.as_str(),
+                server.command.as_str(),
+                server.args.iter().map(|s| s.as_str()).collect(),
+            )
+            .with_enabled(server.enabled);
+            (name.clone(), core_server)
+        })
+        .collect();
+
+    // Collect foreign MCPs from all clients
+    let mut all_foreign: Vec<(String, McpServer, String)> = Vec::new(); // (name, server, source)
+
+    // Helper to convert spn_core::McpServer to crate::mcp::McpServer
+    let convert_server = |server: &spn_core::McpServer| -> McpServer {
+        let cmd = server.command.as_deref().unwrap_or("npx");
+        McpServer::new(cmd)
+            .with_args(server.args.clone())
+            .with_enabled(server.enabled)
+    };
+
+    // Check Claude Code
+    let claude = ClaudeCodeAdapter;
+    if claude.is_available(&home) {
+        let config_path = claude.config_path(&home);
+        if config_path.exists() {
+            if let Ok(client_servers) = parse_client_config(&config_path) {
+                let diff = diff_mcp_configs(&spn_servers, &client_servers);
+                for (name, server) in diff.foreign {
+                    let mcp_server = convert_server(&server);
+                    all_foreign.push((name, mcp_server, "Claude Code".to_string()));
+                }
+            }
+        }
+    }
+
+    // Check Cursor
+    let cursor = CursorAdapter;
+    if cursor.is_available(&home) {
+        let config_path = cursor.config_path(&home);
+        if config_path.exists() {
+            if let Ok(client_servers) = parse_client_config(&config_path) {
+                let diff = diff_mcp_configs(&spn_servers, &client_servers);
+                for (name, server) in diff.foreign {
+                    // Skip if already found in another client
+                    if all_foreign.iter().any(|(n, _, _)| n == &name) {
+                        continue;
+                    }
+                    let mcp_server = convert_server(&server);
+                    all_foreign.push((name, mcp_server, "Cursor".to_string()));
+                }
+            }
+        }
+    }
+
+    // Check Windsurf
+    let windsurf = WindsurfAdapter;
+    if windsurf.is_available(&home) {
+        let config_path = windsurf.config_path(&home);
+        if config_path.exists() {
+            if let Ok(client_servers) = parse_client_config(&config_path) {
+                let diff = diff_mcp_configs(&spn_servers, &client_servers);
+                for (name, server) in diff.foreign {
+                    // Skip if already found in another client
+                    if all_foreign.iter().any(|(n, _, _)| n == &name) {
+                        continue;
+                    }
+                    let mcp_server = convert_server(&server);
+                    all_foreign.push((name, mcp_server, "Windsurf".to_string()));
+                }
+            }
+        }
+    }
+
+    // Handle empty case
+    if all_foreign.is_empty() {
+        if json {
+            println!("[]");
+        } else {
+            println!(
+                "{} {}",
+                ds::success("✓"),
+                ds::success("No foreign MCPs found — all editors are in sync with spn")
+            );
+        }
+        return Ok(());
+    }
+
+    // JSON output
+    if json {
+        let json_output: Vec<_> = all_foreign
+            .iter()
+            .map(|(name, server, source)| {
+                serde_json::json!({
+                    "name": name,
+                    "command": server.command,
+                    "args": server.args,
+                    "source": source,
+                })
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&json_output).unwrap());
+        return Ok(());
+    }
+
+    // Show found foreign MCPs
+    println!(
+        "{}",
+        ds::primary("╔═══════════════════════════════════════════════════════════════════════════════╗")
+    );
+    println!(
+        "{}",
+        ds::primary("║  🔍 FOREIGN MCP DETECTION                                                     ║")
+    );
+    println!(
+        "{}",
+        ds::primary("╚═══════════════════════════════════════════════════════════════════════════════╝")
+    );
+    println!();
+
+    println!(
+        "Found {} foreign MCP(s) in your editors:",
+        ds::highlight(all_foreign.len().to_string())
+    );
+    println!();
+
+    for (name, server, source) in &all_foreign {
+        let cmd_display = if server.command.len() > 30 {
+            format!("{}...", &server.command[..27])
+        } else {
+            server.command.clone()
+        };
+        println!(
+            "  {} {} {} {}",
+            ds::primary("•"),
+            ds::highlight(name),
+            ds::muted(format!("({})", cmd_display)),
+            ds::muted(format!("← {}", source))
+        );
+    }
+    println!();
+
+    // Adopt all or select
+    let to_adopt: Vec<&(String, McpServer, String)> = if all {
+        all_foreign.iter().collect()
+    } else {
+        let labels: Vec<String> = all_foreign
+            .iter()
+            .map(|(name, _, source)| format!("{} (from {})", name, source))
+            .collect();
+
+        let selections = MultiSelect::new()
+            .with_prompt("Select MCPs to adopt (space to toggle, enter to confirm)")
+            .items(&labels)
+            .interact()
+            .map_err(|e| SpnError::CommandFailed(format!("Selection error: {}", e)))?;
+
+        if selections.is_empty() {
+            println!("{}", ds::muted("No MCPs selected."));
+            return Ok(());
+        }
+
+        selections.iter().map(|&i| &all_foreign[i]).collect()
+    };
+
+    // Confirm adoption
+    if !all {
+        let confirm = Confirm::new()
+            .with_prompt(format!(
+                "Adopt {} MCP(s) to ~/.spn/mcp.yaml?",
+                to_adopt.len()
+            ))
+            .default(true)
+            .interact()
+            .map_err(|e| SpnError::CommandFailed(format!("Confirm error: {}", e)))?;
+
+        if !confirm {
+            println!("{}", ds::muted("Adoption cancelled."));
+            return Ok(());
+        }
+    }
+
+    // Adopt the selected MCPs
+    println!();
+    for (name, server, source) in to_adopt {
+        match mcp.add_server(name, server.clone(), McpScope::Global) {
+            Ok(()) => {
+                println!(
+                    "  {} {} {} {}",
+                    ds::success("✓"),
+                    ds::success("Adopted"),
+                    ds::highlight(name),
+                    ds::muted(format!("from {}", source))
+                );
+            }
+            Err(e) => {
+                println!(
+                    "  {} {} {} {}",
+                    ds::error("✗"),
+                    ds::error("Failed"),
+                    ds::highlight(name),
+                    ds::muted(format!("({})", e))
+                );
+            }
+        }
+    }
+
+    println!();
+    println!(
+        "{} {}",
+        ds::success("✓"),
+        ds::success("Foreign MCPs adopted to ~/.spn/mcp.yaml")
+    );
+    println!(
+        "{}",
+        ds::hint_line("Run `spn sync` to sync back to all editors")
+    );
 
     Ok(())
 }

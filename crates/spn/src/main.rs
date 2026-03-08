@@ -533,6 +533,23 @@ enum McpCommands {
         #[arg(long, short = 'y')]
         yes: bool,
     },
+    /// Adopt foreign MCPs from editors (Claude Code, Cursor, Windsurf)
+    Adopt {
+        /// Adopt all foreign MCPs without prompting
+        #[arg(short, long)]
+        all: bool,
+
+        /// Show foreign MCPs as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show MCP server status with client sync details
+    #[command(visible_alias = "st")]
+    Status {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]

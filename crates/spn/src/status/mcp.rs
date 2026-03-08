@@ -4,6 +4,7 @@
 //! - Connection status
 //! - Transport type
 //! - Associated credential
+//! - Client sync status
 
 use serde::Serialize;
 
@@ -14,6 +15,8 @@ use crate::mcp::config_manager;
 pub struct McpServerStatus {
     /// Server name.
     pub name: String,
+    /// Server emoji for display.
+    pub emoji: &'static str,
     /// Current status.
     pub status: ServerStatus,
     /// Transport type.
@@ -22,6 +25,70 @@ pub struct McpServerStatus {
     pub credential: Option<String>,
     /// Server command.
     pub command: String,
+    /// Sync status across clients.
+    pub client_sync: ClientSyncStatus,
+}
+
+/// Sync status for each supported client.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct ClientSyncStatus {
+    /// Claude Code sync state.
+    pub claude_code: SyncState,
+    /// Cursor sync state.
+    pub cursor: SyncState,
+    /// Windsurf sync state.
+    pub windsurf: SyncState,
+    /// Nika sync state.
+    pub nika: SyncState,
+}
+
+/// Sync state for a single client.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SyncState {
+    /// Server is synced to this client.
+    Synced,
+    /// Sync pending (spn has it, client doesn't).
+    #[default]
+    Pending,
+    /// Client is disabled/not available.
+    Disabled,
+}
+
+impl SyncState {
+    /// Icon for display.
+    pub fn icon(&self) -> &'static str {
+        match self {
+            SyncState::Synced => "●",
+            SyncState::Pending => "○",
+            SyncState::Disabled => "⊘",
+        }
+    }
+}
+
+/// Get emoji for an MCP server by name.
+pub fn mcp_emoji(name: &str) -> &'static str {
+    match name {
+        "neo4j" | "@neo4j/mcp-neo4j" => "🔷",
+        "github" | "github-mcp" => "🐙",
+        "slack" | "slack-mcp" => "💬",
+        "perplexity" | "perplexity-mcp" => "🔮",
+        "firecrawl" | "firecrawl-mcp" => "🔥",
+        "supadata" | "supadata-mcp" => "📺",
+        "dataforseo" => "📊",
+        "ahrefs" | "ahrefs-mcp" => "🔗",
+        "context7" => "📚",
+        "novanet" | "novanet-mcp" => "🌐",
+        "sequential-thinking" => "🧠",
+        "21st" | "magic" => "🎨",
+        "spn-mcp" => "⚡",
+        "postgres" | "postgresql" => "🐘",
+        "sqlite" => "🗃️",
+        "redis" => "🔴",
+        "elasticsearch" => "🔍",
+        "mongodb" => "🍃",
+        _ => "🔌",
+    }
 }
 
 /// Server connection status.
@@ -101,6 +168,9 @@ pub async fn collect() -> Vec<McpServerStatus> {
         Err(_) => return vec![],
     };
 
+    // Check client sync status
+    let sync_status = check_client_sync(&servers);
+
     let mut statuses = Vec::new();
 
     for (name, server) in servers {
@@ -121,17 +191,111 @@ pub async fn collect() -> Vec<McpServerStatus> {
             };
 
         let credential = infer_credential(&name);
+        let emoji = mcp_emoji(&name);
+
+        // Get client sync for this server
+        let client_sync = sync_status
+            .get(&name)
+            .cloned()
+            .unwrap_or_default();
 
         statuses.push(McpServerStatus {
             name,
+            emoji,
             status,
             transport,
             credential,
             command: server.command,
+            client_sync,
         });
     }
 
     statuses
+}
+
+/// Check which clients have each MCP server synced.
+fn check_client_sync(
+    spn_servers: &[(String, crate::mcp::McpServer)],
+) -> rustc_hash::FxHashMap<String, ClientSyncStatus> {
+    use crate::sync::adapters::{ClaudeCodeAdapter, CursorAdapter, IdeAdapter, WindsurfAdapter};
+    use rustc_hash::FxHashMap;
+    use std::path::PathBuf;
+
+    let mut result: FxHashMap<String, ClientSyncStatus> = FxHashMap::default();
+
+    // Initialize all servers with default (pending) status
+    for (name, _) in spn_servers {
+        result.insert(name.clone(), ClientSyncStatus::default());
+    }
+
+    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+
+    // Check Claude Code
+    let claude = ClaudeCodeAdapter;
+    if claude.is_available(&home) {
+        if let Ok(content) = std::fs::read_to_string(claude.config_path(&home)) {
+            if let Ok(config) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(servers) = config.get("mcpServers").and_then(|s| s.as_object()) {
+                    for (name, sync) in result.iter_mut() {
+                        if servers.contains_key(name) {
+                            sync.claude_code = SyncState::Synced;
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        for sync in result.values_mut() {
+            sync.claude_code = SyncState::Disabled;
+        }
+    }
+
+    // Check Cursor
+    let cursor = CursorAdapter;
+    if cursor.is_available(&home) {
+        if let Ok(content) = std::fs::read_to_string(cursor.config_path(&home)) {
+            if let Ok(config) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(servers) = config.get("mcpServers").and_then(|s| s.as_object()) {
+                    for (name, sync) in result.iter_mut() {
+                        if servers.contains_key(name) {
+                            sync.cursor = SyncState::Synced;
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        for sync in result.values_mut() {
+            sync.cursor = SyncState::Disabled;
+        }
+    }
+
+    // Check Windsurf
+    let windsurf = WindsurfAdapter;
+    if windsurf.is_available(&home) {
+        if let Ok(content) = std::fs::read_to_string(windsurf.config_path(&home)) {
+            if let Ok(config) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(servers) = config.get("mcpServers").and_then(|s| s.as_object()) {
+                    for (name, sync) in result.iter_mut() {
+                        if servers.contains_key(name) {
+                            sync.windsurf = SyncState::Synced;
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        for sync in result.values_mut() {
+            sync.windsurf = SyncState::Disabled;
+        }
+    }
+
+    // Nika: Check ~/.spn/mcp.yaml (always synced if in spn config)
+    for sync in result.values_mut() {
+        sync.nika = SyncState::Synced;
+    }
+
+    result
 }
 
 #[cfg(test)]
@@ -149,5 +313,29 @@ mod tests {
     fn test_server_status_icons() {
         assert_eq!(ServerStatus::Connected.icon(), "✅");
         assert_eq!(ServerStatus::Disabled.icon(), "⏸️");
+    }
+
+    #[test]
+    fn test_mcp_emoji() {
+        assert_eq!(mcp_emoji("neo4j"), "🔷");
+        assert_eq!(mcp_emoji("github"), "🐙");
+        assert_eq!(mcp_emoji("perplexity"), "🔮");
+        assert_eq!(mcp_emoji("unknown-server"), "🔌");
+    }
+
+    #[test]
+    fn test_sync_state_icons() {
+        assert_eq!(SyncState::Synced.icon(), "●");
+        assert_eq!(SyncState::Pending.icon(), "○");
+        assert_eq!(SyncState::Disabled.icon(), "⊘");
+    }
+
+    #[test]
+    fn test_client_sync_default() {
+        let sync = ClientSyncStatus::default();
+        assert_eq!(sync.claude_code, SyncState::Pending);
+        assert_eq!(sync.cursor, SyncState::Pending);
+        assert_eq!(sync.windsurf, SyncState::Pending);
+        assert_eq!(sync.nika, SyncState::Pending);
     }
 }

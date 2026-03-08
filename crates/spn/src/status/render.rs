@@ -255,12 +255,13 @@ fn render_mcp_servers(servers: &[McpServerStatus]) {
             ds::muted("No MCP servers configured. Run: spn mcp add neo4j                        ")
         );
     } else {
+        // Header with client sync legend
         println!(
-            "│  {:<14}{:<12}{:<12}{:<20}{:<16}│",
+            "│  {:<16}{:<10}{:<10}{:<18}{:<20}│",
             ds::muted("Server"),
             ds::muted("Status"),
-            ds::muted("Transport"),
-            ds::muted("Command"),
+            ds::muted("Trans"),
+            ds::muted("Sync CC Cu WS Nk"),
             ds::muted("Credential")
         );
         println!(
@@ -279,36 +280,55 @@ fn render_mcp_servers(servers: &[McpServerStatus]) {
                 .credential
                 .as_ref()
                 .map(|c| format!("→ {}", c))
-                .unwrap_or_else(|| "(no key)".to_string());
+                .unwrap_or_else(|| "──".to_string());
 
-            // Truncate command if too long
-            let cmd = if server.command.len() > 18 {
-                format!("{}…", &server.command[..17])
-            } else {
-                server.command.clone()
-            };
+            // Client sync icons: ● synced, ○ pending, ⊘ disabled
+            let sync = &server.client_sync;
+            let sync_str = format!(
+                "     {}  {}  {}  {}",
+                sync.claude_code.icon(),
+                sync.cursor.icon(),
+                sync.windsurf.icon(),
+                sync.nika.icon()
+            );
+
+            // Server name with emoji
+            let server_name = format!("{} {}", server.emoji, server.name);
 
             let line = format!(
-                "  {:<14}{:<12}{:<12}{:<20}{:<16}",
-                server.name, status_str, transport, cmd, cred
+                "  {:<16}{:<10}{:<10}{:<18}{:<18}",
+                server_name, status_str, transport, sync_str, cred
             );
             println!("│{}│", line);
         }
 
         println!("│{:width$}│", "", width = WIDTH);
 
+        // Summary with sync stats
         let active = servers
             .iter()
             .filter(|s| !matches!(s.status, super::mcp::ServerStatus::Disabled))
             .count();
         let total = servers.len();
-        println!(
-            "│  {}/{} active{:width$}│",
-            active,
-            total,
-            "",
-            width = WIDTH - 12
+
+        // Count fully synced servers (all enabled clients synced)
+        let fully_synced = servers
+            .iter()
+            .filter(|s| {
+                use super::mcp::SyncState;
+                let sync = &s.client_sync;
+                (sync.claude_code == SyncState::Synced || sync.claude_code == SyncState::Disabled)
+                    && (sync.cursor == SyncState::Synced || sync.cursor == SyncState::Disabled)
+                    && (sync.windsurf == SyncState::Synced || sync.windsurf == SyncState::Disabled)
+                    && (sync.nika == SyncState::Synced || sync.nika == SyncState::Disabled)
+            })
+            .count();
+
+        let summary = format!(
+            "  {}/{} active   │   {}/{} synced   │   ● synced  ○ pending  ⊘ disabled",
+            active, total, fully_synced, total
         );
+        println!("│{:<width$}│", summary, width = WIDTH);
     }
 
     println!("│{:width$}│", "", width = WIDTH);
