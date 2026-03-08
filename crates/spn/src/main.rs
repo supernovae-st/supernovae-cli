@@ -18,7 +18,6 @@ mod config;
 mod daemon;
 mod diff;
 mod error;
-mod first_run;
 mod index;
 mod interop;
 mod manifest;
@@ -32,8 +31,6 @@ mod sync;
 mod tui;
 mod ux;
 mod welcome;
-
-use crate::ux::design_system as ds;
 
 // ============================================================================
 // CLI STYLES - Colorized help for v0.14.0
@@ -1233,65 +1230,6 @@ enum ProviderCommands {
     },
 }
 
-// ============================================================================
-// FIRST-RUN EXPERIENCE
-// ============================================================================
-
-/// Handle the first-run welcome experience
-///
-/// Shows the welcome screen and handles user choices:
-/// - QuickSetup: Runs the setup wizard
-/// - TakeTour: Shows feature tour, then loops back
-/// - ShowHelp: Shows --help and marks complete
-/// - SkipForever: Marks complete and exits
-async fn handle_first_run() -> error::Result<()> {
-    use welcome::WelcomeAction;
-
-    loop {
-        match welcome::show()? {
-            WelcomeAction::QuickSetup => {
-                // Run the setup wizard
-                println!();
-                println!("  {} Starting setup...", ds::primary("→"));
-                println!();
-
-                // Run setup command
-                let result = commands::setup::run(None, false).await;
-                if result.is_ok() {
-                    welcome::show_setup_complete();
-                }
-                first_run::mark_complete()?;
-                return Ok(());
-            }
-            WelcomeAction::TakeTour => {
-                welcome::show_tour();
-                // After tour, loop back to show welcome again
-                // User can then choose setup or skip
-                continue;
-            }
-            WelcomeAction::ShowHelp => {
-                // Show help and mark as complete
-                first_run::mark_complete()?;
-                // Re-invoke with --help
-                let _ = Cli::try_parse_from(["spn", "--help"]);
-                return Ok(());
-            }
-            WelcomeAction::SkipForever => {
-                // Mark as complete and exit
-                first_run::mark_complete()?;
-                println!();
-                println!(
-                    "  {} Run {} anytime to get started.",
-                    ds::success("✓"),
-                    ds::primary("spn setup")
-                );
-                println!();
-                return Ok(());
-            }
-        }
-    }
-}
-
 #[tokio::main]
 async fn main() {
     // Check for verbose flag early (before full CLI parsing) to set correct log level
@@ -1312,17 +1250,11 @@ async fn main() {
         .with_env_filter(format!("spn={}", log_level))
         .init();
 
-    // Check for first-run experience BEFORE parsing CLI
-    // This allows us to show welcome screen when user just types "spn"
-    // Use count() instead of collect() to avoid unnecessary allocation
+    // Check if user just typed "spn" with no args
+    // Show the comprehensive help screen directly
     let has_no_args = std::env::args().count() == 1;
-    if has_no_args && first_run::is_first_run() {
-        // No subcommand provided and it's first run - show welcome
-        if let Err(e) = handle_first_run().await {
-            // Use SpnError::print() for consistent error formatting with help
-            e.print();
-            std::process::exit(1);
-        }
+    if has_no_args {
+        ux::help_screen::print();
         return;
     }
 
@@ -1332,17 +1264,8 @@ async fn main() {
         Err(e) => {
             // Check if this is a missing subcommand (user just ran "spn")
             if e.kind() == clap::error::ErrorKind::MissingSubcommand {
-                // Not first run but no command - show brief help
-                println!();
-                println!(
-                    "  {} {}",
-                    ds::primary("spn"),
-                    ds::muted(format!("v{}", env!("CARGO_PKG_VERSION")))
-                );
-                println!();
-                println!("  Run {} to see all commands", ds::primary("spn --help"));
-                println!("  Run {} to learn about features", ds::primary("spn topic"));
-                println!();
+                // Not first run but no command - show full help screen
+                ux::help_screen::print();
                 std::process::exit(0);
             }
 

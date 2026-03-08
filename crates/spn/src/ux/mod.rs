@@ -36,6 +36,7 @@
 #![allow(dead_code)]
 
 pub mod design_system;
+pub mod help_screen;
 pub mod progress;
 pub mod tables;
 pub mod themes;
