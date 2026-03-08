@@ -43,6 +43,7 @@ pub mod jobs;
 pub mod mcp;
 pub mod memory;
 mod model_manager;
+pub mod proactive;
 mod secrets;
 mod server;
 pub mod service;
@@ -58,6 +59,11 @@ pub use agents::{
 pub use jobs::{Job, JobId, JobScheduler, JobState, JobStatus, JobStore};
 #[allow(unused_imports)]
 pub use memory::{MemoryEntry, MemoryKey, MemoryNamespace, MemoryStore};
+#[allow(unused_imports)]
+pub use proactive::{
+    ContextTrigger, ProactiveSuggestion, SuggestionAnalyzer, SuggestionCategory, SuggestionId,
+    SuggestionPriority, SuggestionSource, TriggerCondition,
+};
 #[allow(unused_imports)]
 pub use traces::{ReasoningTrace, TraceId, TraceMetadata, TraceStep, TraceStepKind, TraceStore};
 pub use model_manager::ModelManager;
