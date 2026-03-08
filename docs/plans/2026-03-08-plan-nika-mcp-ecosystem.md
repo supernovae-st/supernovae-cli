@@ -805,13 +805,14 @@ pub fn register_ecosystem_mcps(tools: &EcosystemTools) -> Result<(), Error> {
 
 ## Verification Checklist
 
-### Phase 1 (Auto-Install)
-- [ ] `spn setup` detects missing Nika/NovaNet
-- [ ] Interactive prompt offers installation
-- [ ] `cargo install` works when cargo available
-- [ ] Binary download fallback works
-- [ ] `spn nk` prompts for install if missing
-- [ ] Non-interactive mode errors cleanly
+### Phase 1 (Auto-Install) ✅ COMPLETE
+- [x] `spn setup` detects missing Nika/NovaNet
+- [x] Interactive prompt offers installation
+- [x] `cargo install` works when cargo available
+- [x] `brew install` fallback available
+- [x] `spn nk` prompts for install if missing
+- [x] `spn nv` prompts for install if missing
+- [x] Non-interactive mode errors cleanly
 
 ### Phase 2 (nika-mcp)
 - [ ] `nika-mcp` binary builds and runs
