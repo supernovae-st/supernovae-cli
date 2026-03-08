@@ -109,8 +109,7 @@ impl Stats {
     /// if Ollama is running and count models.
     fn collect_ollama_stats(&mut self) {
         // Parse Ollama host from env or use default
-        let host = std::env::var("OLLAMA_HOST")
-            .unwrap_or_else(|_| "127.0.0.1:11434".to_string());
+        let host = std::env::var("OLLAMA_HOST").unwrap_or_else(|_| "127.0.0.1:11434".to_string());
 
         // Strip protocol if present
         let addr = host
@@ -119,7 +118,9 @@ impl Stats {
 
         // Try to connect with a short timeout (30ms)
         let stream = TcpStream::connect_timeout(
-            &addr.parse().unwrap_or_else(|_| "127.0.0.1:11434".parse().unwrap()),
+            &addr
+                .parse()
+                .unwrap_or_else(|_| "127.0.0.1:11434".parse().unwrap()),
             Duration::from_millis(30),
         );
 
@@ -201,7 +202,11 @@ impl Stats {
         if self.mcp_servers == 0 {
             "none configured".to_string()
         } else {
-            format!("{} server{}", self.mcp_servers, if self.mcp_servers == 1 { "" } else { "s" })
+            format!(
+                "{} server{}",
+                self.mcp_servers,
+                if self.mcp_servers == 1 { "" } else { "s" }
+            )
         }
     }
 

@@ -29,7 +29,10 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
+    widgets::{
+        Block, Borders, Clear, List, ListItem, ListState, Paragraph, Scrollbar,
+        ScrollbarOrientation, ScrollbarState,
+    },
     Frame, Terminal,
 };
 
@@ -219,8 +222,14 @@ static SECTIONS: &[Section] = &[
 /// Navigation item - either a section header or a command.
 #[derive(Debug, Clone)]
 enum NavItem {
-    Section { index: usize, expanded: bool },
-    Command { section_index: usize, cmd_index: usize },
+    Section {
+        index: usize,
+        expanded: bool,
+    },
+    Command {
+        section_index: usize,
+        cmd_index: usize,
+    },
 }
 
 /// Main TUI application state.
@@ -261,7 +270,10 @@ impl HelpTui {
         self.items.clear();
         for (idx, section) in SECTIONS.iter().enumerate() {
             let expanded = self.expanded[idx];
-            self.items.push(NavItem::Section { index: idx, expanded });
+            self.items.push(NavItem::Section {
+                index: idx,
+                expanded,
+            });
             if expanded {
                 for cmd_idx in 0..section.commands.len() {
                     self.items.push(NavItem::Command {
@@ -411,7 +423,9 @@ impl HelpTui {
             .border_style(Style::default().fg(Color::Cyan))
             .title(Span::styled(
                 title,
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
             ));
         f.render_widget(block, area);
     }
@@ -559,10 +573,7 @@ impl HelpTui {
                             format!("[{}] ", section.icon),
                             Style::default().fg(section.color),
                         ),
-                        Span::styled(
-                            section.name,
-                            Style::default().fg(Color::DarkGray),
-                        ),
+                        Span::styled(section.name, Style::default().fg(Color::DarkGray)),
                     ]),
                     Line::from(""),
                     Line::from(vec![Span::styled(
@@ -598,7 +609,8 @@ impl HelpTui {
 
     /// Render the footer with keybindings.
     fn render_footer(&self, f: &mut Frame<'_>, area: Rect) {
-        let hints = " j/k: navigate | Enter: expand | e: expand all | c: collapse all | ?: help | q: quit ";
+        let hints =
+            " j/k: navigate | Enter: expand | e: expand all | c: collapse all | ?: help | q: quit ";
         let footer = Paragraph::new(hints).style(Style::default().fg(Color::DarkGray));
         f.render_widget(footer, area);
     }

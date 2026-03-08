@@ -28,11 +28,13 @@ fn print_header() {
     // Box top
     println!(
         "{}",
-        style("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓").cyan()
+        style("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")
+            .cyan()
     );
     println!(
         "{}",
-        style("┃                                                                                ┃").cyan()
+        style("┃                                                                                ┃")
+            .cyan()
     );
 
     // ASCII Art - SPN-CLI
@@ -57,12 +59,17 @@ fn print_header() {
     // Version line
     println!(
         "{}",
-        style("┃                                                                                ┃").cyan()
+        style("┃                                                                                ┃")
+            .cyan()
     );
     println!(
         "{}{}{}{}",
         style("┃").cyan(),
-        style(format!("                              v{}                              ", version)).dim(),
+        style(format!(
+            "                              v{}                              ",
+            version
+        ))
+        .dim(),
         style("                ").dim(),
         style("┃").cyan()
     );
@@ -70,23 +77,28 @@ fn print_header() {
     // Tagline
     println!(
         "{}",
-        style("┃                                                                                ┃").cyan()
+        style("┃                                                                                ┃")
+            .cyan()
     );
     println!(
         "{}       {}{}",
         style("┃").cyan(),
-        style("T h e   A g e n t i c   A I   T o o l k i t").white().bold(),
+        style("T h e   A g e n t i c   A I   T o o l k i t")
+            .white()
+            .bold(),
         style("                        ┃").cyan()
     );
     println!(
         "{}",
-        style("┃                                                                                ┃").cyan()
+        style("┃                                                                                ┃")
+            .cyan()
     );
 
     // Box bottom
     println!(
         "{}",
-        style("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛").cyan()
+        style("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")
+            .cyan()
     );
     println!();
 }
@@ -114,11 +126,13 @@ fn print_intro() {
 fn print_how_it_works() {
     println!(
         "{}",
-        style("┌─ HOW IT WORKS ───────────────────────────────────────────────────────────────┐").cyan()
+        style("┌─ HOW IT WORKS ───────────────────────────────────────────────────────────────┐")
+            .cyan()
     );
     println!(
         "{}",
-        style("│                                                                              │").cyan()
+        style("│                                                                              │")
+            .cyan()
     );
 
     // Architecture diagram
@@ -232,7 +246,8 @@ fn print_how_it_works() {
     );
     println!(
         "{}",
-        style("└──────────────────────────────────────────────────────────────────────────────┘").cyan()
+        style("└──────────────────────────────────────────────────────────────────────────────┘")
+            .cyan()
     );
     println!();
 }
@@ -244,7 +259,8 @@ fn print_how_it_works() {
 fn print_get_started() {
     println!(
         "{}",
-        style("┌─ 🚀 GET STARTED ─────────────────────────────────────────────────────────────┐").green()
+        style("┌─ 🚀 GET STARTED ─────────────────────────────────────────────────────────────┐")
+            .green()
     );
     println!(
         "{}                                                                              {}",
@@ -277,7 +293,8 @@ fn print_get_started() {
     );
     println!(
         "{}",
-        style("└──────────────────────────────────────────────────────────────────────────────┘").green()
+        style("└──────────────────────────────────────────────────────────────────────────────┘")
+            .green()
     );
     println!();
 }
@@ -289,128 +306,161 @@ fn print_get_started() {
 fn print_commands() {
     // Row 1: SECRETS + MODELS
     print_two_columns(
-        ("🔐 SECRETS", "yellow", &[
-            ("provider list", "Status"),
-            ("provider set", "Store"),
-            ("provider get", "Fetch"),
-            ("provider delete", "Remove"),
-            ("provider migrate", "Import"),
-            ("provider test", "Verify"),
-            ("provider status", "Full"),
-            ("", ""),
-            ("secrets doctor", "Health"),
-            ("secrets export", "Backup"),
-            ("secrets import", "Restore"),
-        ]),
-        ("🦙 MODELS", "magenta", &[
-            ("model list", "Show installed"),
-            ("model pull", "Download from Ollama"),
-            ("model load", "Load into VRAM"),
-            ("model unload", "Release memory"),
-            ("model delete", "Remove local"),
-            ("model status", "Running + VRAM"),
-            ("model search", "Browse registry"),
-            ("model info", "Details + params"),
-            ("model run", "Quick inference"),
-            ("model recommend", "Suggest for use case"),
-            ("", ""),
-        ]),
+        (
+            "🔐 SECRETS",
+            "yellow",
+            &[
+                ("provider list", "Status"),
+                ("provider set", "Store"),
+                ("provider get", "Fetch"),
+                ("provider delete", "Remove"),
+                ("provider migrate", "Import"),
+                ("provider test", "Verify"),
+                ("provider status", "Full"),
+                ("", ""),
+                ("secrets doctor", "Health"),
+                ("secrets export", "Backup"),
+                ("secrets import", "Restore"),
+            ],
+        ),
+        (
+            "🦙 MODELS",
+            "magenta",
+            &[
+                ("model list", "Show installed"),
+                ("model pull", "Download from Ollama"),
+                ("model load", "Load into VRAM"),
+                ("model unload", "Release memory"),
+                ("model delete", "Remove local"),
+                ("model status", "Running + VRAM"),
+                ("model search", "Browse registry"),
+                ("model info", "Details + params"),
+                ("model run", "Quick inference"),
+                ("model recommend", "Suggest for use case"),
+                ("", ""),
+            ],
+        ),
     );
 
     // Row 2: MCP + PACKAGES
     print_two_columns(
-        ("🔌 MCP SERVERS", "blue", &[
-            ("mcp add", "Add server"),
-            ("mcp remove", "Remove"),
-            ("mcp list", "Show all"),
-            ("mcp test", "Connection"),
-            ("mcp logs", "View logs"),
-            ("mcp serve", "REST→MCP"),
-            ("mcp wrap", "API wizard"),
-            ("mcp apis", "Manage REST"),
-            ("", ""),
-            ("", "44 aliases: neo4j github"),
-            ("", "slack postgres sqlite..."),
-        ]),
-        ("📦 PACKAGES", "yellow", &[
-            ("add", "Add to project"),
-            ("remove", "Remove package"),
-            ("install", "From spn.yaml"),
-            ("update", "Upgrade to latest"),
-            ("list", "Show installed"),
-            ("search", "Browse registry"),
-            ("info", "Package details"),
-            ("outdated", "Check for updates"),
-            ("publish", "Publish to registry"),
-            ("version", "Bump semver"),
-            ("", ""),
-        ]),
+        (
+            "🔌 MCP SERVERS",
+            "blue",
+            &[
+                ("mcp add", "Add server"),
+                ("mcp remove", "Remove"),
+                ("mcp list", "Show all"),
+                ("mcp test", "Connection"),
+                ("mcp logs", "View logs"),
+                ("mcp serve", "REST→MCP"),
+                ("mcp wrap", "API wizard"),
+                ("mcp apis", "Manage REST"),
+                ("", ""),
+                ("", "44 aliases: neo4j github"),
+                ("", "slack postgres sqlite..."),
+            ],
+        ),
+        (
+            "📦 PACKAGES",
+            "yellow",
+            &[
+                ("add", "Add to project"),
+                ("remove", "Remove package"),
+                ("install", "From spn.yaml"),
+                ("update", "Upgrade to latest"),
+                ("list", "Show installed"),
+                ("search", "Browse registry"),
+                ("info", "Package details"),
+                ("outdated", "Check for updates"),
+                ("publish", "Publish to registry"),
+                ("version", "Bump semver"),
+                ("", ""),
+            ],
+        ),
     );
 
     // Row 3: JOBS + SKILLS
     print_two_columns(
-        ("⚡ JOBS", "cyan", &[
-            ("jobs list", "Background"),
-            ("jobs submit", "Queue work"),
-            ("jobs status", "Check job"),
-            ("jobs cancel", "Abort job"),
-            ("jobs output", "View stdout"),
-            ("jobs clear", "Cleanup old"),
-            ("", ""),
-            ("", "Max 4 concurrent"),
-            ("", "Priority queue"),
-            ("", "Nika integration"),
-            ("", ""),
-        ]),
-        ("🎯 SKILLS", "green", &[
-            ("skill add", "Install from skills.sh"),
-            ("skill remove", "Uninstall"),
-            ("skill list", "Show installed"),
-            ("skill search", "Browse 57K+ skills"),
-            ("", ""),
-            ("", "Syncs to:"),
-            ("", ".claude/"),
-            ("", ".cursor/"),
-            ("", ".windsurf/"),
-            ("", ""),
-            ("", ""),
-        ]),
+        (
+            "⚡ JOBS",
+            "cyan",
+            &[
+                ("jobs list", "Background"),
+                ("jobs submit", "Queue work"),
+                ("jobs status", "Check job"),
+                ("jobs cancel", "Abort job"),
+                ("jobs output", "View stdout"),
+                ("jobs clear", "Cleanup old"),
+                ("", ""),
+                ("", "Max 4 concurrent"),
+                ("", "Priority queue"),
+                ("", "Nika integration"),
+                ("", ""),
+            ],
+        ),
+        (
+            "🎯 SKILLS",
+            "green",
+            &[
+                ("skill add", "Install from skills.sh"),
+                ("skill remove", "Uninstall"),
+                ("skill list", "Show installed"),
+                ("skill search", "Browse 57K+ skills"),
+                ("", ""),
+                ("", "Syncs to:"),
+                ("", ".claude/"),
+                ("", ".cursor/"),
+                ("", ".windsurf/"),
+                ("", ""),
+                ("", ""),
+            ],
+        ),
     );
 
     // Row 4: SYSTEM + ECOSYSTEM
     print_two_columns(
-        ("🔧 SYSTEM", "white", &[
-            ("status", "Dashboard"),
-            ("sync", "Editor sync"),
-            ("config show", "Settings"),
-            ("config where", "File paths"),
-            ("config edit", "Modify"),
-            ("config import", "From editor"),
-            ("init", "New project"),
-            ("explore", "TUI browser"),
-            ("suggest", "Smart help"),
-            ("", ""),
-            ("daemon start|stop|status", ""),
-        ]),
-        ("🌐 ECOSYSTEM", "cyan", &[
-            ("nk <args>", "Proxy to Nika CLI"),
-            ("nv <args>", "Proxy to NovaNet CLI"),
-            ("", ""),
-            ("", "┌────────────────────────┐"),
-            ("", "│ Nika    YAML workflows │"),
-            ("", "│         5 verbs: infer │"),
-            ("", "│         exec fetch     │"),
-            ("", "│         invoke agent   │"),
-            ("", "├────────────────────────┤"),
-            ("", "│ NovaNet Knowledge graph│"),
-            ("", "└────────────────────────┘"),
-        ]),
+        (
+            "🔧 SYSTEM",
+            "white",
+            &[
+                ("status", "Dashboard"),
+                ("sync", "Editor sync"),
+                ("config show", "Settings"),
+                ("config where", "File paths"),
+                ("config edit", "Modify"),
+                ("config import", "From editor"),
+                ("init", "New project"),
+                ("explore", "TUI browser"),
+                ("suggest", "Smart help"),
+                ("", ""),
+                ("daemon start|stop|status", ""),
+            ],
+        ),
+        (
+            "🌐 ECOSYSTEM",
+            "cyan",
+            &[
+                ("nk <args>", "Proxy to Nika CLI"),
+                ("nv <args>", "Proxy to NovaNet CLI"),
+                ("", ""),
+                ("", "┌────────────────────────┐"),
+                ("", "│ Nika    YAML workflows │"),
+                ("", "│         5 verbs: infer │"),
+                ("", "│         exec fetch     │"),
+                ("", "│         invoke agent   │"),
+                ("", "├────────────────────────┤"),
+                ("", "│ NovaNet Knowledge graph│"),
+                ("", "└────────────────────────┘"),
+            ],
+        ),
     );
 
     // SYNC & COMPLETION
     println!(
         "{}",
-        style("┌─ 🔄 SYNC & COMPLETION ───────────────────────────────────────────────────────┐").white()
+        style("┌─ 🔄 SYNC & COMPLETION ───────────────────────────────────────────────────────┐")
+            .white()
     );
     println!(
         "{}                                                                              {}",
@@ -464,16 +514,14 @@ fn print_commands() {
     );
     println!(
         "{}",
-        style("└──────────────────────────────────────────────────────────────────────────────┘").white()
+        style("└──────────────────────────────────────────────────────────────────────────────┘")
+            .white()
     );
     println!();
 }
 
 /// Print two command sections side by side.
-fn print_two_columns(
-    left: (&str, &str, &[(&str, &str)]),
-    right: (&str, &str, &[(&str, &str)]),
-) {
+fn print_two_columns(left: (&str, &str, &[(&str, &str)]), right: (&str, &str, &[(&str, &str)])) {
     let (left_title, left_color, left_cmds) = left;
     let (right_title, right_color, right_cmds) = right;
 
@@ -569,8 +617,7 @@ fn print_two_columns(
 
         println!(
             "{} {} {}  {} {} {}",
-            left_border, left_formatted, left_border,
-            right_border, right_formatted, right_border
+            left_border, left_formatted, left_border, right_border, right_formatted, right_border
         );
     }
 
@@ -613,7 +660,9 @@ fn print_capabilities() {
 
     println!(
         "{}",
-        style("┌─ CAPABILITIES ───────────────────────────────────────────────────────────────┐").white().bold()
+        style("┌─ CAPABILITIES ───────────────────────────────────────────────────────────────┐")
+            .white()
+            .bold()
     );
     println!(
         "{}                                                                              {}",
@@ -629,7 +678,11 @@ fn print_capabilities() {
     };
 
     let mcp_label = if stats.mcp_servers > 0 {
-        format!("{} server{}", stats.mcp_servers, if stats.mcp_servers == 1 { "" } else { "s" })
+        format!(
+            "{} server{}",
+            stats.mcp_servers,
+            if stats.mcp_servers == 1 { "" } else { "s" }
+        )
     } else {
         "44 aliases".to_string()
     };
@@ -676,11 +729,7 @@ fn print_capabilities() {
             "Job Queue".to_string(),
             "Background Nika workflows (4 concurrent, priority)",
         ),
-        (
-            "🎯",
-            "57K+ Skills".to_string(),
-            "From skills.sh ecosystem",
-        ),
+        ("🎯", "57K+ Skills".to_string(), "From skills.sh ecosystem"),
     ];
 
     for (icon, name, desc) in &capabilities {
@@ -701,7 +750,9 @@ fn print_capabilities() {
     );
     println!(
         "{}",
-        style("└──────────────────────────────────────────────────────────────────────────────┘").white().bold()
+        style("└──────────────────────────────────────────────────────────────────────────────┘")
+            .white()
+            .bold()
     );
     println!();
 }
@@ -729,7 +780,9 @@ fn print_footer() {
     println!();
     println!(
         "  {}",
-        style("Docs: https://github.com/supernovae-st/supernovae-cli").dim().underlined()
+        style("Docs: https://github.com/supernovae-st/supernovae-cli")
+            .dim()
+            .underlined()
     );
     println!();
 }
