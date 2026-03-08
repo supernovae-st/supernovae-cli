@@ -5,6 +5,7 @@ members = [
     "crates/spn-client",
     "crates/spn-core",
     "crates/spn-keyring",
+    "crates/spn-mcp",
     "crates/spn-ollama",
 ]
 
