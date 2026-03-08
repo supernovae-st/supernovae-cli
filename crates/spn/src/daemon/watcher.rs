@@ -11,9 +11,8 @@
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc};
 use tracing::{debug, error, info, warn};
 
 use super::differ::{diff_mcp_configs, parse_client_config};
@@ -41,8 +40,8 @@ pub enum WatchEvent {
 pub struct WatcherService {
     /// The underlying file watcher.
     watcher: RecommendedWatcher,
-    /// Receiver for file system events.
-    rx: Receiver<notify::Result<Event>>,
+    /// Receiver for file system events (tokio async channel).
+    pub(crate) rx: mpsc::UnboundedReceiver<notify::Result<Event>>,
     /// Currently watched paths.
     watched_paths: FxHashSet<PathBuf>,
     /// Recent projects tracker.
@@ -62,11 +61,13 @@ pub struct WatcherService {
 impl WatcherService {
     /// Create a new watcher service.
     pub fn new() -> Result<(Self, broadcast::Receiver<WatchEvent>)> {
-        let (tx, rx) = mpsc::channel();
+        // Use unbounded channel to avoid blocking the notify callback thread
+        let (tx, rx) = mpsc::unbounded_channel();
         let (event_tx, event_rx) = broadcast::channel(32);
 
         let watcher = RecommendedWatcher::new(
             move |res| {
+                // This callback runs on a system thread, use blocking send
                 let _ = tx.send(res);
             },
             notify::Config::default().with_poll_interval(Duration::from_secs(2)),
@@ -307,7 +308,7 @@ impl WatcherService {
     }
 
     /// Process a file change event.
-    async fn handle_event(&mut self, event: Event) {
+    pub(crate) async fn handle_event(&mut self, event: Event) {
         match event.kind {
             EventKind::Modify(_) | EventKind::Create(_) => {
                 for path in &event.paths {
@@ -418,32 +419,23 @@ impl WatcherService {
 
     /// Run the watcher event loop.
     ///
-    /// This should be spawned as a tokio task.
+    /// This should be spawned as a tokio task. It's fully async and will not
+    /// block the executor.
     pub async fn run(&mut self) -> Result<()> {
         info!("Watcher event loop started");
 
-        loop {
-            // Check for file system events (non-blocking with timeout)
-            match self.rx.recv_timeout(Duration::from_millis(100)) {
-                Ok(Ok(event)) => {
+        while let Some(result) = self.rx.recv().await {
+            match result {
+                Ok(event) => {
                     self.handle_event(event).await;
                 }
-                Ok(Err(e)) => {
+                Err(e) => {
                     error!("Watch error: {}", e);
                 }
-                Err(mpsc::RecvTimeoutError::Timeout) => {
-                    // No events, continue loop
-                }
-                Err(mpsc::RecvTimeoutError::Disconnected) => {
-                    warn!("Watcher channel disconnected, stopping");
-                    break;
-                }
             }
-
-            // Yield to other tasks
-            tokio::task::yield_now().await;
         }
 
+        warn!("Watcher channel closed, stopping");
         Ok(())
     }
 

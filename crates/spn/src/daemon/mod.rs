@@ -57,7 +57,6 @@ mod server;
 pub mod service;
 mod socket;
 pub mod traces;
-#[allow(dead_code)] // Phase 2 - integration pending
 mod watcher;
 
 #[allow(unused_imports)]

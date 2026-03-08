@@ -9,18 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **daemon**: MCP auto-sync Phase 1-3 foundation
+- **daemon**: MCP auto-sync Phases 1-5
   - `RecentProjects` tracker for project-level file watching
   - `ForeignTracker` for detecting MCPs added directly to editors
   - `McpDiff` for comparing spn and client MCP configs
   - `WatcherService` for file system monitoring with debounce
   - `NotificationService` for native desktop notifications
+  - Watcher integrated into daemon event loop (Phase 5)
 - **status**: Client sync status tracking for MCP servers
   - New `ClientSyncStatus` type with per-client sync state
   - Visual sync indicators (● synced, ○ pending, ⊘ disabled)
   - Server emojis for visual identification
 - **mcp**: New `spn mcp adopt` command to adopt foreign MCPs
 - **mcp**: New `spn mcp status` command for detailed MCP status
+
+### Fixed
+
+- **mcp**: Preserve env vars when adopting foreign MCPs
+- **daemon**: Fix TOCTOU race condition in `mark_our_write`
 
 ## [0.15.2](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.15.2) - 2026-03-08
 

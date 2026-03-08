@@ -23,6 +23,7 @@ use super::{
     paths,
     secrets::SecretManager,
     socket::{verify_peer_credentials, SocketUtils},
+    watcher::{WatchEvent, WatcherService},
     DaemonError,
 };
 
@@ -35,6 +36,8 @@ pub struct DaemonConfig {
     pub pid_file: PathBuf,
     /// Whether to preload secrets on start
     pub preload_secrets: bool,
+    /// Whether to watch MCP configs for auto-sync
+    pub watch_mcp_configs: bool,
 }
 
 impl DaemonConfig {
@@ -46,6 +49,7 @@ impl DaemonConfig {
             socket_path: paths::socket().map_err(|e| DaemonError::ConfigError(e.to_string()))?,
             pid_file: paths::pid_file().map_err(|e| DaemonError::ConfigError(e.to_string()))?,
             preload_secrets: true,
+            watch_mcp_configs: true,
         })
     }
 }
@@ -60,6 +64,10 @@ pub struct DaemonServer {
     shutdown_tx: broadcast::Sender<()>,
     /// PID file handle - held to maintain flock until shutdown
     pid_file_lock: Option<File>,
+    /// MCP config watcher (optional, created if watch_mcp_configs is true)
+    watcher: Option<WatcherService>,
+    /// Receiver for watch events
+    watch_rx: Option<broadcast::Receiver<WatchEvent>>,
 }
 
 impl DaemonServer {
@@ -84,6 +92,19 @@ impl DaemonServer {
         ));
         let (shutdown_tx, _) = broadcast::channel(1);
 
+        // Create watcher if enabled
+        let (watcher, watch_rx) = if config.watch_mcp_configs {
+            match WatcherService::new() {
+                Ok((w, rx)) => (Some(w), Some(rx)),
+                Err(e) => {
+                    warn!("Failed to create MCP watcher: {}", e);
+                    (None, None)
+                }
+            }
+        } else {
+            (None, None)
+        };
+
         Self {
             config,
             secrets,
@@ -92,6 +113,8 @@ impl DaemonServer {
             handler,
             shutdown_tx,
             pid_file_lock: None,
+            watcher,
+            watch_rx,
         }
     }
 
@@ -110,6 +133,15 @@ impl DaemonServer {
         if self.config.preload_secrets {
             if let Err(e) = self.secrets.preload_all().await {
                 warn!("Failed to preload some secrets: {}", e);
+            }
+        }
+
+        // Start MCP config watcher if available
+        if let Some(ref mut watcher) = self.watcher {
+            if let Err(e) = watcher.start() {
+                warn!("Failed to start MCP watcher: {}", e);
+            } else {
+                info!("MCP config watcher started");
             }
         }
 
@@ -225,8 +257,9 @@ impl DaemonServer {
     /// Accept loop with graceful shutdown.
     ///
     /// Tracks all spawned connection handlers and drains them on shutdown.
+    /// Also runs the MCP config watcher if available.
     #[cfg(unix)]
-    async fn accept_loop(&self, listener: UnixListener) -> Result<(), DaemonError> {
+    async fn accept_loop(&mut self, listener: UnixListener) -> Result<(), DaemonError> {
         let mut shutdown_rx = self.shutdown_tx.subscribe();
         let mut tasks: JoinSet<()> = JoinSet::new();
 
@@ -249,6 +282,44 @@ impl DaemonServer {
                         }
                         Err(e) => {
                             error!("Accept error: {}", e);
+                        }
+                    }
+                }
+
+                // Process MCP watcher events (if watcher is active)
+                Some(event) = async {
+                    if let Some(ref mut watcher) = self.watcher {
+                        watcher.rx.recv().await
+                    } else {
+                        std::future::pending().await
+                    }
+                } => {
+                    if let Some(ref mut watcher) = self.watcher {
+                        match event {
+                            Ok(e) => watcher.handle_event(e).await,
+                            Err(e) => error!("Watch error: {}", e),
+                        }
+                    }
+                }
+
+                // Handle watch events (from watcher to daemon)
+                Ok(watch_event) = async {
+                    if let Some(ref mut rx) = self.watch_rx {
+                        rx.recv().await
+                    } else {
+                        std::future::pending().await
+                    }
+                } => {
+                    match watch_event {
+                        WatchEvent::ForeignMcpDetected(foreign) => {
+                            info!("Foreign MCP detected: {} from {:?}", foreign.name, foreign.source);
+                        }
+                        WatchEvent::SyncNeeded => {
+                            info!("MCP sync needed (spn config changed)");
+                            // TODO: Trigger sync to clients
+                        }
+                        WatchEvent::WatchListUpdated => {
+                            debug!("Watch list updated");
                         }
                     }
                 }
@@ -464,6 +535,7 @@ mod tests {
             socket_path: dir.path().join("test.sock"),
             pid_file: dir.path().join("test.pid"),
             preload_secrets: false,
+            watch_mcp_configs: false, // Disable watcher in tests
         };
 
         let _server = DaemonServer::new(config);
