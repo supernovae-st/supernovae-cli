@@ -38,18 +38,26 @@
 
 pub mod agents;
 pub mod autonomy;
+#[allow(dead_code)] // Phase 1 foundation - used in Phase 2: WatcherService
+mod differ;
 mod error;
+#[allow(dead_code)] // Phase 1 foundation - used in Phase 2: WatcherService
+mod foreign;
 mod handler;
 pub mod jobs;
 pub mod mcp;
 pub mod memory;
 mod model_manager;
+#[allow(dead_code)] // Phase 1 foundation - used in Phase 2: WatcherService
+mod notifications;
 pub mod proactive;
+mod recent;
 mod secrets;
 mod server;
 pub mod service;
 mod socket;
 pub mod traces;
+// pub mod watcher;  // Phase 2
 
 #[allow(unused_imports)]
 pub use agents::{
@@ -80,6 +88,16 @@ pub use traces::{ReasoningTrace, TraceId, TraceMetadata, TraceStep, TraceStepKin
 // Reserved for future service management API
 #[allow(unused_imports)]
 pub use service::{ServiceManagerType, ServiceStatus};
+
+// MCP Auto-Sync (Phase 1)
+#[allow(unused_imports)]
+pub use differ::{diff_mcp_configs, parse_client_config, McpDiff};
+#[allow(unused_imports)]
+pub use foreign::{ForeignMcp, ForeignMcpServer, ForeignScope, ForeignSource, ForeignTracker};
+#[allow(unused_imports)]
+pub use notifications::NotificationService;
+#[allow(unused_imports)]
+pub use recent::{RecentProject, RecentProjects};
 
 /// Default daemon configuration paths.
 ///

@@ -1374,4 +1374,19 @@ async fn main() {
         e.print();
         std::process::exit(1);
     }
+
+    // Touch recent projects for MCP auto-sync (Phase 1)
+    // Only track if we're in a project directory (not home)
+    if let Ok(cwd) = std::env::current_dir() {
+        let home = dirs::home_dir();
+        let is_home = home.as_ref().map(|h| h == &cwd).unwrap_or(false);
+
+        if !is_home {
+            // Attempt to touch project, but don't fail if it errors
+            if let Ok(mut recent) = daemon::RecentProjects::load() {
+                recent.touch(cwd);
+                let _ = recent.save();
+            }
+        }
+    }
 }

@@ -123,6 +123,10 @@ gethostname = "0.5"
 ratatui = "0.30"
 crossterm = "0.28"
 
+# File watching (MCP auto-sync)
+notify = "8"
+notify-rust = "4"
+
 # HTTP retry logic (0.3.x/0.6.x compatible with reqwest 0.12)
 reqwest-retry = "0.6"
 reqwest-middleware = "0.3"
