@@ -313,6 +313,14 @@ enum Commands {
         command: DaemonCommands,
     },
 
+    /// Manage background workflow jobs
+    #[command(visible_alias = "j")]
+    #[command(after_help = "Related: spn nk run, spn daemon start")]
+    Jobs {
+        #[command(subcommand)]
+        command: JobsCommands,
+    },
+
     /// Manage local LLM models (Ollama)
     #[command(visible_alias = "m")]
     #[command(
@@ -931,6 +939,71 @@ enum DaemonCommands {
 }
 
 #[derive(Subcommand)]
+pub enum JobsCommands {
+    /// List background jobs
+    #[command(visible_alias = "l", visible_alias = "ls")]
+    List {
+        /// Show all jobs (including old completed ones)
+        #[arg(long)]
+        all: bool,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Submit a workflow job for background execution
+    #[command(visible_alias = "sub")]
+    Submit {
+        /// Workflow file (.yaml)
+        workflow: std::path::PathBuf,
+
+        /// Arguments to pass to the workflow
+        #[arg(trailing_var_arg = true)]
+        args: Vec<String>,
+
+        /// Job name for identification
+        #[arg(short, long)]
+        name: Option<String>,
+
+        /// Priority (higher = more urgent, default 0)
+        #[arg(short, long, default_value = "0")]
+        priority: i32,
+    },
+
+    /// Show job status
+    #[command(visible_alias = "stat")]
+    Status {
+        /// Job ID (or prefix)
+        id: String,
+    },
+
+    /// Cancel a pending or running job
+    Cancel {
+        /// Job ID (or prefix)
+        id: String,
+    },
+
+    /// Show job output
+    #[command(visible_alias = "out")]
+    Output {
+        /// Job ID (or prefix)
+        id: String,
+
+        /// Follow output (stream updates)
+        #[arg(short, long)]
+        follow: bool,
+    },
+
+    /// Clear old completed/failed jobs
+    Clear {
+        /// Clear all jobs (including recent)
+        #[arg(long)]
+        all: bool,
+    },
+}
+
+#[derive(Subcommand)]
 pub enum ModelCommands {
     /// List installed models
     #[command(visible_alias = "l", visible_alias = "ls")]
@@ -1300,6 +1373,7 @@ async fn main() {
         Commands::Secrets { command } => commands::secrets::run(command).await,
         Commands::Setup { quick, command } => commands::setup::run(command, quick).await,
         Commands::Daemon { command } => commands::daemon::run(command).await,
+        Commands::Jobs { command } => commands::jobs::run(command).await,
         Commands::Model { command } => commands::model::execute(command).await,
         Commands::Completion { command } => match command {
             CompletionCommands::Bash { output } => commands::completion::run("bash", output).await,

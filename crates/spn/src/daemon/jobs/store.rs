@@ -76,7 +76,7 @@ impl JobStore {
         drop(jobs);
 
         let content = serde_json::to_string_pretty(&job_list)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            .map_err(std::io::Error::other)?;
 
         let jobs_file = self.storage_dir.join("jobs.json");
         tokio::fs::write(&jobs_file, content).await?;

@@ -15,6 +15,7 @@ pub mod help;
 pub mod suggest;
 pub mod info;
 pub mod init;
+pub mod jobs;
 pub mod install;
 pub mod list;
 pub mod mcp;
