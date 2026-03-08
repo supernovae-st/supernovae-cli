@@ -372,7 +372,7 @@ cargo install --path crates/spn
 | spn-core | 0.1.1 | [Published](https://crates.io/crates/spn-core) |
 | spn-keyring | 0.1.3 | [Published](https://crates.io/crates/spn-keyring) |
 | spn-ollama | 0.1.4 | [Published](https://crates.io/crates/spn-ollama) |
-| spn-client | 0.3.0 | [Published](https://crates.io/crates/spn-client) |
+| spn-client | 0.3.1 | [Published](https://crates.io/crates/spn-client) |
 | spn-mcp | 0.1.0 | [Published](https://crates.io/crates/spn-mcp) |
 | spn-cli | 0.15.0 | [Published](https://crates.io/crates/spn-cli) |
 
