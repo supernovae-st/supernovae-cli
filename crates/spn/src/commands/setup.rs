@@ -950,9 +950,9 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
             }
         }
 
-        // Detect Windsurf
-        let windsurf_config = dirs::home_dir()
-            .map(|d| d.join(".windsurf/User/settings.json"))
+        // Detect Windsurf (uses Application Support on macOS, .config on Linux)
+        let windsurf_config = dirs::config_dir()
+            .map(|d| d.join("Windsurf/User/settings.json"))
             .filter(|f| f.exists());
 
         if let Some(settings_path) = windsurf_config {
