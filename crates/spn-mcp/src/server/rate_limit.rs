@@ -118,7 +118,11 @@ mod tests {
 
         // Should allow 10 rapid requests (burst)
         for i in 0..10 {
-            assert!(check_limit(&limiter, "test").is_ok(), "Request {} failed", i);
+            assert!(
+                check_limit(&limiter, "test").is_ok(),
+                "Request {} failed",
+                i
+            );
         }
 
         // 11th should fail

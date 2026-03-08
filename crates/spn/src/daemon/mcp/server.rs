@@ -61,8 +61,7 @@ impl McpServer {
             let request: McpRequest = match serde_json::from_str(&line) {
                 Ok(r) => r,
                 Err(e) => {
-                    let response =
-                        McpResponse::error(None, -32700, format!("Parse error: {}", e));
+                    let response = McpResponse::error(None, -32700, format!("Parse error: {}", e));
                     let _ = writeln!(stdout, "{}", serde_json::to_string(&response)?);
                     let _ = stdout.flush();
                     continue;

@@ -17,7 +17,10 @@ pub enum TriggerCondition {
     /// Command was executed.
     CommandExecuted { command: String },
     /// Command failed.
-    CommandFailed { command: String, exit_code: Option<i32> },
+    CommandFailed {
+        command: String,
+        exit_code: Option<i32>,
+    },
     /// Error pattern detected.
     ErrorDetected { pattern: String },
     /// Time since last activity.
@@ -35,7 +38,10 @@ pub enum TriggerCondition {
     /// Build completed.
     BuildCompleted { success: bool },
     /// Custom condition.
-    Custom { name: String, params: serde_json::Value },
+    Custom {
+        name: String,
+        params: serde_json::Value,
+    },
 }
 
 impl TriggerCondition {
@@ -227,39 +233,44 @@ impl ContextEvent {
     /// Check if event matches a condition.
     pub fn matches(&self, condition: &TriggerCondition) -> bool {
         match (self, condition) {
-            (
-                ContextEvent::FileModified { path },
-                TriggerCondition::FileModified { pattern },
-            ) => glob_match(pattern, path),
+            (ContextEvent::FileModified { path }, TriggerCondition::FileModified { pattern }) => {
+                glob_match(pattern, path)
+            }
+
+            (ContextEvent::FileCreated { path }, TriggerCondition::FileCreated { pattern }) => {
+                glob_match(pattern, path)
+            }
+
+            (ContextEvent::FileDeleted { path }, TriggerCondition::FileDeleted { pattern }) => {
+                glob_match(pattern, path)
+            }
 
             (
-                ContextEvent::FileCreated { path },
-                TriggerCondition::FileCreated { pattern },
-            ) => glob_match(pattern, path),
-
-            (
-                ContextEvent::FileDeleted { path },
-                TriggerCondition::FileDeleted { pattern },
-            ) => glob_match(pattern, path),
-
-            (
-                ContextEvent::CommandExecuted { command, exit_code, .. },
-                TriggerCondition::CommandExecuted { command: cmd_pattern },
+                ContextEvent::CommandExecuted {
+                    command, exit_code, ..
+                },
+                TriggerCondition::CommandExecuted {
+                    command: cmd_pattern,
+                },
             ) => command.contains(cmd_pattern) && *exit_code == 0,
 
             (
-                ContextEvent::CommandExecuted { command, exit_code, .. },
-                TriggerCondition::CommandFailed { command: cmd_pattern, exit_code: expected },
+                ContextEvent::CommandExecuted {
+                    command, exit_code, ..
+                },
+                TriggerCondition::CommandFailed {
+                    command: cmd_pattern,
+                    exit_code: expected,
+                },
             ) => {
                 command.contains(cmd_pattern)
                     && *exit_code != 0
                     && expected.is_none_or(|e| e == *exit_code)
             }
 
-            (
-                ContextEvent::Error { message, .. },
-                TriggerCondition::ErrorDetected { pattern },
-            ) => message.to_lowercase().contains(&pattern.to_lowercase()),
+            (ContextEvent::Error { message, .. }, TriggerCondition::ErrorDetected { pattern }) => {
+                message.to_lowercase().contains(&pattern.to_lowercase())
+            }
 
             (
                 ContextEvent::ProjectEntered { path },

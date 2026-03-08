@@ -256,8 +256,7 @@ mod tests {
     #[test]
     fn test_memory_entry_ttl() {
         let key = MemoryKey::preference("temp");
-        let entry = MemoryEntry::new(key, serde_json::json!("value"))
-            .with_ttl(0); // Expires immediately
+        let entry = MemoryEntry::new(key, serde_json::json!("value")).with_ttl(0); // Expires immediately
 
         // Should be expired (or very close)
         std::thread::sleep(std::time::Duration::from_millis(10));

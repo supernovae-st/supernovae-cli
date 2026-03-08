@@ -11,7 +11,7 @@ use crate::{ApisCommands, McpCommands};
 use crate::ux::design_system as ds;
 
 // Re-export spn-mcp config types for the apis subcommand
-use spn_mcp::config::{load_all_apis, load_api, validate, apis_dir};
+use spn_mcp::config::{apis_dir, load_all_apis, load_api, validate};
 
 /// Run an MCP server management command.
 pub async fn run(command: McpCommands) -> Result<()> {
@@ -561,18 +561,15 @@ async fn run_serve(api: Option<&str>) -> Result<()> {
 
     // Load API configurations
     let configs = if let Some(api_name) = api {
-        println!(
-            "{} {}",
-            ds::muted("Loading API:"),
-            ds::highlight(api_name)
-        );
+        println!("{} {}", ds::muted("Loading API:"), ds::highlight(api_name));
         let config = load_api(api_name).map_err(|e| {
             SpnError::CommandFailed(format!("Failed to load API '{}': {}", api_name, e))
         })?;
 
         // Validate the config
-        validate(&config)
-            .map_err(|e| SpnError::CommandFailed(format!("Invalid config '{}': {}", api_name, e)))?;
+        validate(&config).map_err(|e| {
+            SpnError::CommandFailed(format!("Invalid config '{}': {}", api_name, e))
+        })?;
 
         vec![config]
     } else {
@@ -608,11 +605,7 @@ async fn run_serve(api: Option<&str>) -> Result<()> {
 
     // Show loaded APIs
     println!();
-    println!(
-        "{} {} API(s) loaded:",
-        ds::success("✓"),
-        configs.len()
-    );
+    println!("{} {} API(s) loaded:", ds::success("✓"), configs.len());
     for config in &configs {
         let tool_count = config.tools.len();
         println!(
@@ -631,13 +624,14 @@ async fn run_serve(api: Option<&str>) -> Result<()> {
         ds::muted("Starting MCP server on stdio...")
     );
 
-    let handler = DynamicHandler::new(configs).await.map_err(|e| {
-        SpnError::CommandFailed(format!("Failed to create handler: {}", e))
-    })?;
+    let handler = DynamicHandler::new(configs)
+        .await
+        .map_err(|e| SpnError::CommandFailed(format!("Failed to create handler: {}", e)))?;
 
-    handler.run().await.map_err(|e| {
-        SpnError::CommandFailed(format!("MCP server error: {}", e))
-    })?;
+    handler
+        .run()
+        .await
+        .map_err(|e| SpnError::CommandFailed(format!("MCP server error: {}", e)))?;
 
     Ok(())
 }
@@ -654,8 +648,8 @@ async fn run_apis(command: ApisCommands) -> Result<()> {
 /// List configured REST API wrappers.
 async fn run_apis_list(json: bool) -> Result<()> {
     let dir = apis_dir().map_err(|e| SpnError::CommandFailed(e.to_string()))?;
-    let configs =
-        load_all_apis().map_err(|e| SpnError::CommandFailed(format!("Failed to load APIs: {}", e)))?;
+    let configs = load_all_apis()
+        .map_err(|e| SpnError::CommandFailed(format!("Failed to load APIs: {}", e)))?;
 
     if json {
         let json_output: Vec<_> = configs
@@ -676,16 +670,10 @@ async fn run_apis_list(json: bool) -> Result<()> {
     if configs.is_empty() {
         println!("{}", ds::warning("No REST API wrappers configured"));
         println!();
-        println!(
-            "Create YAML configs in: {}",
-            ds::path(dir.display())
-        );
+        println!("Create YAML configs in: {}", ds::path(dir.display()));
         println!();
         println!("Example:");
-        println!(
-            "  {}",
-            ds::muted("# ~/.spn/apis/example.yaml")
-        );
+        println!("  {}", ds::muted("# ~/.spn/apis/example.yaml"));
         println!("  {}", ds::muted("name: example"));
         println!("  {}", ds::muted("base_url: https://api.example.com"));
         println!("  {}", ds::muted("auth:"));
@@ -737,20 +725,19 @@ async fn run_apis_list(json: bool) -> Result<()> {
 
 /// Validate an API configuration.
 async fn run_apis_validate(name: &str) -> Result<()> {
-    println!(
-        "{} {}",
-        ds::primary("Validating:"),
-        ds::highlight(name)
-    );
+    println!("{} {}", ds::primary("Validating:"), ds::highlight(name));
 
-    let config = load_api(name).map_err(|e| {
-        SpnError::CommandFailed(format!("Failed to load '{}': {}", name, e))
-    })?;
+    let config = load_api(name)
+        .map_err(|e| SpnError::CommandFailed(format!("Failed to load '{}': {}", name, e)))?;
 
     match validate(&config) {
         Ok(()) => {
             println!();
-            println!("{} {}", ds::success("✓"), ds::success("Configuration is valid"));
+            println!(
+                "{} {}",
+                ds::success("✓"),
+                ds::success("Configuration is valid")
+            );
             println!();
             println!("  {} {}", ds::muted("Name:"), ds::highlight(&config.name));
             println!("  {} {}", ds::muted("Base URL:"), config.base_url);
@@ -782,16 +769,19 @@ async fn run_apis_validate(name: &str) -> Result<()> {
 
 /// Show API configuration details.
 async fn run_apis_info(name: &str) -> Result<()> {
-    let config = load_api(name).map_err(|e| {
-        SpnError::CommandFailed(format!("Failed to load '{}': {}", name, e))
-    })?;
+    let config = load_api(name)
+        .map_err(|e| SpnError::CommandFailed(format!("Failed to load '{}': {}", name, e)))?;
 
     println!("{}", ds::section(format!("API: {}", config.name)));
     println!();
 
     // Basic info
     println!("  {} {}", ds::muted("Version:"), config.version);
-    println!("  {} {}", ds::muted("Base URL:"), ds::primary(&config.base_url));
+    println!(
+        "  {} {}",
+        ds::muted("Base URL:"),
+        ds::primary(&config.base_url)
+    );
 
     if let Some(desc) = &config.description {
         println!("  {} {}", ds::muted("Description:"), desc);
@@ -815,7 +805,11 @@ async fn run_apis_info(name: &str) -> Result<()> {
     if let Some(rate) = &config.rate_limit {
         println!();
         println!("{}", ds::section("Rate Limits"));
-        println!("  {} {}/min", ds::muted("Requests:"), rate.requests_per_minute);
+        println!(
+            "  {} {}/min",
+            ds::muted("Requests:"),
+            rate.requests_per_minute
+        );
         if rate.burst > 1 {
             println!("  {} {}", ds::muted("Burst:"), rate.burst);
         }
@@ -848,18 +842,18 @@ async fn run_apis_info(name: &str) -> Result<()> {
         }
 
         if !tool.params.is_empty() {
-            let param_names: Vec<_> = tool.params.iter().map(|p| {
-                if p.required {
-                    format!("{}*", p.name)
-                } else {
-                    p.name.clone()
-                }
-            }).collect();
-            println!(
-                "    {} {}",
-                ds::muted("Params:"),
-                param_names.join(", ")
-            );
+            let param_names: Vec<_> = tool
+                .params
+                .iter()
+                .map(|p| {
+                    if p.required {
+                        format!("{}*", p.name)
+                    } else {
+                        p.name.clone()
+                    }
+                })
+                .collect();
+            println!("    {} {}", ds::muted("Params:"), param_names.join(", "));
         }
     }
 

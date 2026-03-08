@@ -168,32 +168,24 @@ impl DynamicHandler {
             _ => Arc::new(serde_json::Map::new()),
         };
 
-        let description = entry
-            .tool_def
-            .description
-            .clone()
-            .unwrap_or_else(|| {
-                format!(
-                    "{} {} {}",
-                    entry.tool_def.method, entry.api_config.base_url, entry.tool_def.path
-                )
-            });
+        let description = entry.tool_def.description.clone().unwrap_or_else(|| {
+            format!(
+                "{} {} {}",
+                entry.tool_def.method, entry.api_config.base_url, entry.tool_def.path
+            )
+        });
 
         Tool::new(entry.full_name.clone(), description, input_schema)
     }
 
     /// Build an MCP prompt from a tool entry.
     fn build_prompt(entry: &ToolEntry) -> Prompt {
-        let description = entry
-            .tool_def
-            .description
-            .clone()
-            .unwrap_or_else(|| {
-                format!(
-                    "{} {} {}",
-                    entry.tool_def.method, entry.api_config.base_url, entry.tool_def.path
-                )
-            });
+        let description = entry.tool_def.description.clone().unwrap_or_else(|| {
+            format!(
+                "{} {} {}",
+                entry.tool_def.method, entry.api_config.base_url, entry.tool_def.path
+            )
+        });
 
         let arguments: Vec<PromptArgument> = entry
             .tool_def
@@ -222,10 +214,7 @@ impl DynamicHandler {
     fn build_prompt_message(entry: &ToolEntry) -> PromptMessage {
         let mut message = format!(
             "# Tool: {}\n\n**Endpoint:** {} {}{}\n\n",
-            entry.full_name,
-            entry.tool_def.method,
-            entry.api_config.base_url,
-            entry.tool_def.path
+            entry.full_name, entry.tool_def.method, entry.api_config.base_url, entry.tool_def.path
         );
 
         if let Some(desc) = &entry.tool_def.description {
@@ -284,7 +273,12 @@ impl DynamicHandler {
             "PUT" => self.http_client.put(&url),
             "DELETE" => self.http_client.delete(&url),
             "PATCH" => self.http_client.patch(&url),
-            _ => return Err(Error::ConfigValidation(format!("Unknown method: {}", tool.method))),
+            _ => {
+                return Err(Error::ConfigValidation(format!(
+                    "Unknown method: {}",
+                    tool.method
+                )))
+            }
         };
 
         // Add authentication
@@ -300,7 +294,9 @@ impl DynamicHandler {
         // Add body if template exists
         if let Some(template) = &tool.body_template {
             let body = self.render_template(template, &params)?;
-            request = request.body(body).header("Content-Type", "application/json");
+            request = request
+                .body(body)
+                .header("Content-Type", "application/json");
         }
 
         // Execute request
@@ -314,10 +310,7 @@ impl DynamicHandler {
                 tracing::warn!("Failed to read error response body: {}", e);
                 String::new()
             });
-            return Err(Error::Mcp(format!(
-                "API returned {}: {}",
-                status, body
-            )));
+            return Err(Error::Mcp(format!("API returned {}: {}", status, body)));
         }
 
         // Parse response
@@ -404,7 +397,9 @@ impl ServerHandler for DynamicHandler {
         &self,
         _request: Option<PaginatedRequestParams>,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = std::result::Result<rmcp::model::ListToolsResult, McpError>> + Send + '_ {
+    ) -> impl std::future::Future<Output = std::result::Result<rmcp::model::ListToolsResult, McpError>>
+           + Send
+           + '_ {
         async move {
             let tools: Vec<Tool> = self.tools.values().map(Self::build_tool).collect();
             Ok(rmcp::model::ListToolsResult::with_all_items(tools))
@@ -416,26 +411,31 @@ impl ServerHandler for DynamicHandler {
         &self,
         request: rmcp::model::CallToolRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = std::result::Result<CallToolResult, McpError>> + Send + '_ {
+    ) -> impl std::future::Future<Output = std::result::Result<CallToolResult, McpError>> + Send + '_
+    {
         async move {
             let name = request.name.as_ref();
-            let entry = self.tools.get(name).ok_or_else(|| {
-                McpError::invalid_params(format!("Unknown tool: {}", name), None)
-            })?;
+            let entry = self
+                .tools
+                .get(name)
+                .ok_or_else(|| McpError::invalid_params(format!("Unknown tool: {}", name), None))?;
 
-            let params = request.arguments
+            let params = request
+                .arguments
                 .map(|m| Value::Object(m.into_iter().collect()))
                 .unwrap_or(Value::Object(Default::default()));
 
             match self.execute_tool(entry, params).await {
                 Ok(result) => {
-                    let json = serde_json::to_string_pretty(&result)
-                        .map_err(|e| McpError::internal_error(format!("Serialization error: {}", e), None))?;
+                    let json = serde_json::to_string_pretty(&result).map_err(|e| {
+                        McpError::internal_error(format!("Serialization error: {}", e), None)
+                    })?;
                     Ok(CallToolResult::success(vec![Content::text(json)]))
                 }
-                Err(e) => {
-                    Ok(CallToolResult::error(vec![Content::text(format!("Error: {}", e))]))
-                }
+                Err(e) => Ok(CallToolResult::error(vec![Content::text(format!(
+                    "Error: {}",
+                    e
+                ))])),
             }
         }
     }
@@ -445,7 +445,8 @@ impl ServerHandler for DynamicHandler {
         &self,
         _request: Option<PaginatedRequestParams>,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = std::result::Result<ListPromptsResult, McpError>> + Send + '_ {
+    ) -> impl std::future::Future<Output = std::result::Result<ListPromptsResult, McpError>> + Send + '_
+    {
         async move {
             let prompts: Vec<Prompt> = self.tools.values().map(Self::build_prompt).collect();
             Ok(ListPromptsResult::with_all_items(prompts))
@@ -457,7 +458,8 @@ impl ServerHandler for DynamicHandler {
         &self,
         request: GetPromptRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = std::result::Result<GetPromptResult, McpError>> + Send + '_ {
+    ) -> impl std::future::Future<Output = std::result::Result<GetPromptResult, McpError>> + Send + '_
+    {
         async move {
             let name = &request.name;
             let entry = self.tools.get(name).ok_or_else(|| {
@@ -516,7 +518,10 @@ impl ServerHandler for DynamicHandler {
             // Parse URI: api://{name}
             let api_name = uri.strip_prefix("api://").ok_or_else(|| {
                 McpError::invalid_params(
-                    format!("Invalid resource URI: {}. Expected format: api://{{name}}", uri),
+                    format!(
+                        "Invalid resource URI: {}. Expected format: api://{{name}}",
+                        uri
+                    ),
                     None,
                 )
             })?;
@@ -532,8 +537,9 @@ impl ServerHandler for DynamicHandler {
 
             // Return sanitized config (no credentials!)
             let sanitized = Self::sanitized_api_config(config);
-            let json = serde_json::to_string_pretty(&sanitized)
-                .map_err(|e| McpError::internal_error(format!("Serialization error: {}", e), None))?;
+            let json = serde_json::to_string_pretty(&sanitized).map_err(|e| {
+                McpError::internal_error(format!("Serialization error: {}", e), None)
+            })?;
 
             Ok(ReadResourceResult {
                 contents: vec![ResourceContents::text(json, uri)],
@@ -546,35 +552,37 @@ impl ServerHandler for DynamicHandler {
 async fn resolve_credential(auth: &AuthConfig) -> Result<String> {
     // Try spn-client first (with auto-fallback to env vars)
     match spn_client::SpnClient::connect_with_fallback().await {
-        Ok(mut client) => {
-            match client.get_secret(&auth.credential).await {
-                Ok(secret) => {
-                    tracing::debug!("Resolved credential '{}' via spn-client", auth.credential);
-                    return Ok(secret.expose_secret().to_string());
-                }
-                Err(e) => {
-                    tracing::warn!("Failed to resolve '{}': {}", auth.credential, e);
-                }
+        Ok(mut client) => match client.get_secret(&auth.credential).await {
+            Ok(secret) => {
+                tracing::debug!("Resolved credential '{}' via spn-client", auth.credential);
+                return Ok(secret.expose_secret().to_string());
             }
-        }
+            Err(e) => {
+                tracing::warn!("Failed to resolve '{}': {}", auth.credential, e);
+            }
+        },
         Err(e) => {
             tracing::debug!("Could not connect to spn daemon: {}", e);
         }
     }
 
     // Manual env var fallback for non-registered providers
-    let env_var = format!("{}_API_KEY", auth.credential.to_uppercase().replace('-', "_"));
+    let env_var = format!(
+        "{}_API_KEY",
+        auth.credential.to_uppercase().replace('-', "_")
+    );
     if let Ok(value) = std::env::var(&env_var) {
-        tracing::debug!("Resolved credential '{}' via env {}", auth.credential, env_var);
+        tracing::debug!(
+            "Resolved credential '{}' via env {}",
+            auth.credential,
+            env_var
+        );
         return Ok(value);
     }
 
     Err(Error::Credential(
         auth.credential.clone(),
-        format!(
-            "Not found in daemon or environment (tried {})",
-            env_var
-        ),
+        format!("Not found in daemon or environment (tried {})", env_var),
     ))
 }
 
@@ -857,12 +865,13 @@ mod tests {
         };
 
         // Should reject {% include %}
-        let result = handler.render_template(
-            r#"{% include "secret.txt" %}"#,
-            &serde_json::json!({}),
-        );
+        let result =
+            handler.render_template(r#"{% include "secret.txt" %}"#, &serde_json::json!({}));
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("forbidden directive"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("forbidden directive"));
 
         // Should reject {% import %}
         let result = handler.render_template(
@@ -872,17 +881,13 @@ mod tests {
         assert!(result.is_err());
 
         // Should reject {% extends %}
-        let result = handler.render_template(
-            r#"{% extends "base.html" %}"#,
-            &serde_json::json!({}),
-        );
+        let result =
+            handler.render_template(r#"{% extends "base.html" %}"#, &serde_json::json!({}));
         assert!(result.is_err());
 
         // Should reject case variations
-        let result = handler.render_template(
-            r#"{% INCLUDE "secret.txt" %}"#,
-            &serde_json::json!({}),
-        );
+        let result =
+            handler.render_template(r#"{% INCLUDE "secret.txt" %}"#, &serde_json::json!({}));
         assert!(result.is_err());
     }
 
@@ -927,7 +932,11 @@ mod tests {
         let handler = create_test_handler();
 
         // Build prompts from tools
-        let prompts: Vec<Prompt> = handler.tools.values().map(DynamicHandler::build_prompt).collect();
+        let prompts: Vec<Prompt> = handler
+            .tools
+            .values()
+            .map(DynamicHandler::build_prompt)
+            .collect();
 
         // Should have 2 prompts (one per tool)
         assert_eq!(prompts.len(), 2);
@@ -951,7 +960,10 @@ mod tests {
             assert!(text.contains("test_simple"), "Should contain tool name");
             assert!(text.contains("GET"), "Should contain HTTP method");
             assert!(text.contains("/simple"), "Should contain path");
-            assert!(text.contains("https://api.example.com"), "Should contain base URL");
+            assert!(
+                text.contains("https://api.example.com"),
+                "Should contain base URL"
+            );
         } else {
             panic!("Expected text content");
         }
@@ -967,11 +979,20 @@ mod tests {
 
         // Verify message content includes parameters
         if let rmcp::model::PromptMessageContent::Text { text } = &message.content {
-            assert!(text.contains("Parameters"), "Should have Parameters section");
+            assert!(
+                text.contains("Parameters"),
+                "Should have Parameters section"
+            );
             assert!(text.contains("query"), "Should contain query parameter");
-            assert!(text.contains("(required)"), "Should indicate required parameter");
+            assert!(
+                text.contains("(required)"),
+                "Should indicate required parameter"
+            );
             assert!(text.contains("limit"), "Should contain limit parameter");
-            assert!(text.contains("The search query"), "Should contain parameter description");
+            assert!(
+                text.contains("The search query"),
+                "Should contain parameter description"
+            );
         } else {
             panic!("Expected text content");
         }

@@ -1371,9 +1371,10 @@ async fn main() {
         Commands::Provider { command } => commands::provider::run(command).await,
         Commands::Status { json } => commands::status::run(json).await,
         Commands::Explore => commands::explore::run().await,
-        Commands::Suggest { interactive, category } => {
-            commands::suggest::run(interactive, category).await
-        }
+        Commands::Suggest {
+            interactive,
+            category,
+        } => commands::suggest::run(interactive, category).await,
         Commands::Init {
             local,
             mcp,

@@ -1,12 +1,12 @@
 # supernovae-cli
 
-**SuperNovae CLI (`spn`)** v0.14.3 — The Agentic AI Toolkit for the SuperNovae ecosystem.
+**SuperNovae CLI (`spn`)** v0.15.0 — The Agentic AI Toolkit for the SuperNovae ecosystem.
 
 ## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  spn — The Agentic AI Toolkit v0.14.3                                           │
+│  spn — The Agentic AI Toolkit v0.15.0                                           │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │  Package Commands:                                                              │
@@ -63,11 +63,11 @@
 - **Security:** keyring (OS keychain), secrecy, zeroize, libc (mlock)
 - **Performance:** rustc-hash (FxHashMap)
 
-## Workspace Architecture (v0.14.3)
+## Workspace Architecture (v0.15.0)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  UNIFIED 4-CRATE ARCHITECTURE                                                   │
+│  UNIFIED 6-CRATE ARCHITECTURE                                                   │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │  ┌──────────────────────────────────────────────────────────────────────────┐  │
@@ -99,13 +99,15 @@
 │              │                                               │                  │
 │              ▼                                               ▼                  │
 │  ┌────────────────────────┐                   ┌────────────────────────┐        │
-│  │  spn-cli (v0.14.3)     │                   │  Nika (v0.21.1)        │        │
+│  │  spn-cli (v0.15.0)     │                   │  Nika (v0.21.1)        │        │
 │  │  • provider set/get    │                   │  • spn-daemon feature  │        │
 │  │  • model pull/load     │                   │  • KNOWN_PROVIDERS     │        │
 │  │  • setup wizard        │                   │  • Unified secrets     │        │
 │  └────────────────────────┘                   └────────────────────────┘        │
 │                                                                                 │
-│  Also in workspace: spn-ollama (ModelBackend trait, Ollama API client)          │
+│  Also in workspace:                                                             │
+│  • spn-ollama (ModelBackend trait, Ollama API client)                           │
+│  • spn-mcp (Dynamic REST-to-MCP wrapper, MCP server binary)                     │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -154,6 +156,13 @@ supernovae-cli/
 │   │
 │   ├── spn-client/         # SDK for external tools
 │   │   └── src/lib.rs      # Re-exports spn-core types
+│   │
+│   ├── spn-mcp/            # Dynamic REST-to-MCP wrapper
+│   │   └── src/
+│   │       ├── main.rs     # MCP server binary
+│   │       ├── config.rs   # YAML config parser
+│   │       ├── endpoints.rs # REST endpoint mapping
+│   │       └── tools.rs    # MCP tool generation
 │   │
 │   └── spn/                # Main CLI (spn-cli)
 │       └── src/
@@ -256,7 +265,7 @@ supernovae-cli/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Release Automation (v0.14.2)
+## Release Automation (v0.15.0)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -276,7 +285,7 @@ supernovae-cli/
 │  ├── 5. Git tag created       v0.X.Y format                                    │
 │  ├── 6. Binaries built        macOS, Linux (native + musl), Windows            │
 │  ├── 7. Docker published      ghcr.io/supernovae-st/spn (~5MB scratch image)   │
-│  ├── 8. crates.io published   All 5 crates in dependency order                 │
+│  ├── 8. crates.io published   All 6 crates in dependency order                 │
 │  └── 9. GitHub Release        With binaries, SLSA provenance, SBOM             │
 │                                                                                 │
 │  Configuration Files:                                                           │
@@ -287,7 +296,7 @@ supernovae-cli/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Feature Flags (v0.14.2)
+## Feature Flags (v0.15.0)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -364,7 +373,8 @@ cargo install --path crates/spn
 | spn-keyring | 0.1.3 | [Published](https://crates.io/crates/spn-keyring) |
 | spn-ollama | 0.1.4 | [Published](https://crates.io/crates/spn-ollama) |
 | spn-client | 0.3.0 | [Published](https://crates.io/crates/spn-client) |
-| spn-cli | 0.14.3 | [Published](https://crates.io/crates/spn-cli) |
+| spn-mcp | 0.1.0 | [Published](https://crates.io/crates/spn-mcp) |
+| spn-cli | 0.15.0 | [Published](https://crates.io/crates/spn-cli) |
 
 ## Storage Layout
 

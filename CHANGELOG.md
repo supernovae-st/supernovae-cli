@@ -5,7 +5,90 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.15.0](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.15.0) - 2026-03-08
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║  🚀 SPN v0.15.0 — THE AGENTIC AI TOOLKIT                                      ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║  🤖 Agents  │  📋 Jobs  │  🧠 Memory  │  🔮 Autonomy  │  🛠️ spn-mcp          ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+### ✨ Highlights
+
+| Feature | Status | Impact |
+|---------|--------|--------|
+| **🤖 Agent Delegation** | ✅ New | Multi-agent task delegation system |
+| **📋 Job Scheduler** | ✅ New | Background workflow execution |
+| **🧠 Cross-Session Memory** | ✅ New | Persistent context across sessions |
+| **🔮 Autonomy Orchestration** | ✅ New | Self-directed task execution |
+| **🛠️ spn-mcp Crate** | ✅ New | Dynamic REST-to-MCP wrapper |
+| **🖥️ Windows CI** | ✅ New | Full Windows support in CI |
+
+### Added
+
+- **daemon**: Wire JobScheduler to IPC handler and enhance Nika setup
+- **ux**: Add TransformingSpinner to model commands
+- **model**: Add pull_with_progress method to ModelManager
+- **protocol**: Add ModelProgress type for streaming updates
+- **spn-mcp**: Add rate limiting and MCP Resources support
+- **spn-mcp**: Add test infrastructure and security hardening
+- **daemon**: Add autonomy orchestration system (Phase 13)
+- **daemon**: Add proactive suggestion system (Phase 12)
+- **daemon**: Add agent delegation system (Phase 11)
+- **daemon**: Add reasoning trace capture system (Phase 10)
+- **daemon**: Add cross-session memory system (Phase 9)
+- **suggest**: Enhance smart wizard with interactive mode (Phase 8)
+- **jobs**: Add jobs CLI commands (Phase 7)
+- **daemon**: Add job scheduler for background workflows
+- **daemon**: Add MCP server over stdio
+- **suggest**: Add context-aware suggestion wizard
+- **tui**: Add spn explore interactive TUI
+- **spn**: Integrate spn-mcp into main CLI
+- **spn-mcp**: Add dynamic REST-to-MCP wrapper crate
+- **mcp**: Add `spn mcp logs` command for viewing server logs
+- **completion**: Add install/uninstall/status subcommands
+- **model**: Add `spn model run` command for LLM inference
+- **status**: Add unified status dashboard with ASCII rendering
+
+### Changed
+
+- **ci**: Add Windows to test matrix
+- **release**: Add spn-mcp to release-plz.toml
+- **docs**: Update all version references to v0.15.0
+
+### Documentation
+
+- **plan**: Complete master plan v0.15-v0.18
+- **adr**: Add ecosystem architecture ADRs (001-003)
+- **plan**: Add spn v0.15-v0.18 evolution roadmap
+
+### Fixed
+
+- **setup**: Correct Windsurf settings.json path detection
+- **daemon**: Add missing autonomy type exports
+- **spn-mcp**: Critical error handling and security hardening
+- **spn**: Remove phantom explore/tui module references
+
+### 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  6-CRATE WORKSPACE (v0.15.0)                                                    │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  spn-core (0.1.1)     Core types, providers, validation                        │
+│  spn-keyring (0.1.3)  OS keychain integration                                  │
+│  spn-ollama (0.1.4)   Ollama model backend                                     │
+│  spn-client (0.3.0)   Daemon SDK for external tools                            │
+│  spn-mcp (0.1.0)      Dynamic REST-to-MCP wrapper ← NEW                        │
+│  spn-cli (0.15.0)     Main CLI binary                                          │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ## [0.14.3](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.3) - 2026-03-07
 
@@ -484,7 +567,9 @@ spn CLI ──► spn daemon (IPC) ──► spn-ollama ──► Ollama API (lo
 
 ---
 
-[Unreleased]: https://github.com/supernovae-st/supernovae-cli/compare/v0.14.2...HEAD
+[Unreleased]: https://github.com/supernovae-st/supernovae-cli/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.14.3...v0.15.0
+[0.14.3]: https://github.com/supernovae-st/supernovae-cli/compare/v0.14.2...v0.14.3
 [0.14.2]: https://github.com/supernovae-st/supernovae-cli/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/supernovae-st/supernovae-cli/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/supernovae-st/supernovae-cli/compare/v0.12.5...v0.14.0

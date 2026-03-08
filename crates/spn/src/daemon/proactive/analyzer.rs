@@ -477,7 +477,9 @@ mod tests {
         let testing = analyzer.list_by_category(SuggestionCategory::Testing).await;
         assert_eq!(testing.len(), 1);
 
-        let security = analyzer.list_by_category(SuggestionCategory::Security).await;
+        let security = analyzer
+            .list_by_category(SuggestionCategory::Security)
+            .await;
         assert_eq!(security.len(), 1);
     }
 

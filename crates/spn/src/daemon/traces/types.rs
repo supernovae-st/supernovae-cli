@@ -168,7 +168,11 @@ pub struct TraceMetadata {
 
 impl TraceMetadata {
     /// Create new metadata.
-    pub fn new(model: impl Into<String>, provider: impl Into<String>, task: impl Into<String>) -> Self {
+    pub fn new(
+        model: impl Into<String>,
+        provider: impl Into<String>,
+        task: impl Into<String>,
+    ) -> Self {
         Self {
             model: model.into(),
             provider: provider.into(),
@@ -371,8 +375,14 @@ mod tests {
         let metadata = TraceMetadata::new("claude-3-opus", "anthropic", "Implement feature X");
         let mut trace = ReasoningTrace::new(metadata);
 
-        trace.add_step(TraceStep::new(TraceStepKind::Thinking, "Analyzing the request"));
-        trace.add_step(TraceStep::new(TraceStepKind::Planning, "Will create 3 files"));
+        trace.add_step(TraceStep::new(
+            TraceStepKind::Thinking,
+            "Analyzing the request",
+        ));
+        trace.add_step(TraceStep::new(
+            TraceStepKind::Planning,
+            "Will create 3 files",
+        ));
         trace.add_step(
             TraceStep::new(TraceStepKind::ToolCall, "Write")
                 .with_details(serde_json::json!({"file": "src/lib.rs"})),
@@ -411,8 +421,8 @@ mod tests {
 
     #[test]
     fn test_trace_summary() {
-        let metadata = TraceMetadata::new("claude-3", "anthropic", "Test task")
-            .with_tags(vec!["test".into()]);
+        let metadata =
+            TraceMetadata::new("claude-3", "anthropic", "Test task").with_tags(vec!["test".into()]);
         let mut trace = ReasoningTrace::new(metadata);
         trace.add_step(TraceStep::new(TraceStepKind::Thinking, "step 1").with_tokens(100));
         trace.add_step(TraceStep::new(TraceStepKind::Conclusion, "done").with_tokens(50));

@@ -6,9 +6,7 @@ mod loader;
 mod schema;
 
 pub use loader::{apis_dir, load_all_apis, load_api};
-pub use schema::{
-    ApiConfig, ApiKeyLocation, AuthConfig, AuthType, RateLimitConfig, ToolDef,
-};
+pub use schema::{ApiConfig, ApiKeyLocation, AuthConfig, AuthType, RateLimitConfig, ToolDef};
 // These are only used in tests across the crate
 #[allow(unused_imports)]
 pub use schema::{ParamDef, ParamType};
@@ -45,7 +43,9 @@ pub fn validate(config: &ApiConfig) -> Result<()> {
 
     // Check auth credential is specified
     if config.auth.credential.is_empty() {
-        return Err(Error::ConfigValidation("auth.credential is required".into()));
+        return Err(Error::ConfigValidation(
+            "auth.credential is required".into(),
+        ));
     }
 
     // Check tools
@@ -67,11 +67,7 @@ fn validate_tool(tool: &ToolDef) -> Result<()> {
         return Err(Error::ConfigValidation("tool.name is required".into()));
     }
 
-    if !tool
-        .name
-        .chars()
-        .all(|c| c.is_alphanumeric() || c == '_')
-    {
+    if !tool.name.chars().all(|c| c.is_alphanumeric() || c == '_') {
         return Err(Error::ConfigValidation(format!(
             "tool.name '{}' must be alphanumeric with underscores",
             tool.name

@@ -165,7 +165,8 @@ impl ExploreApp {
             Category::McpServers => self.load_mcp_servers().await,
             Category::Skills => self.load_skills().await,
         };
-        self.list_state.select(if self.items.is_empty() { None } else { Some(0) });
+        self.list_state
+            .select(if self.items.is_empty() { None } else { Some(0) });
     }
 
     async fn load_models(&self) -> Vec<ResourceItem> {
@@ -210,12 +211,15 @@ impl ExploreApp {
                         credentials::Status::Local => "local",
                         credentials::Status::NotSet => "missing",
                     };
-                    let source = p.source.map(|s| match s {
-                        credentials::Source::Keychain => "keychain",
-                        credentials::Source::Env => "env",
-                        credentials::Source::DotEnv => ".env",
-                        credentials::Source::Local => "local",
-                    }).unwrap_or("-");
+                    let source = p
+                        .source
+                        .map(|s| match s {
+                            credentials::Source::Keychain => "keychain",
+                            credentials::Source::Env => "env",
+                            credentials::Source::DotEnv => ".env",
+                            credentials::Source::Local => "local",
+                        })
+                        .unwrap_or("-");
                     ResourceItem {
                         name: p.name,
                         status: status.into(),
@@ -362,7 +366,11 @@ impl ExploreApp {
             .collect();
 
         let tabs = Tabs::new(titles)
-            .block(Block::default().borders(Borders::ALL).title(" spn explore "))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" spn explore "),
+            )
             .select(self.category)
             .style(Style::default().fg(Color::White))
             .highlight_style(
@@ -471,8 +479,8 @@ impl ExploreApp {
             Line::from(""),
         ];
 
-        let help = Paragraph::new(help_text)
-            .block(Block::default().borders(Borders::ALL).title(" Help "));
+        let help =
+            Paragraph::new(help_text).block(Block::default().borders(Borders::ALL).title(" Help "));
 
         f.render_widget(help, area);
     }

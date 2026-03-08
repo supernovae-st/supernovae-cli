@@ -325,7 +325,10 @@ pub enum SuggestionAction {
     /// Navigate to URL.
     OpenUrl { url: String },
     /// Custom action.
-    Custom { action_type: String, data: serde_json::Value },
+    Custom {
+        action_type: String,
+        data: serde_json::Value,
+    },
 }
 
 impl SuggestionAction {

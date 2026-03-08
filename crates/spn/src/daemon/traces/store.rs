@@ -144,8 +144,7 @@ impl TraceStore {
     /// Save a trace to disk.
     async fn save_trace(&self, trace: &ReasoningTrace) -> std::io::Result<()> {
         let trace_file = self.storage_dir.join(format!("{}.json", trace.id));
-        let content = serde_json::to_string_pretty(trace)
-            .map_err(std::io::Error::other)?;
+        let content = serde_json::to_string_pretty(trace).map_err(std::io::Error::other)?;
         tokio::fs::write(&trace_file, content).await?;
 
         // Update index
@@ -162,8 +161,7 @@ impl TraceStore {
         drop(completed);
 
         let index_file = self.storage_dir.join("traces_index.json");
-        let content = serde_json::to_string_pretty(&summaries)
-            .map_err(std::io::Error::other)?;
+        let content = serde_json::to_string_pretty(&summaries).map_err(std::io::Error::other)?;
         tokio::fs::write(&index_file, content).await?;
 
         Ok(())
@@ -194,8 +192,8 @@ impl TraceStore {
         }
 
         let content = tokio::fs::read_to_string(&trace_file).await?;
-        let trace: ReasoningTrace = serde_json::from_str(&content)
-            .map_err(std::io::Error::other)?;
+        let trace: ReasoningTrace =
+            serde_json::from_str(&content).map_err(std::io::Error::other)?;
 
         Ok(Some(trace))
     }
@@ -228,7 +226,10 @@ impl TraceStore {
             .iter()
             .filter(|t| {
                 t.metadata.task.to_lowercase().contains(&query_lower)
-                    || t.metadata.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower))
+                    || t.metadata
+                        .tags
+                        .iter()
+                        .any(|tag| tag.to_lowercase().contains(&query_lower))
             })
             .map(TraceSummary::from)
             .collect()
@@ -273,7 +274,9 @@ impl TraceStore {
         // Count by provider
         let mut by_provider = FxHashMap::default();
         for trace in completed.iter() {
-            *by_provider.entry(trace.metadata.provider.clone()).or_insert(0) += 1;
+            *by_provider
+                .entry(trace.metadata.provider.clone())
+                .or_insert(0) += 1;
         }
 
         // Count by model
@@ -372,7 +375,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_trace_store_basic() {
-        let temp_dir = std::env::temp_dir().join(format!("spn-traces-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("spn-traces-test-{}", uuid::Uuid::new_v4()));
         let store = TraceStore::new(&temp_dir);
         store.init().await.unwrap();
 
@@ -405,7 +409,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_trace_store_failure() {
-        let temp_dir = std::env::temp_dir().join(format!("spn-traces-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("spn-traces-test-{}", uuid::Uuid::new_v4()));
         let store = TraceStore::new(&temp_dir);
         store.init().await.unwrap();
 
@@ -425,7 +430,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_trace_store_search() {
-        let temp_dir = std::env::temp_dir().join(format!("spn-traces-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("spn-traces-test-{}", uuid::Uuid::new_v4()));
         let store = TraceStore::new(&temp_dir);
         store.init().await.unwrap();
 
@@ -447,7 +453,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_trace_store_stats() {
-        let temp_dir = std::env::temp_dir().join(format!("spn-traces-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("spn-traces-test-{}", uuid::Uuid::new_v4()));
         let store = TraceStore::new(&temp_dir);
         store.init().await.unwrap();
 

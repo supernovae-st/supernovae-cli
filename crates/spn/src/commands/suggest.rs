@@ -64,19 +64,14 @@ pub async fn run(interactive: bool, category: Option<String>) -> Result<()> {
     println!();
     print_wizard_banner();
 
-    println!(
-        "{}",
-        ds::muted("Analyzing your environment...")
-    );
+    println!("{}", ds::muted("Analyzing your environment..."));
     println!();
 
     let mut suggestions = gather_suggestions().await;
 
     // Filter by category if specified
     if let Some(ref cat) = category {
-        suggestions.retain(|s| {
-            s.category.name().to_lowercase() == cat.to_lowercase()
-        });
+        suggestions.retain(|s| s.category.name().to_lowercase() == cat.to_lowercase());
     }
 
     if suggestions.is_empty() {
@@ -115,16 +110,20 @@ pub async fn run(interactive: bool, category: Option<String>) -> Result<()> {
     }
 
     // Group by category
-    let categories = [Category::Security, Category::Setup, Category::Tools, Category::Project];
+    let categories = [
+        Category::Security,
+        Category::Setup,
+        Category::Tools,
+        Category::Project,
+    ];
 
     if interactive {
         run_interactive_mode(&suggestions).await
     } else {
         // Print grouped suggestions
         for cat in &categories {
-            let cat_suggestions: Vec<_> = suggestions.iter()
-                .filter(|s| s.category == *cat)
-                .collect();
+            let cat_suggestions: Vec<_> =
+                suggestions.iter().filter(|s| s.category == *cat).collect();
 
             if cat_suggestions.is_empty() {
                 continue;
@@ -139,15 +138,8 @@ pub async fn run(interactive: bool, category: Option<String>) -> Result<()> {
             println!();
 
             for suggestion in cat_suggestions {
-                println!(
-                    "    {} {}",
-                    suggestion.icon,
-                    ds::primary(&suggestion.title)
-                );
-                println!(
-                    "      {}",
-                    ds::muted(&suggestion.reason)
-                );
+                println!("    {} {}", suggestion.icon, ds::primary(&suggestion.title));
+                println!("      {}", ds::muted(&suggestion.reason));
                 println!(
                     "      {} {}",
                     ds::muted("→"),
@@ -225,14 +217,10 @@ async fn run_interactive_mode(suggestions: &[Suggestion]) -> Result<()> {
     println!();
 
     // Build selection items
-    let items: Vec<String> = suggestions.iter().map(|s| {
-        format!(
-            "{} {} - {}",
-            s.icon,
-            s.title,
-            s.reason
-        )
-    }).collect();
+    let items: Vec<String> = suggestions
+        .iter()
+        .map(|s| format!("{} {} - {}", s.icon, s.title, s.reason))
+        .collect();
 
     let selections = MultiSelect::with_theme(&theme)
         .with_prompt("Select suggestions to run (Space to select, Enter to confirm)")
@@ -262,7 +250,11 @@ async fn run_interactive_mode(suggestions: &[Suggestion]) -> Result<()> {
             println!();
             println!(
                 "  {} Completed: {} succeeded, {} failed",
-                if failed == 0 { ds::success("✓") } else { ds::warning("⚠") },
+                if failed == 0 {
+                    ds::success("✓")
+                } else {
+                    ds::warning("⚠")
+                },
                 success,
                 failed
             );
@@ -346,7 +338,12 @@ async fn check_providers(suggestions: &mut Vec<Suggestion>) {
     // Count configured vs missing
     let configured = providers
         .iter()
-        .filter(|p| matches!(p.status, credentials::Status::Ready | credentials::Status::Local))
+        .filter(|p| {
+            matches!(
+                p.status,
+                credentials::Status::Ready | credentials::Status::Local
+            )
+        })
         .count();
     let missing: Vec<_> = providers
         .iter()
@@ -368,7 +365,11 @@ async fn check_providers(suggestions: &mut Vec<Suggestion>) {
         let missing_names: Vec<_> = missing.iter().map(|p| p.name.as_str()).collect();
         suggestions.push(Suggestion {
             icon: "🔑",
-            title: format!("Configure {} provider{}", missing.len(), if missing.len() == 1 { "" } else { "s" }),
+            title: format!(
+                "Configure {} provider{}",
+                missing.len(),
+                if missing.len() == 1 { "" } else { "s" }
+            ),
             reason: format!("Missing: {}", missing_names.join(", ")),
             command: format!("spn provider set {}", missing_names[0]),
             priority: 5,
@@ -380,7 +381,12 @@ async fn check_providers(suggestions: &mut Vec<Suggestion>) {
     // Check for env vars that could be migrated
     let env_based: Vec<_> = providers
         .iter()
-        .filter(|p| matches!(p.source, Some(credentials::Source::Env | credentials::Source::DotEnv)))
+        .filter(|p| {
+            matches!(
+                p.source,
+                Some(credentials::Source::Env | credentials::Source::DotEnv)
+            )
+        })
         .collect();
 
     if !env_based.is_empty() {
@@ -425,11 +431,19 @@ async fn check_mcp_servers(suggestions: &mut Vec<Suggestion>) {
     if !errored.is_empty() {
         suggestions.push(Suggestion {
             icon: "⚠️",
-            title: format!("Fix {} MCP server{}", errored.len(), if errored.len() == 1 { "" } else { "s" }),
+            title: format!(
+                "Fix {} MCP server{}",
+                errored.len(),
+                if errored.len() == 1 { "" } else { "s" }
+            ),
             reason: format!(
                 "Server{} with errors: {}",
                 if errored.len() == 1 { "" } else { "s" },
-                errored.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", ")
+                errored
+                    .iter()
+                    .map(|s| s.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
             ),
             command: format!("spn mcp test {}", errored[0].name),
             priority: 2,
@@ -514,11 +528,7 @@ fn check_nika_workflows(suggestions: &mut Vec<Suggestion>) {
         .map(|entries| {
             entries
                 .filter_map(|e| e.ok())
-                .any(|e| {
-                    e.file_name()
-                        .to_string_lossy()
-                        .ends_with(".nika.yaml")
-                })
+                .any(|e| e.file_name().to_string_lossy().ends_with(".nika.yaml"))
         })
         .unwrap_or(false);
 

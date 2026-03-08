@@ -51,32 +51,32 @@ pub mod service;
 mod socket;
 pub mod traces;
 
-pub use error::DaemonError;
 #[allow(unused_imports)]
 pub use agents::{
     Agent, AgentConfig, AgentId, AgentManager, AgentRole, AgentState, AgentStatus, DelegatedTask,
 };
-#[allow(unused_imports)]
-pub use jobs::{Job, JobId, JobScheduler, JobState, JobStatus, JobStore};
-#[allow(unused_imports)]
-pub use memory::{MemoryEntry, MemoryKey, MemoryNamespace, MemoryStore};
-#[allow(unused_imports)]
-pub use proactive::{
-    ContextTrigger, ProactiveSuggestion, SuggestionAnalyzer, SuggestionCategory, SuggestionId,
-    SuggestionPriority, SuggestionSource, TriggerCondition,
-};
-#[allow(unused_imports)]
-pub use traces::{ReasoningTrace, TraceId, TraceMetadata, TraceStep, TraceStepKind, TraceStore};
 #[allow(unused_imports)]
 pub use autonomy::{
     ApprovalLevel, AutonomousTask, AutonomyLevel, AutonomyOrchestrator, AutonomyPolicy, Decision,
     DecisionOutcome, OrchestratorConfig, OrchestratorState, OrchestratorStats, PolicyViolation,
     TaskResult, TaskSource, TaskStatus,
 };
+pub use error::DaemonError;
+#[allow(unused_imports)]
+pub use jobs::{Job, JobId, JobScheduler, JobState, JobStatus, JobStore};
+#[allow(unused_imports)]
+pub use memory::{MemoryEntry, MemoryKey, MemoryNamespace, MemoryStore};
 pub use model_manager::ModelManager;
+#[allow(unused_imports)]
+pub use proactive::{
+    ContextTrigger, ProactiveSuggestion, SuggestionAnalyzer, SuggestionCategory, SuggestionId,
+    SuggestionPriority, SuggestionSource, TriggerCondition,
+};
 pub use secrets::SecretManager;
 pub use server::{DaemonConfig, DaemonServer};
 pub use service::{ServiceError, ServiceManager};
+#[allow(unused_imports)]
+pub use traces::{ReasoningTrace, TraceId, TraceMetadata, TraceStep, TraceStepKind, TraceStore};
 // Reserved for future service management API
 #[allow(unused_imports)]
 pub use service::{ServiceManagerType, ServiceStatus};

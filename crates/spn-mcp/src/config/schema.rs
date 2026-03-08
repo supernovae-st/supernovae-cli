@@ -221,10 +221,7 @@ impl ToolDef {
                         ParamType::Array => "array",
                         ParamType::Object => "object",
                     };
-                    prop.insert(
-                        "items".into(),
-                        serde_json::json!({"type": items_type_str}),
-                    );
+                    prop.insert("items".into(), serde_json::json!({"type": items_type_str}));
                 }
             }
 
@@ -338,6 +335,9 @@ tools:
         assert_eq!(schema["type"], "object");
         assert!(schema["properties"]["query"]["type"] == "string");
         assert!(schema["properties"]["limit"]["default"] == 10);
-        assert!(schema["required"].as_array().unwrap().contains(&serde_json::json!("query")));
+        assert!(schema["required"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("query")));
     }
 }

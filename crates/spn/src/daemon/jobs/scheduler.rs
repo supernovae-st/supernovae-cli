@@ -274,7 +274,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_scheduler_stats() {
-        let temp_dir = std::env::temp_dir().join(format!("spn-sched-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("spn-sched-test-{}", uuid::Uuid::new_v4()));
         let store = Arc::new(JobStore::new(&temp_dir));
         store.init().await.unwrap();
 

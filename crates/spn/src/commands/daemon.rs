@@ -2,7 +2,9 @@
 //!
 //! Start, stop, and manage the spn daemon.
 
-use crate::daemon::{mcp::McpServer, paths, DaemonConfig, DaemonServer, ModelManager, SecretManager, ServiceManager};
+use crate::daemon::{
+    mcp::McpServer, paths, DaemonConfig, DaemonServer, ModelManager, SecretManager, ServiceManager,
+};
 use crate::error::Result;
 use crate::ux::design_system as ds;
 use crate::DaemonCommands;

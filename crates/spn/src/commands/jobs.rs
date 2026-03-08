@@ -15,9 +15,12 @@ use std::time::SystemTime;
 pub async fn run(command: JobsCommands) -> Result<()> {
     match command {
         JobsCommands::List { all, json } => list(all, json).await,
-        JobsCommands::Submit { workflow, args, name, priority } => {
-            submit(workflow, args, name, priority).await
-        }
+        JobsCommands::Submit {
+            workflow,
+            args,
+            name,
+            priority,
+        } => submit(workflow, args, name, priority).await,
         JobsCommands::Status { id } => status(&id).await,
         JobsCommands::Cancel { id } => cancel(&id).await,
         JobsCommands::Output { id, follow } => output(&id, follow).await,
@@ -56,7 +59,10 @@ async fn list(all: bool, json: bool) -> Result<()> {
     if jobs.is_empty() {
         println!("{} No jobs found", ds::primary("→"));
         println!();
-        println!("Submit a workflow with: {}", ds::highlight("spn jobs submit <workflow.yaml>"));
+        println!(
+            "Submit a workflow with: {}",
+            ds::highlight("spn jobs submit <workflow.yaml>")
+        );
         return Ok(());
     }
 
@@ -94,7 +100,10 @@ async fn list(all: bool, json: bool) -> Result<()> {
     // Summary
     let pending = jobs.iter().filter(|j| j.state == JobState::Pending).count();
     let running = jobs.iter().filter(|j| j.state == JobState::Running).count();
-    let completed = jobs.iter().filter(|j| j.state == JobState::Completed).count();
+    let completed = jobs
+        .iter()
+        .filter(|j| j.state == JobState::Completed)
+        .count();
     let failed = jobs.iter().filter(|j| j.state == JobState::Failed).count();
 
     println!(
@@ -118,7 +127,11 @@ async fn submit(
 ) -> Result<()> {
     // Validate workflow exists
     if !workflow.exists() {
-        println!("{} Workflow not found: {}", ds::error("✗"), workflow.display());
+        println!(
+            "{} Workflow not found: {}",
+            ds::error("✗"),
+            workflow.display()
+        );
         return Ok(());
     }
 
@@ -128,9 +141,11 @@ async fn submit(
     let scheduler = JobScheduler::new(store);
 
     if !scheduler.has_nika() {
-        println!("{} Nika not found. Install with: {}",
+        println!(
+            "{} Nika not found. Install with: {}",
             ds::warning("⚠"),
-            ds::highlight("spn setup nika"));
+            ds::highlight("spn setup nika")
+        );
         return Ok(());
     }
 
@@ -150,7 +165,10 @@ async fn submit(
     println!("  Workflow:  {}", workflow.display());
     println!("  State:     {}", format_state(status.state));
     println!();
-    println!("Track with: {}", ds::highlight(format!("spn jobs status {}", status.job.id)));
+    println!(
+        "Track with: {}",
+        ds::highlight(format!("spn jobs status {}", status.job.id))
+    );
 
     Ok(())
 }

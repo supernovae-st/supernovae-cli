@@ -64,7 +64,11 @@ impl ModelManager {
     /// Pull a model with progress callback.
     ///
     /// The callback is invoked for each progress update during the download.
-    pub async fn pull_with_progress<F>(&self, name: &str, on_progress: F) -> Result<(), BackendError>
+    pub async fn pull_with_progress<F>(
+        &self,
+        name: &str,
+        on_progress: F,
+    ) -> Result<(), BackendError>
     where
         F: Fn(PullProgress) + Send + Sync + 'static,
     {

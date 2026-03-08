@@ -2,7 +2,9 @@
 
 #![allow(dead_code)]
 
-use super::types::{Agent, AgentConfig, AgentId, AgentResult, AgentState, AgentStatus, DelegatedTask};
+use super::types::{
+    Agent, AgentConfig, AgentId, AgentResult, AgentState, AgentStatus, DelegatedTask,
+};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -90,7 +92,9 @@ impl AgentManager {
     /// Delegate a task to an agent.
     pub async fn delegate(&self, agent_id: AgentId, task: DelegatedTask) -> Result<(), AgentError> {
         let mut agents = self.agents.write().await;
-        let agent = agents.get_mut(&agent_id).ok_or(AgentError::NotFound(agent_id))?;
+        let agent = agents
+            .get_mut(&agent_id)
+            .ok_or(AgentError::NotFound(agent_id))?;
 
         if agent.state != AgentState::Idle {
             return Err(AgentError::NotIdle(agent_id));
@@ -102,9 +106,15 @@ impl AgentManager {
     }
 
     /// Update agent state.
-    pub async fn update_state(&self, agent_id: AgentId, state: AgentState) -> Result<(), AgentError> {
+    pub async fn update_state(
+        &self,
+        agent_id: AgentId,
+        state: AgentState,
+    ) -> Result<(), AgentError> {
         let mut agents = self.agents.write().await;
-        let agent = agents.get_mut(&agent_id).ok_or(AgentError::NotFound(agent_id))?;
+        let agent = agents
+            .get_mut(&agent_id)
+            .ok_or(AgentError::NotFound(agent_id))?;
         agent.set_state(state);
         Ok(())
     }
@@ -112,7 +122,9 @@ impl AgentManager {
     /// Record a turn for an agent.
     pub async fn record_turn(&self, agent_id: AgentId, tokens: u32) -> Result<(), AgentError> {
         let mut agents = self.agents.write().await;
-        let agent = agents.get_mut(&agent_id).ok_or(AgentError::NotFound(agent_id))?;
+        let agent = agents
+            .get_mut(&agent_id)
+            .ok_or(AgentError::NotFound(agent_id))?;
         agent.record_turn(tokens);
         Ok(())
     }
@@ -120,16 +132,24 @@ impl AgentManager {
     /// Complete an agent with result.
     pub async fn complete(&self, agent_id: AgentId, result: AgentResult) -> Result<(), AgentError> {
         let mut agents = self.agents.write().await;
-        let agent = agents.get_mut(&agent_id).ok_or(AgentError::NotFound(agent_id))?;
+        let agent = agents
+            .get_mut(&agent_id)
+            .ok_or(AgentError::NotFound(agent_id))?;
         agent.complete(result);
         info!(?agent_id, "Agent completed");
         Ok(())
     }
 
     /// Fail an agent.
-    pub async fn fail(&self, agent_id: AgentId, error: impl Into<String>) -> Result<(), AgentError> {
+    pub async fn fail(
+        &self,
+        agent_id: AgentId,
+        error: impl Into<String>,
+    ) -> Result<(), AgentError> {
         let mut agents = self.agents.write().await;
-        let agent = agents.get_mut(&agent_id).ok_or(AgentError::NotFound(agent_id))?;
+        let agent = agents
+            .get_mut(&agent_id)
+            .ok_or(AgentError::NotFound(agent_id))?;
         agent.fail(error);
         warn!(?agent_id, "Agent failed");
         Ok(())
@@ -138,7 +158,9 @@ impl AgentManager {
     /// Cancel an agent.
     pub async fn cancel(&self, agent_id: AgentId) -> Result<(), AgentError> {
         let mut agents = self.agents.write().await;
-        let agent = agents.get_mut(&agent_id).ok_or(AgentError::NotFound(agent_id))?;
+        let agent = agents
+            .get_mut(&agent_id)
+            .ok_or(AgentError::NotFound(agent_id))?;
         agent.cancel();
         info!(?agent_id, "Agent cancelled");
         Ok(())
@@ -350,8 +372,14 @@ mod tests {
         let manager = AgentManager::new();
 
         let id = manager.spawn(AgentConfig::default()).await.unwrap();
-        manager.delegate(id, DelegatedTask::new("Task")).await.unwrap();
-        manager.complete(id, AgentResult::Text("Done".into())).await.unwrap();
+        manager
+            .delegate(id, DelegatedTask::new("Task"))
+            .await
+            .unwrap();
+        manager
+            .complete(id, AgentResult::Text("Done".into()))
+            .await
+            .unwrap();
 
         let agent = manager.get(&id).await.unwrap();
         assert_eq!(agent.state, AgentState::Completed);
@@ -364,8 +392,14 @@ mod tests {
         // Spawn 2 agents and make them active
         let id1 = manager.spawn(AgentConfig::default()).await.unwrap();
         let id2 = manager.spawn(AgentConfig::default()).await.unwrap();
-        manager.delegate(id1, DelegatedTask::new("Task 1")).await.unwrap();
-        manager.delegate(id2, DelegatedTask::new("Task 2")).await.unwrap();
+        manager
+            .delegate(id1, DelegatedTask::new("Task 1"))
+            .await
+            .unwrap();
+        manager
+            .delegate(id2, DelegatedTask::new("Task 2"))
+            .await
+            .unwrap();
 
         // Third should fail
         let result = manager.spawn(AgentConfig::default()).await;
@@ -392,8 +426,14 @@ mod tests {
         let manager = AgentManager::new().with_max_depth(2);
 
         let id1 = manager.spawn(AgentConfig::default()).await.unwrap();
-        let id2 = manager.spawn_child(id1, AgentConfig::default()).await.unwrap();
-        let id3 = manager.spawn_child(id2, AgentConfig::default()).await.unwrap();
+        let id2 = manager
+            .spawn_child(id1, AgentConfig::default())
+            .await
+            .unwrap();
+        let id3 = manager
+            .spawn_child(id2, AgentConfig::default())
+            .await
+            .unwrap();
 
         // Fourth level should fail
         let result = manager.spawn_child(id3, AgentConfig::default()).await;
@@ -404,9 +444,18 @@ mod tests {
     async fn test_agent_manager_stats() {
         let manager = AgentManager::new();
 
-        manager.spawn(AgentConfig::for_role(AgentRole::Explorer)).await.unwrap();
-        manager.spawn(AgentConfig::for_role(AgentRole::Explorer)).await.unwrap();
-        manager.spawn(AgentConfig::for_role(AgentRole::Generator)).await.unwrap();
+        manager
+            .spawn(AgentConfig::for_role(AgentRole::Explorer))
+            .await
+            .unwrap();
+        manager
+            .spawn(AgentConfig::for_role(AgentRole::Explorer))
+            .await
+            .unwrap();
+        manager
+            .spawn(AgentConfig::for_role(AgentRole::Generator))
+            .await
+            .unwrap();
 
         let stats = manager.stats().await;
         assert_eq!(stats.total_count, 3);

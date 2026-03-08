@@ -179,13 +179,17 @@ impl AutonomousTask {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TaskSource {
     /// From a proactive suggestion.
-    Suggestion { suggestion_id: crate::daemon::SuggestionId },
+    Suggestion {
+        suggestion_id: crate::daemon::SuggestionId,
+    },
     /// From a scheduled job.
     Job { job_id: crate::daemon::JobId },
     /// From user request.
     UserRequest { request_id: Uuid },
     /// From agent delegation.
-    AgentDelegation { parent_agent: crate::daemon::AgentId },
+    AgentDelegation {
+        parent_agent: crate::daemon::AgentId,
+    },
     /// From error recovery.
     ErrorRecovery { error: String },
     /// System-initiated.
@@ -436,9 +440,12 @@ mod tests {
 
     #[test]
     fn test_autonomous_task_creation() {
-        let task = AutonomousTask::new("Run tests", TaskSource::System {
-            reason: "scheduled".into(),
-        })
+        let task = AutonomousTask::new(
+            "Run tests",
+            TaskSource::System {
+                reason: "scheduled".into(),
+            },
+        )
         .with_priority(2)
         .with_estimated_duration(Duration::from_secs(60));
 
@@ -449,9 +456,12 @@ mod tests {
 
     #[test]
     fn test_task_lifecycle() {
-        let mut task = AutonomousTask::new("Test task", TaskSource::System {
-            reason: "test".into(),
-        });
+        let mut task = AutonomousTask::new(
+            "Test task",
+            TaskSource::System {
+                reason: "test".into(),
+            },
+        );
 
         assert!(task.needs_approval() == false); // Auto level
         task.approval_level = super::super::ApprovalLevel::Required;

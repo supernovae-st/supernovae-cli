@@ -173,7 +173,10 @@ async fn pull(name: &str) -> Result<()> {
         }
         Err(e) => {
             spinner.finish_error(&format!("Daemon request failed: {}", e));
-            return Err(SpnError::CommandFailed(format!("Daemon request failed: {}", e)));
+            return Err(SpnError::CommandFailed(format!(
+                "Daemon request failed: {}",
+                e
+            )));
         }
     }
 
@@ -210,7 +213,10 @@ async fn load(name: &str, keep_alive: bool) -> Result<()> {
     match response {
         Ok(Response::Success { success: true }) => {
             let msg = if keep_alive {
-                format!("Model '{}' loaded (will stay loaded until manually unloaded)", name)
+                format!(
+                    "Model '{}' loaded (will stay loaded until manually unloaded)",
+                    name
+                )
             } else {
                 format!("Model '{}' loaded", name)
             };
@@ -228,7 +234,10 @@ async fn load(name: &str, keep_alive: bool) -> Result<()> {
         }
         Err(e) => {
             spinner.finish_error(&format!("Daemon request failed: {}", e));
-            return Err(SpnError::CommandFailed(format!("Daemon request failed: {}", e)));
+            return Err(SpnError::CommandFailed(format!(
+                "Daemon request failed: {}",
+                e
+            )));
         }
     }
 
@@ -266,7 +275,10 @@ async fn unload(name: &str) -> Result<()> {
         }
         Err(e) => {
             spinner.finish_error(&format!("Daemon request failed: {}", e));
-            return Err(SpnError::CommandFailed(format!("Daemon request failed: {}", e)));
+            return Err(SpnError::CommandFailed(format!(
+                "Daemon request failed: {}",
+                e
+            )));
         }
     }
 
@@ -317,7 +329,10 @@ async fn delete(name: &str, skip_confirm: bool) -> Result<()> {
         }
         Err(e) => {
             spinner.finish_error(&format!("Daemon request failed: {}", e));
-            return Err(SpnError::CommandFailed(format!("Daemon request failed: {}", e)));
+            return Err(SpnError::CommandFailed(format!(
+                "Daemon request failed: {}",
+                e
+            )));
         }
     }
 

@@ -84,11 +84,7 @@ async fn serve(api_filter: Option<String>) -> Result<()> {
     }
 
     let tool_count: usize = configs.iter().map(|c| c.tools.len()).sum();
-    tracing::info!(
-        "Loaded {} APIs with {} tools",
-        configs.len(),
-        tool_count
-    );
+    tracing::info!("Loaded {} APIs with {} tools", configs.len(), tool_count);
 
     // Start MCP server
     server::run(configs).await

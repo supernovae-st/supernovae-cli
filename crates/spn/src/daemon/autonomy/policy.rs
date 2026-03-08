@@ -233,7 +233,11 @@ impl AutonomyPolicy {
     }
 
     /// Validate an action against policy.
-    pub fn validate(&self, action: &str, resources: &[String]) -> Result<ApprovalLevel, PolicyViolation> {
+    pub fn validate(
+        &self,
+        action: &str,
+        resources: &[String],
+    ) -> Result<ApprovalLevel, PolicyViolation> {
         // Check operation
         if !self.is_operation_allowed(action) {
             return Err(PolicyViolation::OperationBlocked(action.to_string()));

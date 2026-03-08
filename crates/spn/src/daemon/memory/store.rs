@@ -52,22 +52,20 @@ impl MemoryStore {
         }
 
         match tokio::fs::read_to_string(&memory_file).await {
-            Ok(content) => {
-                match serde_json::from_str::<Vec<MemoryEntry>>(&content) {
-                    Ok(entries) => {
-                        let mut cache = self.cache.write().await;
-                        for entry in entries {
-                            if !entry.is_expired() {
-                                cache.insert(entry.key.path(), entry);
-                            }
+            Ok(content) => match serde_json::from_str::<Vec<MemoryEntry>>(&content) {
+                Ok(entries) => {
+                    let mut cache = self.cache.write().await;
+                    for entry in entries {
+                        if !entry.is_expired() {
+                            cache.insert(entry.key.path(), entry);
                         }
-                        debug!(count = cache.len(), "Loaded memory entries from disk");
                     }
-                    Err(e) => {
-                        warn!(error = %e, "Failed to parse memory file");
-                    }
+                    debug!(count = cache.len(), "Loaded memory entries from disk");
                 }
-            }
+                Err(e) => {
+                    warn!(error = %e, "Failed to parse memory file");
+                }
+            },
             Err(e) => {
                 warn!(error = %e, "Failed to read memory file");
             }
@@ -82,8 +80,7 @@ impl MemoryStore {
         let entries: Vec<_> = cache.values().cloned().collect();
         drop(cache);
 
-        let content = serde_json::to_string_pretty(&entries)
-            .map_err(std::io::Error::other)?;
+        let content = serde_json::to_string_pretty(&entries).map_err(std::io::Error::other)?;
 
         let memory_file = self.storage_dir.join("memory.json");
         tokio::fs::write(&memory_file, content).await?;
@@ -192,9 +189,7 @@ impl MemoryStore {
 
         cache
             .values()
-            .filter(|entry| {
-                !entry.is_expired() && tags.iter().all(|t| entry.tags.contains(t))
-            })
+            .filter(|entry| !entry.is_expired() && tags.iter().all(|t| entry.tags.contains(t)))
             .cloned()
             .collect()
     }
@@ -332,7 +327,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_store_basic() {
-        let temp_dir = std::env::temp_dir().join(format!("spn-memory-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("spn-memory-test-{}", uuid::Uuid::new_v4()));
         let store = MemoryStore::new(&temp_dir);
         store.init().await.unwrap();
 
@@ -351,7 +347,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_store_upsert() {
-        let temp_dir = std::env::temp_dir().join(format!("spn-memory-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("spn-memory-test-{}", uuid::Uuid::new_v4()));
         let store = MemoryStore::new(&temp_dir);
         store.init().await.unwrap();
 
@@ -375,23 +372,30 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_store_list() {
-        let temp_dir = std::env::temp_dir().join(format!("spn-memory-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("spn-memory-test-{}", uuid::Uuid::new_v4()));
         let store = MemoryStore::new(&temp_dir);
         store.init().await.unwrap();
 
         // Add entries to different namespaces
-        store.set(MemoryEntry::new(
-            MemoryKey::preference("a"),
-            serde_json::json!("1"),
-        )).await;
-        store.set(MemoryEntry::new(
-            MemoryKey::preference("b"),
-            serde_json::json!("2"),
-        )).await;
-        store.set(MemoryEntry::new(
-            MemoryKey::command("x"),
-            serde_json::json!("cmd"),
-        )).await;
+        store
+            .set(MemoryEntry::new(
+                MemoryKey::preference("a"),
+                serde_json::json!("1"),
+            ))
+            .await;
+        store
+            .set(MemoryEntry::new(
+                MemoryKey::preference("b"),
+                serde_json::json!("2"),
+            ))
+            .await;
+        store
+            .set(MemoryEntry::new(
+                MemoryKey::command("x"),
+                serde_json::json!("cmd"),
+            ))
+            .await;
 
         // List preferences
         let prefs = store.list(MemoryNamespace::Preferences).await;
@@ -407,12 +411,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_store_delete() {
-        let temp_dir = std::env::temp_dir().join(format!("spn-memory-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("spn-memory-test-{}", uuid::Uuid::new_v4()));
         let store = MemoryStore::new(&temp_dir);
         store.init().await.unwrap();
 
         let key = MemoryKey::preference("temp");
-        store.set(MemoryEntry::new(key.clone(), serde_json::json!("value"))).await;
+        store
+            .set(MemoryEntry::new(key.clone(), serde_json::json!("value")))
+            .await;
 
         // Verify exists
         assert!(store.get(&key).await.is_some());

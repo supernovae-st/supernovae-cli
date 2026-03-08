@@ -47,20 +47,18 @@ impl JobStore {
         }
 
         match tokio::fs::read_to_string(&jobs_file).await {
-            Ok(content) => {
-                match serde_json::from_str::<Vec<JobStatus>>(&content) {
-                    Ok(job_list) => {
-                        let mut jobs = self.jobs.write().await;
-                        for status in job_list {
-                            jobs.insert(status.job.id, status);
-                        }
-                        debug!(count = jobs.len(), "Loaded jobs from disk");
+            Ok(content) => match serde_json::from_str::<Vec<JobStatus>>(&content) {
+                Ok(job_list) => {
+                    let mut jobs = self.jobs.write().await;
+                    for status in job_list {
+                        jobs.insert(status.job.id, status);
                     }
-                    Err(e) => {
-                        warn!(error = %e, "Failed to parse jobs file");
-                    }
+                    debug!(count = jobs.len(), "Loaded jobs from disk");
                 }
-            }
+                Err(e) => {
+                    warn!(error = %e, "Failed to parse jobs file");
+                }
+            },
             Err(e) => {
                 warn!(error = %e, "Failed to read jobs file");
             }
@@ -75,8 +73,7 @@ impl JobStore {
         let job_list: Vec<_> = jobs.values().cloned().collect();
         drop(jobs);
 
-        let content = serde_json::to_string_pretty(&job_list)
-            .map_err(std::io::Error::other)?;
+        let content = serde_json::to_string_pretty(&job_list).map_err(std::io::Error::other)?;
 
         let jobs_file = self.storage_dir.join("jobs.json");
         tokio::fs::write(&jobs_file, content).await?;
@@ -141,7 +138,8 @@ impl JobStore {
             .collect();
         // Sort by priority (highest first), then by creation time (oldest first)
         pending.sort_by(|a, b| {
-            b.job.priority
+            b.job
+                .priority
                 .cmp(&a.job.priority)
                 .then_with(|| a.job.created_at.cmp(&b.job.created_at))
         });

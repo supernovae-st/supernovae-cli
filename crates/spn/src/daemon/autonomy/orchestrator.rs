@@ -313,7 +313,11 @@ impl AutonomyOrchestrator {
     }
 
     /// Record decision outcome.
-    pub fn record_outcome(&self, decision_id: Uuid, outcome: DecisionOutcome) -> Result<(), String> {
+    pub fn record_outcome(
+        &self,
+        decision_id: Uuid,
+        outcome: DecisionOutcome,
+    ) -> Result<(), String> {
         let mut decisions = self.decisions.write().unwrap();
         let decision = decisions
             .iter_mut()
@@ -445,9 +449,12 @@ mod tests {
         let orchestrator = AutonomyOrchestrator::new();
         orchestrator.start();
 
-        let task = AutonomousTask::new("Run tests", TaskSource::System {
-            reason: "test".into(),
-        });
+        let task = AutonomousTask::new(
+            "Run tests",
+            TaskSource::System {
+                reason: "test".into(),
+            },
+        );
         let result = orchestrator.submit_task(task);
         assert!(result.is_ok());
 
@@ -460,9 +467,12 @@ mod tests {
         let orchestrator = AutonomyOrchestrator::new();
         // Don't start it
 
-        let task = AutonomousTask::new("Test", TaskSource::System {
-            reason: "test".into(),
-        });
+        let task = AutonomousTask::new(
+            "Test",
+            TaskSource::System {
+                reason: "test".into(),
+            },
+        );
         let result = orchestrator.submit_task(task);
         assert!(result.is_err());
     }
@@ -475,9 +485,12 @@ mod tests {
         // Set to manual mode (all tasks need approval)
         orchestrator.set_autonomy_level(AutonomyLevel::Manual);
 
-        let task = AutonomousTask::new("Test task", TaskSource::System {
-            reason: "test".into(),
-        });
+        let task = AutonomousTask::new(
+            "Test task",
+            TaskSource::System {
+                reason: "test".into(),
+            },
+        );
         let task_id = orchestrator.submit_task(task).unwrap();
 
         // Task should need approval in manual mode
@@ -498,9 +511,12 @@ mod tests {
         // Set to full autonomy mode
         orchestrator.set_autonomy_level(AutonomyLevel::Full);
 
-        let task = AutonomousTask::new("Test task", TaskSource::System {
-            reason: "test".into(),
-        });
+        let task = AutonomousTask::new(
+            "Test task",
+            TaskSource::System {
+                reason: "test".into(),
+            },
+        );
         let task_id = orchestrator.submit_task(task).unwrap();
 
         // Task should be auto-approved in full mode
@@ -541,9 +557,12 @@ mod tests {
         orchestrator.start();
         orchestrator.set_autonomy_level(AutonomyLevel::Full);
 
-        let task = AutonomousTask::new("Test", TaskSource::System {
-            reason: "test".into(),
-        });
+        let task = AutonomousTask::new(
+            "Test",
+            TaskSource::System {
+                reason: "test".into(),
+            },
+        );
         let task_id = orchestrator.submit_task(task).unwrap();
 
         let agent_id = AgentId::new();

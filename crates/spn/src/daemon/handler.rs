@@ -518,9 +518,7 @@ mod tests {
     async fn test_handle_job_list_empty() {
         let handler = create_handler();
 
-        let response = handler
-            .handle(Request::JobList { state: None })
-            .await;
+        let response = handler.handle(Request::JobList { state: None }).await;
 
         match response {
             Response::JobListResult { jobs } => {

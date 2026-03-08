@@ -250,7 +250,9 @@ impl AgentConfig {
 
     /// Get the model (role default or override).
     pub fn effective_model(&self) -> &str {
-        self.model.as_deref().unwrap_or_else(|| self.role.default_model())
+        self.model
+            .as_deref()
+            .unwrap_or_else(|| self.role.default_model())
     }
 }
 
