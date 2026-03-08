@@ -81,16 +81,12 @@ pub struct AutonomyOrchestrator {
     /// Statistics.
     stats: RwLock<OrchestratorStats>,
     /// Agent manager (optional, may not be initialized).
-    #[allow(dead_code)]
     agent_manager: Option<Arc<AgentManager>>,
     /// Memory store (optional).
-    #[allow(dead_code)]
     memory_store: Option<Arc<MemoryStore>>,
     /// Trace store (optional).
-    #[allow(dead_code)]
     trace_store: Option<Arc<TraceStore>>,
     /// Suggestion analyzer (optional).
-    #[allow(dead_code)]
     suggestion_analyzer: Option<Arc<SuggestionAnalyzer>>,
     /// When started.
     started_at: RwLock<Option<SystemTime>>,
