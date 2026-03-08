@@ -1020,6 +1020,53 @@ spn setup --verbose
 
 > 💡 **Tip:** Start with Ollama for local development — no API keys, no costs, full privacy.
 
+#### `spn setup nika`
+
+Install and configure Nika workflow engine with 5-step wizard.
+
+```bash
+spn setup nika
+```
+
+**What happens:**
+
+| Step | Action | Description |
+|:----:|:-------|:------------|
+| 1 | Install CLI | Downloads `nika` binary via cargo or homebrew |
+| 2 | Install LSP | Sets up `nika-lsp` for IDE support |
+| 3 | Start Daemon | Auto-starts `spn daemon` for unified secret management |
+| 4 | Check Providers | Verifies LLM API keys are configured |
+| 5 | Configure Editors | Auto-detects and configures IDE integrations |
+
+**Editor Integration:**
+- **Claude Code** — Syncs MCP config via `spn sync`
+- **VS Code** — Adds YAML schema for `.nika.yaml` validation
+- **Cursor** — Adds YAML schema for `.nika.yaml` validation
+- **Windsurf** — Adds YAML schema for `.nika.yaml` validation
+
+```
+🦋 Nika Setup Complete!
+
+WHAT'S NEXT?
+  nika              Launch TUI (Home View)
+  nika chat         Start chat session
+  nika studio       Open workflow studio
+  nika --help       Show all commands
+```
+
+#### `spn setup novanet`
+
+Install and configure NovaNet knowledge graph.
+
+```bash
+spn setup novanet
+```
+
+**What happens:**
+1. Installs `novanet` CLI
+2. Configures Neo4j connection
+3. Sets up MCP server integration
+
 <br>
 
 ---
