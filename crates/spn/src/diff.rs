@@ -2,7 +2,7 @@
 //!
 //! Provides interactive diff previews with colored output.
 //!
-//! TODO(v0.14): Integrate with sync command for change confirmation
+//! TODO(v0.16): Integrate with sync command for change confirmation
 
 #![allow(dead_code)]
 

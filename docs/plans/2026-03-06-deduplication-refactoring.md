@@ -134,7 +134,7 @@ pub enum PathError {
 
 Two parallel implementations exist:
 1. `sync/adapters.rs` (343 lines) — trait-based, used by `spn sync`
-2. `sync/mcp_sync.rs` (683 lines) — function-based, TODO(v0.14)
+2. `sync/mcp_sync.rs` (683 lines) — function-based, TODO(v0.16)
 
 Duplication within adapters.rs:
 - ClaudeCode JSON loading: 17 lines

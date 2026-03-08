@@ -4,7 +4,7 @@
 //! - Global: `~/.spn/mcp.yaml`
 //! - Project: `.spn/mcp.yaml` or `spn.yaml` (mcp section)
 //!
-//! TODO(v0.14): Integrate with `spn mcp` and `spn sync` commands
+//! TODO(v0.16): Integrate with `spn mcp` and `spn sync` commands
 
 #![allow(dead_code)]
 

@@ -6,8 +6,9 @@ Thank you for your interest in contributing to SuperNovae CLI! This document pro
 
 ### Prerequisites
 
-- Rust 1.75 or later
+- Rust 1.85 or later (MSRV)
 - Linux: `libdbus-1-dev` and `pkg-config` for keyring support
+- **Note:** Windows is not yet supported (daemon uses Unix sockets)
 
 ### Development Setup
 

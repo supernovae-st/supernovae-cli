@@ -2,7 +2,7 @@
 //!
 //! This module provides CLI-specific extensions on top of `spn_keyring`.
 //!
-//! TODO(v0.14): Integrate additional keyring methods
+//! TODO(v0.16): Integrate additional keyring methods
 //!
 //! # Core keyring functionality
 //!

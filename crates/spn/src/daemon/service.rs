@@ -3,7 +3,7 @@
 //! Supports launchd (macOS) and systemd (Linux) for running the daemon
 //! as a system service that starts automatically at login.
 //!
-//! TODO(v0.14): Integrate with `spn daemon install` and `spn daemon status`
+//! TODO(v0.16): Integrate with `spn daemon install` and `spn daemon status`
 //!
 //! # Example
 //!

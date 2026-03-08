@@ -1,6 +1,6 @@
 //! Daemon-specific error types.
 //!
-//! TODO(v0.14): Add more granular error variants
+//! TODO(v0.16): Add more granular error variants
 
 #![allow(dead_code)]
 

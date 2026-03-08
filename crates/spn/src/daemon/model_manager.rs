@@ -2,7 +2,7 @@
 //!
 //! Manages model lifecycle (pull, load, unload) using the ModelBackend trait.
 //!
-//! TODO(v0.14): Integrate with `spn model` commands and daemon IPC
+//! TODO(v0.16): Integrate with `spn model` commands and daemon IPC
 
 #![allow(dead_code)]
 

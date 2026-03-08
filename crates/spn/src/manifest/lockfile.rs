@@ -2,7 +2,7 @@
 //!
 //! The lockfile captures exact resolved versions for reproducible installs.
 //!
-//! TODO(v0.14): Integrate with `spn install --frozen` for reproducible builds
+//! TODO(v0.16): Integrate with `spn install --frozen` for reproducible builds
 //!
 //! # Example
 //!

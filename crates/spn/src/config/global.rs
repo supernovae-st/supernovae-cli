@@ -1,6 +1,6 @@
 //! Global user configuration (~/.spn/config.toml).
 //!
-//! TODO(v0.14): Integrate advanced config options
+//! TODO(v0.16): Integrate advanced config options
 
 #![allow(dead_code)]
 

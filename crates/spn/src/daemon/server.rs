@@ -1,6 +1,6 @@
 //! Unix socket server for the daemon.
 //!
-//! TODO(v0.14): Integrate model backend features
+//! TODO(v0.16): Integrate model backend features
 
 #![allow(dead_code)]
 

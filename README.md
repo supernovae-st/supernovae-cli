@@ -157,6 +157,8 @@ docker run --rm \
 
 > **Note:** Docker cannot access OS Keychain. Use environment variables for secrets in containers.
 
+> **Platform Support:** macOS and Linux are fully supported. Windows is not yet supported (the daemon uses Unix sockets).
+
 ### Verify Installation
 
 ```bash

@@ -2,7 +2,7 @@
 //!
 //! Fetches model metadata from the SuperNovae registry.json.
 //!
-//! TODO(v0.14): Integrate with `spn model` commands
+//! TODO(v0.16): Integrate with `spn model` commands
 
 #![allow(dead_code)]
 

@@ -2,7 +2,7 @@
 //!
 //! The sparse index uses a Cargo-style NDJSON format for package metadata.
 //!
-//! TODO(v0.14): Integrate advanced package type methods
+//! TODO(v0.16): Integrate advanced package type methods
 
 #![allow(dead_code)]
 

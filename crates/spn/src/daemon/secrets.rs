@@ -5,7 +5,7 @@
 //! - In-memory cache with mlock protection
 //! - Automatic preloading at daemon start
 //!
-//! TODO(v0.14): Integrate stats and advanced cache management
+//! TODO(v0.16): Integrate stats and advanced cache management
 
 #![allow(dead_code)]
 

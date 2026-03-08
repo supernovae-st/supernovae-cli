@@ -16,7 +16,7 @@ Comprehensive analysis of spn-cli revealed **30 issues** across 8 categories:
 - 3 UX problems
 - 2 documentation gaps
 - 2 architectural debts
-- 5 TODO(v0.14) items in interop modules
+- 5 TODO(v0.16) items in interop modules
 - 1 unimplemented setup wizard
 
 ---
@@ -159,7 +159,7 @@ Comprehensive analysis of spn-cli revealed **30 issues** across 8 categories:
 
 Location: `commands/setup.rs:852-861` - just prints "not yet implemented".
 
-### 2.8 TODO(v0.14) Items (5)
+### 2.8 TODO(v0.16) Items (5)
 
 All interop modules have explicit TODO markers for v0.14 integration:
 
@@ -437,7 +437,7 @@ Nika proxy commands deferred to v0.14:
 | Proxy coverage | ~30% | 90% ✅ | 90% |
 | Error messages with help | ~50% | 100% ✅ | 100% |
 | Topic coverage | 6 | 10 ✅ | 10 |
-| TODO(v0.14) items | 5 | 5 | 0 (by v0.14) |
+| TODO(v0.16) items | 5 | 5 | 0 (by v0.14) |
 | Unimplemented features | 1 | 0 ✅ | 0 |
 | Hardcoded data items | 2 | 2 | 0 (configurable) |
 

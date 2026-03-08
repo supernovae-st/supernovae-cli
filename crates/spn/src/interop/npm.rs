@@ -3,7 +3,7 @@
 //! Proxies MCP server installation via npm/npx.
 //! Uses the MCP registry for package resolution, with hardcoded fallbacks.
 //!
-//! TODO(v0.14): Integrate with `spn mcp` commands
+//! TODO(v0.16): Integrate with `spn mcp` commands
 
 #![allow(dead_code)]
 

@@ -2,7 +2,7 @@
 //!
 //! Provides SO_PEERCRED verification and socket permission management.
 //!
-//! TODO(v0.14): Integrate socket ownership verification
+//! TODO(v0.16): Integrate socket ownership verification
 
 #![allow(dead_code)]
 

@@ -2,7 +2,7 @@
 //!
 //! The manifest file defines project dependencies for the SuperNovae package ecosystem.
 //!
-//! TODO(v0.14): Fully integrate with `spn add`, `spn remove`, `spn install`
+//! TODO(v0.16): Fully integrate with `spn add`, `spn remove`, `spn install`
 //!
 //! # Example
 //!

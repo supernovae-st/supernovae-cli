@@ -1,6 +1,6 @@
 //! Types for IDE synchronization.
 //!
-//! TODO(v0.14): Integrate IDE target detection and sync methods
+//! TODO(v0.16): Integrate IDE target detection and sync methods
 
 #![allow(dead_code)]
 

@@ -3,7 +3,7 @@
 //! Uses a directed graph (petgraph) to resolve transitive dependencies
 //! and topological sort to determine installation order.
 //!
-//! TODO(v0.14): Integrate with `spn add` and `spn install` for dependency resolution
+//! TODO(v0.16): Integrate with `spn add` and `spn install` for dependency resolution
 //!
 //! # Example
 //!

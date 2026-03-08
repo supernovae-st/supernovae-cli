@@ -2,7 +2,7 @@
 //!
 //! Fetches package metadata from the sparse index using HTTP or local files.
 //!
-//! TODO(v0.14): Integrate cache management and local index support
+//! TODO(v0.16): Integrate cache management and local index support
 
 #![allow(dead_code)]
 

@@ -38,7 +38,7 @@
 │  ├── spn skill add/remove/list  Manage skills (via skills.sh)                   │
 │  └── spn mcp add/remove/list    Manage MCP servers (via npm)                    │
 │                                                                                 │
-│  Setup Commands (v0.12.0):                                                      │
+│  Setup Commands (v0.15.0):                                                      │
 │  ├── spn setup                  Interactive onboarding wizard                   │
 │  ├── spn setup nika             Install and configure Nika workflow engine      │
 │  └── spn setup novanet          Install and configure NovaNet knowledge graph   │
@@ -55,7 +55,7 @@
 
 ## Tech Stack
 
-- **Language:** Rust 2021 (MSRV 1.75)
+- **Language:** Rust 2021 (MSRV 1.85)
 - **CLI Framework:** clap v4
 - **HTTP Client:** reqwest (rustls)
 - **Async Runtime:** tokio
@@ -344,7 +344,7 @@ cargo run -p spn-cli -- provider test all
 cargo run -p spn-cli -- model list
 cargo run -p spn-cli -- model pull llama3.2:7b
 
-# Setup (v0.12.0)
+# Setup (v0.15.0)
 cargo run -p spn-cli -- setup              # Interactive wizard
 cargo run -p spn-cli -- setup nika         # Install Nika
 cargo run -p spn-cli -- setup novanet      # Install NovaNet

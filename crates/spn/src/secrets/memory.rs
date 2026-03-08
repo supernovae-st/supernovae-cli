@@ -3,7 +3,7 @@
 //! Provides memory locking (mlock) to prevent secrets from being swapped to disk,
 //! and MADV_DONTDUMP to prevent secrets from appearing in core dumps.
 //!
-//! TODO(v0.14): Integrate advanced memory protection methods
+//! TODO(v0.16): Integrate advanced memory protection methods
 //!
 //! # Security Features
 //!

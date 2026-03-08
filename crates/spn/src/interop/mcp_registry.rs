@@ -3,7 +3,7 @@
 //! Fetches MCP server metadata from the SuperNovae registry.json.
 //! Falls back to hardcoded aliases for offline/fast access.
 //!
-//! TODO(v0.14): Integrate with `spn mcp` commands
+//! TODO(v0.16): Integrate with `spn mcp` commands
 
 #![allow(dead_code)]
 

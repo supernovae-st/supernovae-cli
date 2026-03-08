@@ -2,7 +2,7 @@
 //!
 //! Handles finding and running nika/novanet binaries.
 //!
-//! TODO(v0.14): Fully integrate with `spn nk` and `spn nv` proxy commands
+//! TODO(v0.16): Fully integrate with `spn nk` and `spn nv` proxy commands
 
 #![allow(dead_code)]
 

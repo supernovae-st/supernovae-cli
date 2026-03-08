@@ -6,7 +6,7 @@
 //! - Global ~/.spn/secrets.env
 //! - Shell export (print only)
 //!
-//! TODO(v0.14): Integrate storage backend selection with `spn provider`
+//! TODO(v0.16): Integrate storage backend selection with `spn provider`
 
 #![allow(dead_code)]
 
