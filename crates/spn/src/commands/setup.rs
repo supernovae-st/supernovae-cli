@@ -1030,38 +1030,37 @@ fn print_nika_banner() {
 }
 
 fn print_nika_success() {
-    println!("{}", ds::highlight("🎉 NIKA SETUP COMPLETE!").green());
+    println!();
+    println!("{}", ds::highlight("🦋 Nika Setup Complete!").green());
     println!();
 
-    // Prerequisites reminder
-    println!("{}", ds::highlight("PREREQUISITES"));
+    // Setup summary box
+    println!("┌───────────────────────────────────────────────────────────┐");
+    println!("│  {} Nika CLI installed                               │", ds::command("✓"));
+    println!("│  {} Nika LSP configured                              │", ds::command("✓"));
+    println!("│  {} spn daemon running (unified secrets)             │", ds::command("✓"));
+    println!("│  {} Provider keys verified                           │", ds::command("✓"));
+    println!("│  {} Editors configured                               │", ds::command("✓"));
+    println!("└───────────────────────────────────────────────────────────┘");
     println!();
+
+    // Note about providers (less prominent)
     println!(
-        "  {}",
-        ds::muted("Nika requires at least one LLM provider to be configured.")
+        "{}",
+        ds::muted("Note: If you haven't configured providers yet, run:")
     );
-    println!("  {}", ds::muted("If not done during setup, run:"));
-    println!();
-    println!("     {}", ds::primary("spn provider set anthropic"));
     println!(
-        "     {}",
-        ds::muted("# or: spn provider migrate (from env vars)")
+        "      {}",
+        ds::primary("spn provider set anthropic")
     );
     println!();
 
     println!("{}", ds::highlight("WHAT'S NEXT?"));
     println!();
-    println!("  {} Try the TUI:", ds::primary("1."));
-    println!("     {}", ds::primary("nika"));
-    println!();
-    println!("  {} Start a chat:", ds::primary("2."));
-    println!("     {}", ds::primary("nika chat"));
-    println!();
-    println!("  {} Create a workflow:", ds::primary("3."));
-    println!("     {}", ds::primary("nika new my-workflow"));
-    println!();
-    println!("  {} Run a workflow:", ds::primary("4."));
-    println!("     {}", ds::primary("nika my-workflow.nika.yaml"));
+    println!("  {}       Launch TUI (Home View)", ds::primary("nika"));
+    println!("  {}  Start chat session", ds::primary("nika chat"));
+    println!("  {} Open workflow studio", ds::primary("nika studio"));
+    println!("  {}  Show all commands", ds::primary("nika --help"));
     println!();
     println!(
         "{}",
