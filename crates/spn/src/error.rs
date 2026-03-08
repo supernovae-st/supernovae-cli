@@ -108,6 +108,18 @@ impl From<dialoguer::Error> for SpnError {
     }
 }
 
+impl From<walkdir::Error> for SpnError {
+    fn from(e: walkdir::Error) -> Self {
+        SpnError::IoError(e.into())
+    }
+}
+
+impl From<std::path::StripPrefixError> for SpnError {
+    fn from(e: std::path::StripPrefixError) -> Self {
+        SpnError::Other(anyhow::anyhow!("Path error: {}", e))
+    }
+}
+
 // TODO: Re-enable when backup module implementation is complete
 // impl From<spn_core::backup::BackupError> for SpnError {
 //     fn from(e: spn_core::backup::BackupError) -> Self {
