@@ -1,28 +1,92 @@
 //! Nika wrapper command implementation.
 //!
-//! Proxies commands to the nika binary.
+//! Proxies commands to the nika binary with lazy install support.
 
-use crate::error::Result;
+use crate::error::{Result, SpnError};
 use crate::interop::binary::{BinaryRunner, BinaryType};
+use crate::interop::detect::{install_nika, EcosystemTools, InstallMethod};
 use crate::{JobCommands, NikaCommands, NikaConfigCommands, TraceCommands};
 
 use crate::ux::design_system as ds;
+use dialoguer::Confirm;
 
 /// Run a nika command via the binary proxy.
 pub async fn run(command: NikaCommands) -> Result<()> {
     let runner = BinaryRunner::new(BinaryType::Nika);
 
     if !runner.is_available() {
-        eprintln!("{}", ds::error("Error: nika not found"));
-        eprintln!(
-            "Install with: {}",
-            ds::primary("brew install supernovae-st/tap/nika")
-        );
-        eprintln!(
-            "Or download from: {}",
-            ds::primary("https://github.com/supernovae-st/nika/releases")
-        );
-        return Ok(());
+        // Check if we're in an interactive terminal
+        if atty::is(atty::Stream::Stdin) {
+            eprintln!();
+            eprintln!("{}", ds::warning("⚠️  Nika is not installed"));
+            eprintln!();
+
+            let install = Confirm::new()
+                .with_prompt("Install Nika now?")
+                .default(true)
+                .interact()
+                .map_err(|e| SpnError::InvalidInput(e.to_string()))?;
+
+            if install {
+                let method = InstallMethod::best_available().ok_or_else(|| {
+                    SpnError::NotFound(
+                        "No installation method available (cargo or brew required)".into(),
+                    )
+                })?;
+
+                eprintln!();
+                eprintln!(
+                    "  {} Installing Nika via {}...",
+                    ds::primary("→"),
+                    ds::muted(method.display_name())
+                );
+
+                match install_nika(method) {
+                    Ok(()) => {
+                        eprintln!(
+                            "  {} Nika installed successfully",
+                            ds::command("✓")
+                        );
+                        eprintln!();
+                        // Re-detect after install
+                        let tools = EcosystemTools::detect();
+                        if !tools.nika.is_installed() {
+                            eprintln!(
+                                "{} Installation completed but nika not found in PATH.",
+                                ds::warning("⚠️")
+                            );
+                            eprintln!(
+                                "  You may need to restart your shell or run: {}",
+                                ds::primary("source ~/.bashrc")
+                            );
+                            return Ok(());
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "  {} Installation failed: {}",
+                            ds::error("✗"),
+                            e
+                        );
+                        return Ok(());
+                    }
+                }
+            } else {
+                eprintln!(
+                    "{}",
+                    ds::muted("Install later with: spn setup nika")
+                );
+                return Ok(());
+            }
+        } else {
+            // Non-interactive mode - show error
+            eprintln!("{}", ds::error("Error: nika not found"));
+            eprintln!(
+                "Install with: {}",
+                ds::primary("spn setup nika")
+            );
+            return Ok(());
+        }
     }
 
     let args: Vec<String> = match &command {
