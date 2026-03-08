@@ -92,21 +92,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.14.3](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.3) - 2026-03-07
 
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║  ⚡ SPN v0.14.3 — POLISH & PERFORMANCE                                        ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║  🐚 Completions  │  📊 Protocol  │  ⚡ FxHashMap  │  📦 Dependencies           ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+### ✨ Highlights
+
+| Feature | Status | Impact |
+|---------|--------|--------|
+| **🐚 Shell Completions** | ✅ New | `install`, `uninstall`, `status` subcommands |
+| **📊 IPC Protocol** | ✅ Enhanced | Version negotiation for daemon communication |
+| **⚡ FxHashMap** | ✅ Perf | Faster hashing (~20% in hot paths) |
+| **📦 Dependencies** | ✅ Updated | reqwest 0.13, indicatif 0.18 |
+
 ### Added
 
-- **cli**: Add shell completion and verbose logging
+- **cli**: Add shell completion subcommands (`install`, `uninstall`, `status`)
+- **cli**: Add verbose logging support
 - **ipc**: Add protocol versioning for daemon communication
 
 ### Changed
 
 - Format FxHashMap collection patterns
 - Simplify conditional patterns
-
-### Documentation
-
-- Update for v0.14.3 release
-- **plan**: Complete spn-cli improvement verification v2.0
-- Sync versions to v0.14.2 and improve DX
 
 ### Fixed
 
@@ -117,71 +129,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use FxHashMap for faster hashing
 - **tokio**: Use minimal features for smaller binary
 
-### Deps
+### Dependencies
 
 - Update reqwest 0.12→0.13, indicatif 0.17→0.18, reqwest-retry 0.6→0.9
 
 
 ## [0.14.2](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.2) - 2026-03-07
 
+### 🎨 UX Enhancements
+
+| Feature | Description |
+|---------|-------------|
+| **Human-Readable Formatters** | File sizes, durations, counts displayed nicely |
+| **Enhanced Help** | Improved `--help` output with examples |
+
 ### Added
 
-- **ux**: Add human-readable formatters and enhanced help
-
-### Changed
-
-- Fix formatting
+- **ux**: Add human-readable formatters (file sizes, durations, counts)
+- **ux**: Enhanced `--help` output with usage examples
 
 
 ## [0.14.1](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.1) - 2026-03-07
 
-### Documentation
+### 🔧 Housekeeping Release
 
-- Align versions and enable automated crates.io publishing
+Minor release focused on ecosystem alignment and publishing automation.
+
+### Changed
+
+- **release**: Enable automated crates.io publishing
+- **docs**: Align version references across all crates
 
 ### Fixed
 
-- **cli**: Align spn nk config with nika CLI subcommands
+- **cli**: Align `spn nk config` with nika CLI subcommands
 
 
 ## [0.14.0](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.14.0) - 2026-03-07
 
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║  🎨 SPN v0.14.0 — THE DELIGHT RELEASE                                         ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║  🎨 Design System  │  🦙 Streaming  │  🔧 Error Handling  │  ⚡ Performance   ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+### ✨ Highlights
+
+| Feature | Status | Impact |
+|---------|--------|--------|
+| **🎨 Semantic Design System** | ✅ New | Unified UX with consistent theming |
+| **🦙 Streaming Chat** | ✅ New | `chat_stream()` in spn-ollama |
+| **🔧 Error Handling** | ✅ Fixed | All CLI commands use `Result` types |
+| **⏱️ Configurable Timeouts** | ✅ New | `ClientConfig` with retry logic |
+
 ### Added
 
-- **ux**: Migrate to semantic design system
-- **cli**: V0.14.0 "The Delight Release" - UX improvements
-- **cli**: Complete Phase 3-5 improvements
-- **cli**: Complete Phase 2 UX improvements
-- **ux**: Add comprehensive UX module and improve CLI experience
-
-### Changed
-
-- Cargo fmt
-- Apply cargo fmt
+- **ux**: Add semantic design system with unified theming
+- **ux**: Add comprehensive UX module for consistent CLI experience
+- **cli**: Complete Phase 2-5 UX improvements
+- **🦙 spn-ollama**: Add `chat_stream()` method for streaming chat completions
+- **🦙 spn-ollama**: Add `BoxedTokenCallback` type for trait object compatibility
+- **🦙 spn-ollama**: Add `DynModelBackend::chat_stream()` for runtime polymorphism
+- **⏱️ spn-ollama**: Add `ClientConfig` with configurable timeouts (connect, request, model)
+- **🔄 spn-ollama**: Add retry logic infrastructure (`with_retry()`, `is_retryable()`)
 
 ### Fixed
 
-- **lint**: Resolve clippy warnings for io_other_error and uninlined_format_args
-- **ux**: Complete migration of remaining 4 files
+- **cli**: Replace all `exit(1)` calls with proper `SpnError::CommandFailed` (18 occurrences)
+  - provider.rs (11 calls)
+  - mcp.rs (4 calls)
+  - skill.rs (3 calls)
+- **lint**: Resolve all clippy warnings (`io_other_error`, `uninlined_format_args`)
 - **cli**: Resolve 3 bugs found in e2e testing
-- **lint**: Resolve all clippy warnings in integration tests
-
-
-### Added
-
-- **🦙 spn-ollama**: Added `chat_stream()` method to `ModelBackend` trait for streaming chat completions
-- **🦙 spn-ollama**: Added `BoxedTokenCallback` type for trait object compatibility
-- **🦙 spn-ollama**: Added `DynModelBackend::chat_stream()` for runtime polymorphism with streaming
-- **⏱️ spn-ollama**: Added `ClientConfig` with configurable timeouts (connect, request, model)
-- **🔄 spn-ollama**: Added retry logic infrastructure (`with_retry()`, `is_retryable()`)
-
-### Fixed
-
-- **🔧 CLI**: Replaced all `exit(1)` calls with proper `SpnError::CommandFailed` in provider.rs (11 calls)
-- **🔧 CLI**: Replaced all `exit(1)` calls with proper `SpnError::CommandFailed` in mcp.rs (4 calls)
-- **🔧 CLI**: Replaced all `exit(1)` calls with proper `SpnError::CommandFailed` in skill.rs (3 calls)
-- **🔧 CLI**: Replaced all `exit(1)` calls with proper `SpnError::CommandFailed` in model.rs (previous commit)
-- **🔧 CLI**: Fixed `if_same_then_else` clippy warning in publish.rs
 
 ### Technical
 
