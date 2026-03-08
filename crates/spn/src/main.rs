@@ -329,6 +329,14 @@ enum Commands {
         command: JobsCommands,
     },
 
+    /// Backup and restore SuperNovae data
+    #[command(visible_alias = "bk")]
+    #[command(after_help = "Related: novanet db seed --backup, spn backup list")]
+    Backup {
+        #[command(subcommand)]
+        command: commands::backup::BackupCommands,
+    },
+
     /// Manage local LLM models (Ollama)
     #[command(visible_alias = "m")]
     #[command(
@@ -1385,6 +1393,7 @@ async fn main() {
         Commands::Setup { quick, command } => commands::setup::run(command, quick).await,
         Commands::Daemon { command } => commands::daemon::run(command).await,
         Commands::Jobs { command } => commands::jobs::run(command).await,
+        Commands::Backup { command } => commands::backup::run(command).await,
         Commands::Model { command } => commands::model::execute(command).await,
         Commands::Completion { command } => match command {
             CompletionCommands::Bash { output } => commands::completion::run("bash", output).await,

@@ -44,6 +44,7 @@
 #![warn(clippy::all)]
 
 mod backend;
+mod backup;
 mod mcp;
 mod providers;
 mod registry;
@@ -64,4 +65,9 @@ pub use registry::{PackageManifest, PackageRef, PackageType, Source};
 pub use backend::{
     BackendError, ChatMessage, ChatOptions, ChatResponse, ChatRole, EmbeddingResponse, GpuInfo,
     LoadConfig, ModelInfo, PullProgress, RunningModel,
+};
+
+pub use backup::{
+    BackupContents, BackupError, BackupInfo, BackupManifest, ComponentVersions, NikaContents,
+    NovaNetContents, RestoreInfo, SpnContents,
 };
