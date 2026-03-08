@@ -9,7 +9,7 @@ use crate::ux::design_system as ds;
 const COMMANDS: &[&str] = &[
     "add", "remove", "install", "update", "outdated", "search", "info", "list", "publish",
     "version", "init", "mcp", "skill", "model", "provider", "nk", "nv", "schema", "config", "sync",
-    "secrets", "daemon", "doctor", "status", "topic", "setup", "help",
+    "secrets", "daemon", "doctor", "status", "topic", "setup", "help", "explore", "suggest",
 ];
 
 /// Calculate Levenshtein distance between two strings.

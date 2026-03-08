@@ -12,6 +12,7 @@ pub mod daemon;
 pub mod doctor;
 pub mod explore;
 pub mod help;
+pub mod suggest;
 pub mod info;
 pub mod init;
 pub mod install;

@@ -265,6 +265,10 @@ enum Commands {
     #[command(visible_alias = "ex")]
     Explore,
 
+    /// Get context-aware suggestions
+    #[command(visible_alias = "sg")]
+    Suggest,
+
     /// Initialize a new project
     Init {
         /// Create local config template
@@ -1283,6 +1287,7 @@ async fn main() {
         Commands::Provider { command } => commands::provider::run(command).await,
         Commands::Status { json } => commands::status::run(json).await,
         Commands::Explore => commands::explore::run().await,
+        Commands::Suggest => commands::suggest::run().await,
         Commands::Init {
             local,
             mcp,
