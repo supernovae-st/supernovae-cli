@@ -58,6 +58,12 @@ pub async fn run(command: McpCommands) -> Result<()> {
         } => run_logs(&mcp, name.as_deref(), follow, lines, level.as_deref()).await,
         McpCommands::Serve { api } => run_serve(api.as_deref()).await,
         McpCommands::Apis { command } => run_apis(command).await,
+        McpCommands::Wrap {
+            from_openapi,
+            name,
+            base_url,
+            yes,
+        } => run_wrap(from_openapi, name, base_url, yes).await,
     }
 }
 
@@ -647,6 +653,310 @@ async fn run_serve(api: Option<&str>) -> Result<()> {
         .map_err(|e| SpnError::CommandFailed(format!("MCP server error: {}", e)))?;
 
     Ok(())
+}
+
+/// Wrap a REST API as MCP tools (interactive wizard).
+async fn run_wrap(
+    from_openapi: Option<std::path::PathBuf>,
+    name: Option<String>,
+    base_url: Option<String>,
+    yes: bool,
+) -> Result<()> {
+    use dialoguer::{Confirm, Input, Select};
+    use spn_mcp::config::{ApiConfig, ApiKeyLocation, AuthConfig, AuthType, ToolDef};
+
+    // OpenAPI import not yet implemented
+    if let Some(spec_path) = from_openapi {
+        println!("{}", ds::section("OpenAPI Import"));
+        println!();
+        println!(
+            "{}",
+            ds::warning("OpenAPI import is coming soon. For now, use the interactive wizard.")
+        );
+        println!("  {} {}", ds::muted("Spec file:"), spec_path.display());
+        println!();
+        println!(
+            "  {}",
+            ds::hint_line("Run 'spn mcp wrap' without --from-openapi for interactive mode.")
+        );
+        return Ok(());
+    }
+
+    // Print banner
+    println!();
+    println!("╔═══════════════════════════════════════════════════════════════════════════════╗");
+    println!("║  {}  MCP WRAPPER WIZARD                                                        ║", ds::primary("🛠️"));
+    println!("╚═══════════════════════════════════════════════════════════════════════════════╝");
+    println!();
+
+    // Prompt for API name
+    let api_name = match name {
+        Some(n) => n,
+        None => Input::<String>::new()
+            .with_prompt("API name")
+            .interact_text()
+            .map_err(|e| SpnError::CommandFailed(format!("Input error: {}", e)))?,
+    };
+
+    // Prompt for base URL
+    let api_base_url = match base_url {
+        Some(u) => u,
+        None => Input::<String>::new()
+            .with_prompt("Base URL")
+            .interact_text()
+            .map_err(|e| SpnError::CommandFailed(format!("Input error: {}", e)))?,
+    };
+
+    // Prompt for auth type
+    let auth_types = vec![
+        "Bearer Token",
+        "API Key (header)",
+        "API Key (query)",
+        "Basic Auth",
+        "None (skip for now)",
+    ];
+    let auth_selection = Select::new()
+        .with_prompt("Authentication")
+        .items(&auth_types)
+        .default(0)
+        .interact()
+        .map_err(|e| SpnError::CommandFailed(format!("Select error: {}", e)))?;
+
+    // Build auth config
+    let auth = match auth_selection {
+        0 => AuthConfig {
+            auth_type: AuthType::Bearer,
+            credential: api_name.clone(),
+            location: None,
+            key_name: None,
+        },
+        1 => {
+            let header_name: String = Input::new()
+                .with_prompt("Header name")
+                .default("X-API-Key".to_string())
+                .interact_text()
+                .map_err(|e| SpnError::CommandFailed(format!("Input error: {}", e)))?;
+            AuthConfig {
+                auth_type: AuthType::ApiKey,
+                credential: api_name.clone(),
+                location: Some(ApiKeyLocation::Header),
+                key_name: Some(header_name),
+            }
+        }
+        2 => {
+            let param_name: String = Input::new()
+                .with_prompt("Query param name")
+                .default("api_key".to_string())
+                .interact_text()
+                .map_err(|e| SpnError::CommandFailed(format!("Input error: {}", e)))?;
+            AuthConfig {
+                auth_type: AuthType::ApiKey,
+                credential: api_name.clone(),
+                location: Some(ApiKeyLocation::Query),
+                key_name: Some(param_name),
+            }
+        }
+        3 => AuthConfig {
+            auth_type: AuthType::Basic,
+            credential: api_name.clone(),
+            location: None,
+            key_name: None,
+        },
+        _ => AuthConfig {
+            auth_type: AuthType::Bearer,
+            credential: "placeholder".to_string(),
+            location: None,
+            key_name: None,
+        },
+    };
+
+    println!();
+    println!("╭─────────────────────────────────────────────────────────────────────────────────╮");
+    println!("│  Adding endpoints...                                                            │");
+    println!("╰─────────────────────────────────────────────────────────────────────────────────╯");
+    println!();
+
+    // Collect tools
+    let mut tools: Vec<ToolDef> = Vec::new();
+    let mut endpoint_num = 1;
+
+    loop {
+        // Method
+        let methods = vec!["GET", "POST", "PUT", "PATCH", "DELETE"];
+        let method_idx = Select::new()
+            .with_prompt(format!("Endpoint {} - Method", endpoint_num))
+            .items(&methods)
+            .default(0)
+            .interact()
+            .map_err(|e| SpnError::CommandFailed(format!("Select error: {}", e)))?;
+        let method = methods[method_idx].to_string();
+
+        // Path
+        let path: String = Input::new()
+            .with_prompt(format!("Endpoint {} - Path", endpoint_num))
+            .interact_text()
+            .map_err(|e| SpnError::CommandFailed(format!("Input error: {}", e)))?;
+
+        // Auto-generate tool name
+        let default_tool_name = generate_tool_name(&api_name, &method, &path);
+        let tool_name: String = Input::new()
+            .with_prompt(format!("Endpoint {} - Tool name", endpoint_num))
+            .default(default_tool_name)
+            .interact_text()
+            .map_err(|e| SpnError::CommandFailed(format!("Input error: {}", e)))?;
+
+        // Description
+        let description: String = Input::new()
+            .with_prompt(format!("Endpoint {} - Description", endpoint_num))
+            .allow_empty(true)
+            .interact_text()
+            .map_err(|e| SpnError::CommandFailed(format!("Input error: {}", e)))?;
+
+        // Extract path params
+        let params = extract_path_params(&path);
+
+        tools.push(ToolDef {
+            name: tool_name,
+            description: if description.is_empty() {
+                None
+            } else {
+                Some(description)
+            },
+            method,
+            path,
+            body_template: None,
+            params,
+            response: None,
+        });
+
+        endpoint_num += 1;
+
+        // Ask to continue
+        let add_more = if yes {
+            false
+        } else {
+            Confirm::new()
+                .with_prompt("Add another endpoint?")
+                .default(true)
+                .interact()
+                .map_err(|e| SpnError::CommandFailed(format!("Confirm error: {}", e)))?
+        };
+
+        if !add_more {
+            break;
+        }
+    }
+
+    // Build config
+    let config = ApiConfig {
+        name: api_name.clone(),
+        version: "1.0".to_string(),
+        base_url: api_base_url,
+        description: None,
+        auth,
+        rate_limit: None,
+        headers: None,
+        tools,
+    };
+
+    // Save config
+    let apis_dir = apis_dir().map_err(|e| SpnError::CommandFailed(e.to_string()))?;
+    std::fs::create_dir_all(&apis_dir)?;
+    let config_path = apis_dir.join(format!("{}.yaml", api_name));
+
+    let yaml = serde_yaml::to_string(&config)
+        .map_err(|e| SpnError::CommandFailed(format!("YAML serialization error: {}", e)))?;
+    std::fs::write(&config_path, &yaml)?;
+
+    println!();
+    println!(
+        "{} Created {} ({} tools)",
+        ds::success("✓"),
+        ds::path(config_path.display()),
+        config.tools.len()
+    );
+
+    // Validate by re-loading
+    match spn_mcp::config::load_api(&api_name) {
+        Ok(_) => println!("{} Validated configuration", ds::success("✓")),
+        Err(e) => println!("{} Validation warning: {}", ds::warning("⚠"), e),
+    }
+
+    // Ask to start server (skip in non-interactive mode)
+    if !yes {
+        println!();
+        let start_now = Confirm::new()
+            .with_prompt("Start server now?")
+            .default(false)
+            .interact()
+            .map_err(|e| SpnError::CommandFailed(format!("Confirm error: {}", e)))?;
+
+        if start_now {
+            println!();
+            println!(
+                "{}",
+                ds::hint_line(&format!("Run: spn mcp apis start {}", api_name))
+            );
+        }
+    }
+
+    Ok(())
+}
+
+/// Generate a tool name from method and path.
+fn generate_tool_name(_api_name: &str, method: &str, path: &str) -> String {
+    // Convert /repos/{owner}/{repo}/issues -> repos_repo_issues
+    let path_part: String = path
+        .split('/')
+        .filter(|s| !s.is_empty() && !s.starts_with('{'))
+        .collect::<Vec<_>>()
+        .join("_");
+
+    let method_upper = method.to_uppercase();
+    let method_prefix = match method_upper.as_str() {
+        "GET" => "get",
+        "POST" => "create",
+        "PUT" | "PATCH" => "update",
+        "DELETE" => "delete",
+        _ => "call",
+    };
+
+    format!("{}_{}", method_prefix, path_part)
+        .trim_matches('_')
+        .to_string()
+}
+
+/// Extract path parameters from URL template (e.g., /repos/{owner}/{repo}).
+fn extract_path_params(path: &str) -> Vec<spn_mcp::config::ParamDef> {
+    use spn_mcp::config::{ParamDef, ParamType};
+
+    let mut params = Vec::new();
+    let mut chars = path.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '{' {
+            let mut param_name = String::new();
+            while let Some(&next) = chars.peek() {
+                if next == '}' {
+                    chars.next();
+                    break;
+                }
+                param_name.push(chars.next().unwrap());
+            }
+            if !param_name.is_empty() {
+                params.push(ParamDef {
+                    name: param_name,
+                    param_type: ParamType::String,
+                    items: None,
+                    required: true,
+                    default: None,
+                    description: None,
+                });
+            }
+        }
+    }
+
+    params
 }
 
 /// Handle APIs subcommand.

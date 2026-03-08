@@ -518,6 +518,24 @@ enum McpCommands {
         #[command(subcommand)]
         command: ApisCommands,
     },
+    /// Wrap a REST API as MCP tools (interactive wizard)
+    Wrap {
+        /// Import from OpenAPI spec file
+        #[arg(long)]
+        from_openapi: Option<std::path::PathBuf>,
+
+        /// API name (skip name prompt)
+        #[arg(long)]
+        name: Option<String>,
+
+        /// Base URL (skip URL prompt)
+        #[arg(long)]
+        base_url: Option<String>,
+
+        /// Non-interactive mode (requires --from-openapi)
+        #[arg(long, short = 'y')]
+        yes: bool,
+    },
 }
 
 #[derive(Subcommand)]

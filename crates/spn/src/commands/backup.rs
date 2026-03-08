@@ -110,7 +110,13 @@ fn generate_backup_name(timestamp: &DateTime<Utc>, label: Option<&str>) -> Strin
 fn sanitize_label(label: &str) -> String {
     label
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '-' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect::<String>()
         .to_lowercase()
 }
@@ -177,11 +183,7 @@ async fn create_backup(label: Option<String>, only: Option<Vec<String>>) -> Resu
 
     println!("{} Backup created successfully!", style("").green());
     println!();
-    println!(
-        "   {} {}",
-        style("File:").dim(),
-        archive_path.display()
-    );
+    println!("   {} {}", style("File:").dim(), archive_path.display());
     println!("   {} {}", style("Size:").dim(), format_bytes(size));
     println!(
         "   {} {}",
@@ -383,8 +385,16 @@ async fn list_backups(detailed: bool, limit: usize, json: bool) -> Result<()> {
                 if manifest.spn.has_mcp_yaml || manifest.spn.has_config {
                     println!(
                         "      spn: {}{}",
-                        if manifest.spn.has_mcp_yaml { "mcp.yaml" } else { "" },
-                        if manifest.spn.has_config { ", config" } else { "" }
+                        if manifest.spn.has_mcp_yaml {
+                            "mcp.yaml"
+                        } else {
+                            ""
+                        },
+                        if manifest.spn.has_config {
+                            ", config"
+                        } else {
+                            ""
+                        }
                     );
                 }
             }
@@ -451,11 +461,7 @@ async fn prune_backups(keep: usize, execute: bool) -> Result<()> {
                 path.file_name().unwrap_or_default().to_string_lossy()
             );
         }
-        println!(
-            "{} Pruned {} backups",
-            style("").green(),
-            to_delete.len()
-        );
+        println!("{} Pruned {} backups", style("").green(), to_delete.len());
     } else {
         println!(
             "{} Dry run - would delete {} backups:",
@@ -483,7 +489,9 @@ fn collect_novanet(staging: &Path) -> Result<NovaNetContents> {
     // Look for private-data/ in common locations
     let private_data_paths = [
         dirs::home_dir().map(|h| h.join("dev/supernovae/private-data")),
-        std::env::current_dir().ok().map(|p| p.join("../private-data")),
+        std::env::current_dir()
+            .ok()
+            .map(|p| p.join("../private-data")),
     ];
 
     let private_data_path = private_data_paths
@@ -607,9 +615,7 @@ fn restore_novanet(staging: &Path) -> Result<()> {
     }
 
     // Find private-data/ destination
-    let private_data_paths = [
-        dirs::home_dir().map(|h| h.join("dev/supernovae/private-data")),
-    ];
+    let private_data_paths = [dirs::home_dir().map(|h| h.join("dev/supernovae/private-data"))];
 
     let private_data_path = private_data_paths
         .into_iter()

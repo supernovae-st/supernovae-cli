@@ -705,9 +705,7 @@ const MAX_STRING_LENGTH: usize = 100 * 1024;
 
 /// Validate payload size to prevent DoS via large requests.
 fn validate_payload_size(params: &Value) -> Result<()> {
-    let size = serde_json::to_string(params)
-        .map(|s| s.len())
-        .unwrap_or(0);
+    let size = serde_json::to_string(params).map(|s| s.len()).unwrap_or(0);
 
     if size > MAX_PAYLOAD_SIZE {
         return Err(Error::ConfigValidation(format!(
@@ -1176,7 +1174,10 @@ mod tests {
         let params = serde_json::json!({ "data": large_string });
         let result = validate_payload_size(&params);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Payload too large"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Payload too large"));
     }
 
     #[test]
@@ -1302,10 +1303,12 @@ mod tests {
         assert!(validate_param_type("a", &ParamType::Array, &serde_json::json!("array")).is_err());
 
         // Object
-        assert!(
-            validate_param_type("o", &ParamType::Object, &serde_json::json!({"key": "value"}))
-                .is_ok()
-        );
+        assert!(validate_param_type(
+            "o",
+            &ParamType::Object,
+            &serde_json::json!({"key": "value"})
+        )
+        .is_ok());
         assert!(validate_param_type("o", &ParamType::Object, &serde_json::json!([1, 2])).is_err());
     }
 }
