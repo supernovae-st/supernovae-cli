@@ -1,8 +1,8 @@
 # Plan: `spn mcp wrap` Interactive Wizard
 
 **Created**: 2026-03-08
-**Status**: Ready for execution
-**Effort**: ~4 hours
+**Status**: Interactive wizard complete, OpenAPI parser pending
+**Effort**: ~4 hours (~2h done)
 **Target**: v0.16.0
 
 ---
@@ -18,8 +18,8 @@ spn mcp apis list      # ✅ Works - lists YAML configs
 spn mcp apis validate  # ✅ Works - validates YAML
 spn mcp apis info      # ✅ Works - shows API info
 
-spn mcp wrap           # ❌ NOT IMPLEMENTED
-spn mcp wrap --from-openapi  # ❌ NOT IMPLEMENTED
+spn mcp wrap           # ✅ IMPLEMENTED (interactive wizard)
+spn mcp wrap --from-openapi  # ⏳ PENDING (shows placeholder message)
 ```
 
 ### Gap Analysis Reference
@@ -353,14 +353,14 @@ fn test_convert_to_api_config() {
 
 ## Verification Checklist
 
-- [ ] `spn mcp wrap` launches interactive wizard
-- [ ] All prompts work (name, URL, auth, endpoints)
-- [ ] YAML file is created in correct location
-- [ ] YAML file passes validation
-- [ ] `spn mcp wrap --from-openapi` parses OpenAPI 3.0+
-- [ ] Swagger 2.0 files are rejected with clear error
-- [ ] `--yes` flag skips confirmations
-- [ ] Tool names are sanitized (no special chars)
+- [x] `spn mcp wrap` launches interactive wizard
+- [x] All prompts work (name, URL, auth, endpoints)
+- [x] YAML file is created in correct location
+- [x] YAML file passes validation
+- [ ] `spn mcp wrap --from-openapi` parses OpenAPI 3.0+ (PENDING)
+- [ ] Swagger 2.0 files are rejected with clear error (PENDING)
+- [x] `--yes` flag skips confirmations
+- [x] Tool names are sanitized (no special chars)
 
 ---
 
