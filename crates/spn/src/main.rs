@@ -29,6 +29,7 @@ mod status;
 mod storage;
 mod suggest;
 mod sync;
+mod tui;
 mod ux;
 mod welcome;
 
@@ -259,6 +260,10 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+
+    /// Interactive TUI for exploring resources
+    #[command(visible_alias = "ex")]
+    Explore,
 
     /// Initialize a new project
     Init {
@@ -1277,6 +1282,7 @@ async fn main() {
         }
         Commands::Provider { command } => commands::provider::run(command).await,
         Commands::Status { json } => commands::status::run(json).await,
+        Commands::Explore => commands::explore::run().await,
         Commands::Init {
             local,
             mcp,

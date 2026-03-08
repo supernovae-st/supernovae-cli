@@ -10,6 +10,7 @@ pub mod completion;
 pub mod config;
 pub mod daemon;
 pub mod doctor;
+pub mod explore;
 pub mod help;
 pub mod info;
 pub mod init;
