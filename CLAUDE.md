@@ -361,7 +361,7 @@ cargo install --path crates/spn
 
 ## Test Stats
 
-- **920+ tests passing** across workspace
+- **1288 tests passing** across workspace
 - **Zero clippy errors** with `-D warnings`
 - **MSRV:** Rust 1.85+
 

@@ -1362,16 +1362,16 @@ Key is valid and ready to use!
 
 | Type | Provider | Environment Variable | Key Format | Notes |
 |:-----|:---------|:---------------------|:-----------|:------|
-| 🦙 LLM | **ollama** | `OLLAMA_HOST` | `http://...` | Local, free, private |
+| 🦙 LLM | **ollama** | `OLLAMA_API_BASE_URL` | `http://...` | Local, free, private |
 | LLM | anthropic | `ANTHROPIC_API_KEY` | `sk-ant-api03-...` | Claude models |
 | LLM | openai | `OPENAI_API_KEY` | `sk-...` | GPT models |
 | LLM | mistral | `MISTRAL_API_KEY` | `...` | EU provider |
 | LLM | groq | `GROQ_API_KEY` | `gsk_...` | Fast inference |
 | LLM | deepseek | `DEEPSEEK_API_KEY` | `...` | Cost-effective |
-| LLM | gemini | `GOOGLE_API_KEY` | `AI...` | Multimodal |
+| LLM | gemini | `GEMINI_API_KEY` | `AI...` | Multimodal |
 | MCP | neo4j | `NEO4J_PASSWORD` | `...` | Graph database |
 | MCP | github | `GITHUB_TOKEN` | `ghp_...` | Code integration |
-| MCP | slack | `SLACK_TOKEN` | `xoxb-...` | Team messaging |
+| MCP | slack | `SLACK_BOT_TOKEN` | `xoxb-...` | Team messaging |
 | MCP | perplexity | `PERPLEXITY_API_KEY` | `...` | AI search |
 | MCP | firecrawl | `FIRECRAWL_API_KEY` | `fc-...` | Web scraping |
 | MCP | supadata | `SUPADATA_API_KEY` | `...` | Data API |
@@ -2109,7 +2109,7 @@ spn doctor
 
 Installation:
   ✅ spn v0.15.0 installed
-  ✅ nika v0.17.5 available
+  ✅ nika v0.21.1 available
   ✅ novanet v0.14.0 available
 
 Dependencies:
