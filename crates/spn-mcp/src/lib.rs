@@ -30,7 +30,9 @@
 
 pub mod config;
 pub mod error;
+pub mod openapi;
 pub mod server;
 
 pub use config::{ApiConfig, AuthConfig, AuthType, ToolDef};
 pub use error::{Error, Result};
+pub use openapi::{parse_openapi, OpenApiError, OpenApiSpec};
