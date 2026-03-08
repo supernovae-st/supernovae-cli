@@ -36,9 +36,9 @@ rmcp = { version = "0.16", features = ["server", "transport-io"] }
 tokio = { version = "1.36", features = ["full"] }
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# HTTP Client
+# HTTP Client (webpki-roots bundles CA certs for Docker/scratch images)
 # ═══════════════════════════════════════════════════════════════════════════════
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls-webpki-roots"] }
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Serialization
