@@ -38,6 +38,7 @@
 
 mod error;
 mod handler;
+pub mod mcp;
 mod model_manager;
 mod secrets;
 mod server;

@@ -101,6 +101,33 @@ impl ModelManager {
     pub fn backend_id(&self) -> &'static str {
         self.backend.id()
     }
+
+    /// Run simple inference with a prompt.
+    ///
+    /// Convenience wrapper around `chat` for single-turn inference.
+    pub async fn run_inference(
+        &self,
+        model: &str,
+        prompt: &str,
+        system: Option<String>,
+        temperature: Option<f32>,
+    ) -> Result<String, BackendError> {
+        let mut messages = Vec::new();
+
+        if let Some(sys) = system {
+            messages.push(ChatMessage::system(sys));
+        }
+
+        messages.push(ChatMessage::user(prompt));
+
+        let options = temperature.map(|t| ChatOptions {
+            temperature: Some(t),
+            ..Default::default()
+        });
+
+        let response = self.chat(model, messages, options).await?;
+        Ok(response.message.content)
+    }
 }
 
 impl Default for ModelManager {

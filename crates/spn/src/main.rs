@@ -925,6 +925,9 @@ enum DaemonCommands {
     Install,
     /// Uninstall daemon system service
     Uninstall,
+    /// Run as MCP server over stdio
+    #[command(visible_alias = "mcp-server")]
+    Mcp,
 }
 
 #[derive(Subcommand)]

@@ -2,12 +2,13 @@
 //!
 //! Start, stop, and manage the spn daemon.
 
-use crate::daemon::{paths, DaemonConfig, DaemonServer, ServiceManager};
+use crate::daemon::{mcp::McpServer, paths, DaemonConfig, DaemonServer, ModelManager, SecretManager, ServiceManager};
 use crate::error::Result;
 use crate::ux::design_system as ds;
 use crate::DaemonCommands;
 use std::fs;
 use std::process::Command;
+use std::sync::Arc;
 
 /// Run a daemon command.
 pub async fn run(command: DaemonCommands) -> Result<()> {
@@ -18,6 +19,7 @@ pub async fn run(command: DaemonCommands) -> Result<()> {
         DaemonCommands::Restart => restart().await,
         DaemonCommands::Install => install().await,
         DaemonCommands::Uninstall => uninstall().await,
+        DaemonCommands::Mcp => run_mcp_server().await,
     }
 }
 
@@ -277,6 +279,24 @@ async fn install() -> Result<()> {
             return Err(anyhow::anyhow!("Service install failed: {}", e).into());
         }
     }
+
+    Ok(())
+}
+
+/// Run as MCP server over stdio.
+///
+/// This allows Claude Code to use spn daemon as an MCP server.
+async fn run_mcp_server() -> Result<()> {
+    // Initialize managers
+    let secrets = Arc::new(SecretManager::new());
+    let models = Arc::new(ModelManager::new());
+
+    // Create and run MCP server
+    let server = McpServer::new(secrets, models);
+    server
+        .run()
+        .await
+        .map_err(|e| anyhow::anyhow!("MCP server error: {}", e))?;
 
     Ok(())
 }
