@@ -584,7 +584,7 @@ mod tests {
 
     #[test]
     fn test_suggestion_priority_order() {
-        let mut suggestions = vec![
+        let mut suggestions = [
             Suggestion {
                 icon: "📦",
                 title: "Low priority".into(),

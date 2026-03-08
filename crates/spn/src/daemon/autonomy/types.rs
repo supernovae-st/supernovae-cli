@@ -463,7 +463,7 @@ mod tests {
             },
         );
 
-        assert!(task.needs_approval() == false); // Auto level
+        assert!(!task.needs_approval()); // Auto level
         task.approval_level = super::super::ApprovalLevel::Required;
         assert!(task.needs_approval());
 
