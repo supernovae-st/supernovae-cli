@@ -34,6 +34,77 @@
 use serde::{Deserialize, Serialize};
 use spn_core::{LoadConfig, ModelInfo, PullProgress, RunningModel};
 
+// ============================================================================
+// JOB TYPES (IPC-friendly versions)
+// ============================================================================
+
+/// Job state in the scheduler (IPC version).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum IpcJobState {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+impl std::fmt::Display for IpcJobState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IpcJobState::Pending => write!(f, "pending"),
+            IpcJobState::Running => write!(f, "running"),
+            IpcJobState::Completed => write!(f, "completed"),
+            IpcJobState::Failed => write!(f, "failed"),
+            IpcJobState::Cancelled => write!(f, "cancelled"),
+        }
+    }
+}
+
+/// Job status for IPC responses.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IpcJobStatus {
+    /// Job ID (8-char UUID prefix)
+    pub id: String,
+    /// Workflow path
+    pub workflow: String,
+    /// Current state
+    pub state: IpcJobState,
+    /// Optional job name
+    pub name: Option<String>,
+    /// Progress percentage (0-100)
+    pub progress: u8,
+    /// Error message (if failed)
+    pub error: Option<String>,
+    /// Output from the workflow (if completed)
+    pub output: Option<String>,
+    /// Creation timestamp (Unix epoch millis)
+    pub created_at: u64,
+    /// Start timestamp (Unix epoch millis, if started)
+    pub started_at: Option<u64>,
+    /// End timestamp (Unix epoch millis, if finished)
+    pub ended_at: Option<u64>,
+}
+
+/// Scheduler statistics for IPC responses.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IpcSchedulerStats {
+    /// Total jobs (all states)
+    pub total: usize,
+    /// Pending jobs
+    pub pending: usize,
+    /// Currently running jobs
+    pub running: usize,
+    /// Completed jobs
+    pub completed: usize,
+    /// Failed jobs
+    pub failed: usize,
+    /// Cancelled jobs
+    pub cancelled: usize,
+    /// Whether nika binary is available
+    pub has_nika: bool,
+}
+
 /// Progress update for model operations (pull, load, delete).
 ///
 /// Used for streaming progress from daemon to CLI during long-running operations.
@@ -174,6 +245,49 @@ pub enum Request {
         #[serde(default)]
         stream: bool,
     },
+
+    // ==================== Job Commands ====================
+    /// Submit a workflow job for background execution.
+    #[serde(rename = "JOB_SUBMIT")]
+    JobSubmit {
+        /// Path to workflow file
+        workflow: String,
+        /// Optional workflow arguments
+        #[serde(default)]
+        args: Vec<String>,
+        /// Optional job name for display
+        #[serde(default)]
+        name: Option<String>,
+        /// Job priority (higher = more urgent)
+        #[serde(default)]
+        priority: i32,
+    },
+
+    /// Get status of a specific job.
+    #[serde(rename = "JOB_STATUS")]
+    JobStatus {
+        /// Job ID (8-character short UUID)
+        job_id: String,
+    },
+
+    /// List all jobs (optionally filtered by state).
+    #[serde(rename = "JOB_LIST")]
+    JobList {
+        /// Filter by state (pending, running, completed, failed, cancelled)
+        #[serde(default)]
+        state: Option<String>,
+    },
+
+    /// Cancel a running or pending job.
+    #[serde(rename = "JOB_CANCEL")]
+    JobCancel {
+        /// Job ID to cancel
+        job_id: String,
+    },
+
+    /// Get scheduler statistics.
+    #[serde(rename = "JOB_STATS")]
+    JobStats,
 }
 
 /// Response from the daemon.
@@ -242,6 +356,39 @@ pub enum Response {
         /// Error message if failed
         #[serde(default)]
         error: Option<String>,
+    },
+
+    // ==================== Job Responses ====================
+    /// Job submitted response with initial status.
+    JobSubmitted {
+        /// The job status
+        job: IpcJobStatus,
+    },
+
+    /// Single job status response.
+    JobStatusResult {
+        /// The job status (None if job not found)
+        job: Option<IpcJobStatus>,
+    },
+
+    /// Job list response.
+    JobListResult {
+        /// List of jobs
+        jobs: Vec<IpcJobStatus>,
+    },
+
+    /// Job cancelled response.
+    JobCancelled {
+        /// Whether cancellation succeeded
+        cancelled: bool,
+        /// Job ID that was cancelled
+        job_id: String,
+    },
+
+    /// Scheduler statistics response.
+    JobStatsResult {
+        /// Scheduler stats
+        stats: IpcSchedulerStats,
     },
 }
 
@@ -385,5 +532,135 @@ mod tests {
         };
         let json = serde_json::to_string(&error_response).unwrap();
         assert!(json.contains("Connection lost"));
+    }
+
+    // ==================== Job Protocol Tests ====================
+
+    #[test]
+    fn test_job_request_serialization() {
+        let submit = Request::JobSubmit {
+            workflow: "/path/to/workflow.yaml".into(),
+            args: vec!["--verbose".into()],
+            name: Some("Test Job".into()),
+            priority: 5,
+        };
+        let json = serde_json::to_string(&submit).unwrap();
+        assert!(json.contains("JOB_SUBMIT"));
+        assert!(json.contains("workflow.yaml"));
+
+        let status = Request::JobStatus {
+            job_id: "abc12345".into(),
+        };
+        let json = serde_json::to_string(&status).unwrap();
+        assert!(json.contains("JOB_STATUS"));
+        assert!(json.contains("abc12345"));
+
+        let list = Request::JobList { state: None };
+        let json = serde_json::to_string(&list).unwrap();
+        assert!(json.contains("JOB_LIST"));
+
+        let cancel = Request::JobCancel {
+            job_id: "def67890".into(),
+        };
+        let json = serde_json::to_string(&cancel).unwrap();
+        assert!(json.contains("JOB_CANCEL"));
+
+        let stats = Request::JobStats;
+        let json = serde_json::to_string(&stats).unwrap();
+        assert!(json.contains("JOB_STATS"));
+    }
+
+    #[test]
+    fn test_ipc_job_state_serialization() {
+        assert_eq!(
+            serde_json::to_string(&IpcJobState::Pending).unwrap(),
+            r#""pending""#
+        );
+        assert_eq!(
+            serde_json::to_string(&IpcJobState::Running).unwrap(),
+            r#""running""#
+        );
+        assert_eq!(
+            serde_json::to_string(&IpcJobState::Completed).unwrap(),
+            r#""completed""#
+        );
+        assert_eq!(
+            serde_json::to_string(&IpcJobState::Failed).unwrap(),
+            r#""failed""#
+        );
+        assert_eq!(
+            serde_json::to_string(&IpcJobState::Cancelled).unwrap(),
+            r#""cancelled""#
+        );
+    }
+
+    #[test]
+    fn test_ipc_job_status_serialization() {
+        let status = IpcJobStatus {
+            id: "abc12345".into(),
+            workflow: "/path/to/test.yaml".into(),
+            state: IpcJobState::Running,
+            name: Some("Test Job".into()),
+            progress: 50,
+            error: None,
+            output: None,
+            created_at: 1710000000000,
+            started_at: Some(1710000001000),
+            ended_at: None,
+        };
+
+        let json = serde_json::to_string(&status).unwrap();
+        assert!(json.contains("abc12345"));
+        assert!(json.contains("running"));
+        assert!(json.contains("Test Job"));
+    }
+
+    #[test]
+    fn test_ipc_scheduler_stats_serialization() {
+        let stats = IpcSchedulerStats {
+            total: 10,
+            pending: 2,
+            running: 3,
+            completed: 4,
+            failed: 1,
+            cancelled: 0,
+            has_nika: true,
+        };
+
+        let json = serde_json::to_string(&stats).unwrap();
+        let parsed: IpcSchedulerStats = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.total, 10);
+        assert_eq!(parsed.running, 3);
+        assert!(parsed.has_nika);
+    }
+
+    #[test]
+    fn test_job_response_variants() {
+        // JobSubmitted
+        let status = IpcJobStatus {
+            id: "abc12345".into(),
+            workflow: "/test.yaml".into(),
+            state: IpcJobState::Pending,
+            name: None,
+            progress: 0,
+            error: None,
+            output: None,
+            created_at: 1710000000000,
+            started_at: None,
+            ended_at: None,
+        };
+        let response = Response::JobSubmitted { job: status };
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("abc12345"));
+
+        // JobCancelled
+        let response = Response::JobCancelled {
+            cancelled: true,
+            job_id: "def67890".into(),
+        };
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("cancelled"));
+        assert!(json.contains("def67890"));
     }
 }

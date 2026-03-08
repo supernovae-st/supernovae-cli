@@ -677,7 +677,7 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
     // Step 1: Install nika CLI
     println!(
         "{}",
-        ds::highlight("STEP 1/3: Installing Nika CLI").underlined()
+        ds::highlight("STEP 1/5: Installing Nika CLI").underlined()
     );
     println!();
 
@@ -748,7 +748,7 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
     if !no_lsp {
         println!(
             "{}",
-            ds::highlight("STEP 2/3: Installing Nika LSP").underlined()
+            ds::highlight("STEP 2/5: Installing Nika LSP").underlined()
         );
         println!();
 
@@ -777,11 +777,122 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
         println!();
     }
 
-    // Step 3: Configure editors
+    // Step 3: Start spn daemon (for keychain-free secrets)
+    println!(
+        "{}",
+        ds::highlight("STEP 3/5: Starting spn Daemon").underlined()
+    );
+    println!();
+    println!(
+        "  {}",
+        ds::muted("The daemon provides keychain-free secrets to Nika workflows.")
+    );
+    println!();
+
+    // Check if daemon is already running (by checking socket existence)
+    let daemon_running = spn_client::daemon_socket_exists();
+
+    if daemon_running {
+        println!("  {} Daemon already running", ds::command("✓"));
+    } else {
+        println!("  {} Starting daemon...", ds::primary("→"));
+
+        // Get the path to the current executable
+        let exe = std::env::current_exe().unwrap_or_else(|_| "spn".into());
+
+        // Spawn detached daemon process
+        let spawn_result = Command::new(&exe)
+            .args(["daemon", "start", "--foreground"])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+
+        match spawn_result {
+            Ok(_) => {
+                // Wait a moment for the daemon to start
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+                if spn_client::daemon_socket_exists() {
+                    println!("  {} Daemon started", ds::command("✓"));
+                } else {
+                    println!(
+                        "  {} Daemon may have failed to start",
+                        ds::warning("⚠️")
+                    );
+                    println!(
+                        "     {}",
+                        ds::muted("Run 'spn daemon start' manually later")
+                    );
+                }
+            }
+            Err(e) => {
+                println!(
+                    "  {} Daemon start failed: {}",
+                    ds::warning("⚠️"),
+                    e
+                );
+                println!(
+                    "     {}",
+                    ds::muted("Run 'spn daemon start' manually later")
+                );
+            }
+        }
+    }
+    println!();
+
+    // Step 4: Check provider configuration
+    println!(
+        "{}",
+        ds::highlight("STEP 4/5: Checking API Providers").underlined()
+    );
+    println!();
+
+    // Check for common providers
+    let providers_to_check = ["anthropic", "openai", "mistral", "groq"];
+    let mut configured_count = 0;
+    let mut unconfigured: Vec<&str> = Vec::new();
+
+    for provider in &providers_to_check {
+        if crate::secrets::resolve_api_key(provider).is_some() {
+            configured_count += 1;
+        } else {
+            unconfigured.push(provider);
+        }
+    }
+
+    if configured_count > 0 {
+        println!(
+            "  {} {}/{} providers configured",
+            ds::command("✓"),
+            configured_count,
+            providers_to_check.len()
+        );
+    }
+
+    if !unconfigured.is_empty() {
+        println!(
+            "  {} Missing providers: {}",
+            ds::warning("⚠️"),
+            unconfigured.join(", ")
+        );
+        println!();
+        println!(
+            "     {}",
+            ds::muted("Configure with: spn provider set <provider>")
+        );
+        println!(
+            "     {}",
+            ds::muted("Or migrate from env: spn provider migrate")
+        );
+    }
+    println!();
+
+    // Step 5: Configure editors
     if !no_sync {
         println!(
             "{}",
-            ds::highlight("STEP 3/3: Configuring Editors").underlined()
+            ds::highlight("STEP 5/5: Configuring Editors").underlined()
         );
         println!();
 
@@ -838,6 +949,23 @@ async fn run_nika_setup(no_sync: bool, no_lsp: bool, method: &str) -> Result<()>
                 println!("  {} Cursor configured", ds::command("✓"));
             }
         }
+
+        // Detect Windsurf
+        let windsurf_config = dirs::home_dir()
+            .map(|d| d.join(".windsurf/User/settings.json"))
+            .filter(|f| f.exists());
+
+        if let Some(settings_path) = windsurf_config {
+            println!(
+                "  {} Windsurf detected, configuring yaml.schemas...",
+                ds::primary("→")
+            );
+            if let Err(e) = configure_windsurf_yaml_schema(&settings_path) {
+                println!("  {} Windsurf config failed: {}", ds::warning("⚠️"), e);
+            } else {
+                println!("  {} Windsurf configured", ds::command("✓"));
+            }
+        }
         println!();
     }
 
@@ -878,6 +1006,11 @@ fn configure_cursor_yaml_schema(settings_path: &std::path::Path) -> Result<()> {
     configure_vscode_yaml_schema(settings_path)
 }
 
+fn configure_windsurf_yaml_schema(settings_path: &std::path::Path) -> Result<()> {
+    // Same logic as VS Code
+    configure_vscode_yaml_schema(settings_path)
+}
+
 fn print_nika_banner() {
     println!();
     println!(
@@ -906,6 +1039,23 @@ fn print_nika_banner() {
 fn print_nika_success() {
     println!("{}", ds::highlight("🎉 NIKA SETUP COMPLETE!").green());
     println!();
+
+    // Prerequisites reminder
+    println!("{}", ds::highlight("PREREQUISITES"));
+    println!();
+    println!(
+        "  {}",
+        ds::muted("Nika requires at least one LLM provider to be configured.")
+    );
+    println!(
+        "  {}",
+        ds::muted("If not done during setup, run:")
+    );
+    println!();
+    println!("     {}", ds::primary("spn provider set anthropic"));
+    println!("     {}", ds::muted("# or: spn provider migrate (from env vars)"));
+    println!();
+
     println!("{}", ds::highlight("WHAT'S NEXT?"));
     println!();
     println!("  {} Try the TUI:", ds::primary("1."));

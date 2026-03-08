@@ -1,10 +1,16 @@
 //! Request handler for daemon commands.
 
 use secrecy::ExposeSecret;
-use spn_client::{ChatMessage, ChatOptions, Request, Response, PROTOCOL_VERSION};
+use spn_client::{
+    ChatMessage, ChatOptions, IpcJobState, IpcJobStatus, IpcSchedulerStats, Request, Response,
+    PROTOCOL_VERSION,
+};
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, warn};
 
+use super::jobs::{Job, JobScheduler, JobState, JobStatus};
 use super::{ModelManager, SecretManager};
 
 /// Handles incoming daemon requests.
@@ -15,16 +21,24 @@ pub struct RequestHandler {
     /// Model manager
     models: Arc<ModelManager>,
 
+    /// Job scheduler
+    jobs: Arc<JobScheduler>,
+
     /// Daemon version
     version: String,
 }
 
 impl RequestHandler {
     /// Create a new request handler.
-    pub fn new(secrets: Arc<SecretManager>, models: Arc<ModelManager>) -> Self {
+    pub fn new(
+        secrets: Arc<SecretManager>,
+        models: Arc<ModelManager>,
+        jobs: Arc<JobScheduler>,
+    ) -> Self {
         Self {
             secrets,
             models,
+            jobs,
             version: env!("CARGO_PKG_VERSION").to_string(),
         }
     }
@@ -56,6 +70,21 @@ impl RequestHandler {
                 self.handle_model_run(&model, &prompt, system, temperature)
                     .await
             }
+
+            // Job commands
+            Request::JobSubmit {
+                workflow,
+                args,
+                name,
+                priority,
+            } => {
+                self.handle_job_submit(&workflow, args, name, priority)
+                    .await
+            }
+            Request::JobStatus { job_id } => self.handle_job_status(&job_id).await,
+            Request::JobList { state } => self.handle_job_list(state.as_deref()).await,
+            Request::JobCancel { job_id } => self.handle_job_cancel(&job_id).await,
+            Request::JobStats => self.handle_job_stats().await,
         }
     }
 
@@ -195,22 +224,177 @@ impl RequestHandler {
             },
         }
     }
+
+    // ==================== Job Handlers ====================
+
+    async fn handle_job_submit(
+        &self,
+        workflow: &str,
+        args: Vec<String>,
+        name: Option<String>,
+        priority: i32,
+    ) -> Response {
+        let path = PathBuf::from(workflow);
+
+        // Validate workflow file exists
+        if !path.exists() {
+            return Response::Error {
+                message: format!("Workflow file not found: {}", workflow),
+            };
+        }
+
+        // Create job with optional name and priority
+        let mut job = Job::new(path).with_args(args).with_priority(priority);
+        if let Some(n) = name {
+            job = job.with_name(n);
+        }
+
+        // Submit to scheduler
+        let status = self.jobs.submit(job).await;
+
+        Response::JobSubmitted {
+            job: job_status_to_ipc(&status),
+        }
+    }
+
+    async fn handle_job_status(&self, job_id: &str) -> Response {
+        // Parse job ID (first 8 chars of UUID)
+        let job = self.find_job_by_short_id(job_id).await;
+
+        Response::JobStatusResult {
+            job: job.map(|s| job_status_to_ipc(&s)),
+        }
+    }
+
+    async fn handle_job_list(&self, state_filter: Option<&str>) -> Response {
+        let all_jobs = self.jobs.list().await;
+
+        // Filter by state if specified
+        let jobs: Vec<IpcJobStatus> = if let Some(state_str) = state_filter {
+            let target_state = match state_str.to_lowercase().as_str() {
+                "pending" => Some(JobState::Pending),
+                "running" => Some(JobState::Running),
+                "completed" => Some(JobState::Completed),
+                "failed" => Some(JobState::Failed),
+                "cancelled" => Some(JobState::Cancelled),
+                _ => None,
+            };
+
+            if let Some(state) = target_state {
+                all_jobs
+                    .into_iter()
+                    .filter(|s| s.state == state)
+                    .map(|s| job_status_to_ipc(&s))
+                    .collect()
+            } else {
+                // Invalid state filter, return all
+                all_jobs.iter().map(job_status_to_ipc).collect()
+            }
+        } else {
+            all_jobs.iter().map(job_status_to_ipc).collect()
+        };
+
+        Response::JobListResult { jobs }
+    }
+
+    async fn handle_job_cancel(&self, job_id: &str) -> Response {
+        // Find and cancel job
+        if let Some(status) = self.find_job_by_short_id(job_id).await {
+            let cancelled = self.jobs.cancel(&status.job.id).await;
+            Response::JobCancelled {
+                cancelled,
+                job_id: job_id.to_string(),
+            }
+        } else {
+            Response::JobCancelled {
+                cancelled: false,
+                job_id: job_id.to_string(),
+            }
+        }
+    }
+
+    async fn handle_job_stats(&self) -> Response {
+        let stats = self.jobs.stats().await;
+        Response::JobStatsResult {
+            stats: IpcSchedulerStats {
+                total: stats.total,
+                pending: stats.pending,
+                running: stats.running,
+                completed: stats.completed,
+                failed: stats.failed,
+                cancelled: stats.cancelled,
+                has_nika: stats.has_nika,
+            },
+        }
+    }
+
+    /// Find a job by short ID (first 8 chars of UUID).
+    async fn find_job_by_short_id(&self, short_id: &str) -> Option<JobStatus> {
+        let all_jobs = self.jobs.list().await;
+        all_jobs
+            .into_iter()
+            .find(|s| s.job.id.to_string() == short_id)
+    }
+}
+
+// ==================== Conversion Helpers ====================
+
+/// Convert daemon JobStatus to IPC-friendly IpcJobStatus.
+fn job_status_to_ipc(status: &JobStatus) -> IpcJobStatus {
+    IpcJobStatus {
+        id: status.job.id.to_string(),
+        workflow: status.job.workflow.display().to_string(),
+        state: job_state_to_ipc(status.state),
+        name: status.job.name.clone(),
+        progress: status.progress,
+        error: status.error.clone(),
+        output: status.output.clone(),
+        created_at: system_time_to_millis(status.job.created_at),
+        started_at: status.started_at.map(system_time_to_millis),
+        ended_at: status.ended_at.map(system_time_to_millis),
+    }
+}
+
+/// Convert daemon JobState to IPC JobState.
+fn job_state_to_ipc(state: JobState) -> IpcJobState {
+    match state {
+        JobState::Pending => IpcJobState::Pending,
+        JobState::Running => IpcJobState::Running,
+        JobState::Completed => IpcJobState::Completed,
+        JobState::Failed => IpcJobState::Failed,
+        JobState::Cancelled => IpcJobState::Cancelled,
+    }
+}
+
+/// Convert SystemTime to Unix epoch milliseconds.
+fn system_time_to_millis(time: SystemTime) -> u64 {
+    time.duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::daemon::jobs::JobStore;
+    use tempfile::tempdir;
 
     fn create_handler() -> RequestHandler {
         let secrets = Arc::new(SecretManager::new());
         let models = Arc::new(ModelManager::new());
-        RequestHandler::new(secrets, models)
+        let dir = tempdir().expect("Failed to create tempdir");
+        let store = Arc::new(JobStore::new(dir.path()));
+        let jobs = Arc::new(JobScheduler::new(store));
+        RequestHandler::new(secrets, models, jobs)
     }
 
     fn create_handler_with_secrets() -> (RequestHandler, Arc<SecretManager>) {
         let secrets = Arc::new(SecretManager::new());
         let models = Arc::new(ModelManager::new());
-        let handler = RequestHandler::new(Arc::clone(&secrets), models);
+        let dir = tempdir().expect("Failed to create tempdir");
+        let store = Arc::new(JobStore::new(dir.path()));
+        let jobs = Arc::new(JobScheduler::new(store));
+        let handler = RequestHandler::new(Arc::clone(&secrets), models, jobs);
         (handler, secrets)
     }
 
@@ -306,6 +490,101 @@ mod tests {
                 assert!(providers.contains(&"openai".to_string()));
             }
             _ => panic!("Expected Providers response"),
+        }
+    }
+
+    // ==================== Job Handler Tests ====================
+
+    #[tokio::test]
+    async fn test_handle_job_stats() {
+        let handler = create_handler();
+
+        let response = handler.handle(Request::JobStats).await;
+
+        match response {
+            Response::JobStatsResult { stats } => {
+                assert_eq!(stats.total, 0);
+                assert_eq!(stats.pending, 0);
+                assert_eq!(stats.running, 0);
+                assert_eq!(stats.completed, 0);
+                assert_eq!(stats.failed, 0);
+                assert_eq!(stats.cancelled, 0);
+            }
+            _ => panic!("Expected JobStatsResult response"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handle_job_list_empty() {
+        let handler = create_handler();
+
+        let response = handler
+            .handle(Request::JobList { state: None })
+            .await;
+
+        match response {
+            Response::JobListResult { jobs } => {
+                assert!(jobs.is_empty());
+            }
+            _ => panic!("Expected JobListResult response"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handle_job_submit_workflow_not_found() {
+        let handler = create_handler();
+
+        let response = handler
+            .handle(Request::JobSubmit {
+                workflow: "/nonexistent/workflow.nika.yaml".to_string(),
+                args: vec![],
+                name: None,
+                priority: 0,
+            })
+            .await;
+
+        match response {
+            Response::Error { message } => {
+                assert!(message.contains("not found"));
+            }
+            _ => panic!("Expected Error response for missing workflow"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handle_job_status_not_found() {
+        let handler = create_handler();
+
+        let response = handler
+            .handle(Request::JobStatus {
+                job_id: "nonexistent".to_string(),
+            })
+            .await;
+
+        match response {
+            Response::JobStatusResult { job } => {
+                assert!(job.is_none());
+            }
+            _ => panic!("Expected JobStatusResult response"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handle_job_cancel_not_found() {
+        let handler = create_handler();
+
+        let response = handler
+            .handle(Request::JobCancel {
+                job_id: "nonexistent".to_string(),
+            })
+            .await;
+
+        match response {
+            Response::JobCancelled { cancelled, job_id } => {
+                assert!(!cancelled);
+                assert_eq!(job_id, "nonexistent");
+            }
+            _ => panic!("Expected JobCancelled response"),
         }
     }
 }

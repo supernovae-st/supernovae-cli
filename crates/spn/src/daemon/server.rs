@@ -18,6 +18,7 @@ use tracing::{debug, error, info, warn};
 
 use super::{
     handler::RequestHandler,
+    jobs::{JobScheduler, JobStore},
     model_manager::ModelManager,
     paths,
     secrets::SecretManager,
@@ -54,6 +55,7 @@ pub struct DaemonServer {
     config: DaemonConfig,
     secrets: Arc<SecretManager>,
     models: Arc<ModelManager>,
+    jobs: Arc<JobScheduler>,
     handler: Arc<RequestHandler>,
     shutdown_tx: broadcast::Sender<()>,
     /// PID file handle - held to maintain flock until shutdown
@@ -65,9 +67,20 @@ impl DaemonServer {
     pub fn new(config: DaemonConfig) -> Self {
         let secrets = Arc::new(SecretManager::new());
         let models = Arc::new(ModelManager::new());
+
+        // Create job store in ~/.spn/jobs/
+        let jobs_dir = config
+            .socket_path
+            .parent()
+            .map(|p| p.join("jobs"))
+            .unwrap_or_else(|| PathBuf::from("/tmp/spn-jobs"));
+        let store = Arc::new(JobStore::new(jobs_dir));
+        let jobs = Arc::new(JobScheduler::new(store));
+
         let handler = Arc::new(RequestHandler::new(
             Arc::clone(&secrets),
             Arc::clone(&models),
+            Arc::clone(&jobs),
         ));
         let (shutdown_tx, _) = broadcast::channel(1);
 
@@ -75,6 +88,7 @@ impl DaemonServer {
             config,
             secrets,
             models,
+            jobs,
             handler,
             shutdown_tx,
             pid_file_lock: None,

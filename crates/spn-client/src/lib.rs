@@ -51,7 +51,10 @@ mod protocol;
 
 pub use error::Error;
 pub use paths::{PathError, SpnPaths};
-pub use protocol::{ModelProgress, Request, Response, PROTOCOL_VERSION};
+pub use protocol::{
+    IpcJobState, IpcJobStatus, IpcSchedulerStats, ModelProgress, Request, Response,
+    PROTOCOL_VERSION,
+};
 pub use secrecy::{ExposeSecret, SecretString};
 
 // Re-export all spn-core types for convenience
