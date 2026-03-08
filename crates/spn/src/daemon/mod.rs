@@ -38,6 +38,7 @@
 
 mod error;
 mod handler;
+pub mod jobs;
 pub mod mcp;
 mod model_manager;
 mod secrets;
@@ -46,6 +47,8 @@ pub mod service;
 mod socket;
 
 pub use error::DaemonError;
+#[allow(unused_imports)]
+pub use jobs::{Job, JobId, JobScheduler, JobState, JobStatus, JobStore};
 pub use model_manager::ModelManager;
 pub use secrets::SecretManager;
 pub use server::{DaemonConfig, DaemonServer};
