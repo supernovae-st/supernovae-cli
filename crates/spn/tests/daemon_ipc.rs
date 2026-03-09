@@ -436,3 +436,230 @@ async fn test_client_disconnect() {
 
     server.await.unwrap();
 }
+
+// =============================================================================
+// Phase 6: Watcher Status Tests
+// =============================================================================
+
+/// Test WatcherStatus request serialization.
+#[test]
+fn test_watcher_status_request_serialization() {
+    let request = Request::WatcherStatus;
+    let json = serde_json::to_string(&request).unwrap();
+    assert!(json.contains("WATCHER_STATUS"));
+
+    // Roundtrip
+    let parsed: Request = serde_json::from_str(&json).unwrap();
+    assert!(matches!(parsed, Request::WatcherStatus));
+}
+
+/// Test WatcherStatusResult response serialization.
+#[test]
+fn test_watcher_status_response_serialization() {
+    use spn_client::{ForeignMcpInfo, RecentProjectInfo, WatcherStatusInfo};
+
+    let status = WatcherStatusInfo {
+        is_running: true,
+        watched_count: 5,
+        watched_paths: vec!["/home/user/.claude".to_string()],
+        debounce_ms: 500,
+        recent_projects: vec![RecentProjectInfo {
+            path: "/home/user/dev/project".to_string(),
+            last_used: "2026-03-09T12:00:00Z".to_string(),
+        }],
+        foreign_pending: vec![ForeignMcpInfo {
+            name: "test-mcp".to_string(),
+            source: "cursor".to_string(),
+            scope: "global".to_string(),
+            detected: "2026-03-09T12:00:00Z".to_string(),
+        }],
+        foreign_ignored: vec!["ignored-mcp".to_string()],
+    };
+
+    let response = Response::WatcherStatusResult { status };
+    let json = serde_json::to_string(&response).unwrap();
+
+    // Response uses untagged serde, so check for status fields directly
+    assert!(json.contains("\"status\""));
+    assert!(json.contains("is_running"));
+    assert!(json.contains("watched_count"));
+    assert!(json.contains("recent_projects"));
+    assert!(json.contains("foreign_pending"));
+    assert!(json.contains("test-mcp"));
+    assert!(json.contains("cursor"));
+
+    // Roundtrip
+    let parsed: Response = serde_json::from_str(&json).unwrap();
+    match parsed {
+        Response::WatcherStatusResult { status } => {
+            assert!(status.is_running);
+            assert_eq!(status.watched_count, 5);
+            assert_eq!(status.recent_projects.len(), 1);
+            assert_eq!(status.foreign_pending.len(), 1);
+            assert_eq!(status.foreign_pending[0].name, "test-mcp");
+        }
+        _ => panic!("Expected WatcherStatusResult"),
+    }
+}
+
+/// Test WatcherStatus IPC flow (mock server).
+#[tokio::test]
+async fn test_watcher_status_ipc_flow() {
+    use spn_client::{ForeignMcpInfo, RecentProjectInfo, WatcherStatusInfo};
+
+    let dir = tempdir().unwrap();
+    let socket_path = dir.path().join("watcher.sock");
+
+    let listener = UnixListener::bind(&socket_path).unwrap();
+
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+
+        // Read request
+        let mut len_buf = [0u8; 4];
+        stream.read_exact(&mut len_buf).await.unwrap();
+        let msg_len = u32::from_be_bytes(len_buf) as usize;
+
+        let mut msg_buf = vec![0u8; msg_len];
+        stream.read_exact(&mut msg_buf).await.unwrap();
+
+        let request: Request = serde_json::from_slice(&msg_buf).unwrap();
+        assert!(matches!(request, Request::WatcherStatus));
+
+        // Send response
+        let status = WatcherStatusInfo {
+            is_running: true,
+            watched_count: 3,
+            watched_paths: vec![
+                "/home/user/.claude".to_string(),
+                "/home/user/.cursor".to_string(),
+            ],
+            debounce_ms: 500,
+            recent_projects: vec![RecentProjectInfo {
+                path: "/home/user/dev/myproject".to_string(),
+                last_used: "2026-03-09T10:30:00Z".to_string(),
+            }],
+            foreign_pending: vec![ForeignMcpInfo {
+                name: "foreign-server".to_string(),
+                source: "cursor".to_string(),
+                scope: "global".to_string(),
+                detected: "2026-03-09T09:00:00Z".to_string(),
+            }],
+            foreign_ignored: vec![],
+        };
+
+        let response = Response::WatcherStatusResult { status };
+        let response_json = serde_json::to_vec(&response).unwrap();
+
+        let response_len = response_json.len() as u32;
+        stream.write_all(&response_len.to_be_bytes()).await.unwrap();
+        stream.write_all(&response_json).await.unwrap();
+    });
+
+    // Client request
+    let mut client = UnixStream::connect(&socket_path).await.unwrap();
+
+    let request = Request::WatcherStatus;
+    let request_json = serde_json::to_vec(&request).unwrap();
+    let len = request_json.len() as u32;
+
+    client.write_all(&len.to_be_bytes()).await.unwrap();
+    client.write_all(&request_json).await.unwrap();
+
+    // Read response
+    let mut len_buf = [0u8; 4];
+    client.read_exact(&mut len_buf).await.unwrap();
+    let response_len = u32::from_be_bytes(len_buf) as usize;
+
+    let mut response_buf = vec![0u8; response_len];
+    client.read_exact(&mut response_buf).await.unwrap();
+
+    let response: Response = serde_json::from_slice(&response_buf).unwrap();
+    match response {
+        Response::WatcherStatusResult { status } => {
+            assert!(status.is_running);
+            assert_eq!(status.watched_count, 3);
+            assert_eq!(status.watched_paths.len(), 2);
+            assert_eq!(status.recent_projects.len(), 1);
+            assert_eq!(
+                status.recent_projects[0].path,
+                "/home/user/dev/myproject"
+            );
+            assert_eq!(status.foreign_pending.len(), 1);
+            assert_eq!(status.foreign_pending[0].name, "foreign-server");
+        }
+        _ => panic!("Expected WatcherStatusResult response"),
+    }
+
+    server.await.unwrap();
+}
+
+/// Test WatcherStatus with empty data.
+#[tokio::test]
+async fn test_watcher_status_empty() {
+    use spn_client::WatcherStatusInfo;
+
+    let dir = tempdir().unwrap();
+    let socket_path = dir.path().join("watcher_empty.sock");
+
+    let listener = UnixListener::bind(&socket_path).unwrap();
+
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+
+        let mut len_buf = [0u8; 4];
+        stream.read_exact(&mut len_buf).await.unwrap();
+        let msg_len = u32::from_be_bytes(len_buf) as usize;
+
+        let mut msg_buf = vec![0u8; msg_len];
+        stream.read_exact(&mut msg_buf).await.unwrap();
+
+        // Return empty status
+        let status = WatcherStatusInfo {
+            is_running: true,
+            watched_count: 0,
+            watched_paths: vec![],
+            debounce_ms: 500,
+            recent_projects: vec![],
+            foreign_pending: vec![],
+            foreign_ignored: vec![],
+        };
+
+        let response = Response::WatcherStatusResult { status };
+        let response_json = serde_json::to_vec(&response).unwrap();
+
+        let response_len = response_json.len() as u32;
+        stream.write_all(&response_len.to_be_bytes()).await.unwrap();
+        stream.write_all(&response_json).await.unwrap();
+    });
+
+    let mut client = UnixStream::connect(&socket_path).await.unwrap();
+
+    let request = Request::WatcherStatus;
+    let request_json = serde_json::to_vec(&request).unwrap();
+    let len = request_json.len() as u32;
+
+    client.write_all(&len.to_be_bytes()).await.unwrap();
+    client.write_all(&request_json).await.unwrap();
+
+    let mut len_buf = [0u8; 4];
+    client.read_exact(&mut len_buf).await.unwrap();
+    let response_len = u32::from_be_bytes(len_buf) as usize;
+
+    let mut response_buf = vec![0u8; response_len];
+    client.read_exact(&mut response_buf).await.unwrap();
+
+    let response: Response = serde_json::from_slice(&response_buf).unwrap();
+    match response {
+        Response::WatcherStatusResult { status } => {
+            assert!(status.is_running);
+            assert_eq!(status.watched_count, 0);
+            assert!(status.watched_paths.is_empty());
+            assert!(status.recent_projects.is_empty());
+            assert!(status.foreign_pending.is_empty());
+        }
+        _ => panic!("Expected WatcherStatusResult response"),
+    }
+
+    server.await.unwrap();
+}
