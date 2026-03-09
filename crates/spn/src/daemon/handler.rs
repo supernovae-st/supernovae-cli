@@ -2,15 +2,17 @@
 
 use secrecy::ExposeSecret;
 use spn_client::{
-    ChatMessage, ChatOptions, IpcJobState, IpcJobStatus, IpcSchedulerStats, Request, Response,
-    PROTOCOL_VERSION,
+    ChatMessage, ChatOptions, ForeignMcpInfo, IpcJobState, IpcJobStatus, IpcSchedulerStats,
+    RecentProjectInfo, Request, Response, WatcherStatusInfo, PROTOCOL_VERSION,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, warn};
 
+use super::foreign::{ForeignScope, ForeignTracker};
 use super::jobs::{Job, JobScheduler, JobState, JobStatus};
+use super::recent::RecentProjects;
 use super::{ModelManager, SecretManager};
 
 /// Handles incoming daemon requests.
@@ -85,6 +87,9 @@ impl RequestHandler {
             Request::JobList { state } => self.handle_job_list(state.as_deref()).await,
             Request::JobCancel { job_id } => self.handle_job_cancel(&job_id).await,
             Request::JobStats => self.handle_job_stats().await,
+
+            // Watcher commands
+            Request::WatcherStatus => self.handle_watcher_status().await,
         }
     }
 
@@ -324,6 +329,72 @@ impl RequestHandler {
                 failed: stats.failed,
                 cancelled: stats.cancelled,
                 has_nika: stats.has_nika,
+            },
+        }
+    }
+
+    // ==================== Watcher Handlers ====================
+
+    async fn handle_watcher_status(&self) -> Response {
+        // Load recent projects from persistent storage
+        let recent = RecentProjects::load().unwrap_or_default();
+        let recent_projects: Vec<RecentProjectInfo> = recent
+            .projects
+            .iter()
+            .map(|p| RecentProjectInfo {
+                path: p.path.display().to_string(),
+                last_used: p.last_used.to_rfc3339(),
+            })
+            .collect();
+
+        // Load foreign tracker from persistent storage
+        let foreign = ForeignTracker::load().unwrap_or_default();
+        let foreign_pending: Vec<ForeignMcpInfo> = foreign
+            .pending
+            .iter()
+            .map(|f| ForeignMcpInfo {
+                name: f.name.clone(),
+                source: f.source.to_string().to_lowercase().replace(' ', "_"),
+                scope: match &f.scope {
+                    ForeignScope::Global => "global".into(),
+                    ForeignScope::Project(p) => format!("project:{}", p.display()),
+                },
+                detected: f.detected.to_rfc3339(),
+            })
+            .collect();
+
+        // Build watched paths list based on default config locations
+        // The actual watcher state is in the server, but we can infer from config
+        let mut watched_paths = Vec::new();
+        if let Some(home) = dirs::home_dir() {
+            // Global configs always watched
+            watched_paths.push(home.join(".spn/mcp.yaml").display().to_string());
+            watched_paths.push(home.join(".claude.json").display().to_string());
+            watched_paths.push(home.join(".cursor/mcp.json").display().to_string());
+            watched_paths.push(
+                home.join(".codeium/windsurf/mcp_config.json")
+                    .display()
+                    .to_string(),
+            );
+        }
+
+        // Add project-level configs from recent projects
+        for proj in &recent.projects {
+            watched_paths.push(proj.path.join(".mcp.json").display().to_string());
+            watched_paths.push(proj.path.join(".cursor/mcp.json").display().to_string());
+        }
+
+        let watched_count = watched_paths.len();
+
+        Response::WatcherStatusResult {
+            status: WatcherStatusInfo {
+                is_running: true, // If we're responding, daemon is running
+                watched_count,
+                watched_paths,
+                debounce_ms: 500, // Matches DEBOUNCE_MS constant
+                recent_projects,
+                foreign_pending,
+                foreign_ignored: foreign.ignored.clone(),
             },
         }
     }
