@@ -893,6 +893,10 @@ enum ConfigCommands {
     Show {
         /// Config section to show (providers, paths, sync, ui)
         section: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Show config file locations
     Where,
@@ -931,6 +935,9 @@ enum ConfigCommands {
         /// Edit MCP config
         #[arg(long)]
         mcp: bool,
+        /// Scope to edit (global, team, local) - alternative to flags
+        #[arg(long)]
+        scope: Option<String>,
     },
     /// Import configuration from editor config file
     Import {

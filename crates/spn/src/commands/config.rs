@@ -96,20 +96,37 @@ fn validate_editor(editor: &str) -> Result<()> {
 
 pub async fn run(command: ConfigCommands) -> Result<()> {
     match command {
-        ConfigCommands::Show { section } => show_config(section).await,
+        ConfigCommands::Show { section, json } => show_config(section, json).await,
         ConfigCommands::Where => show_locations().await,
         ConfigCommands::List { show_origin } => list_config(show_origin).await,
         ConfigCommands::Get { key, show_origin } => get_value(&key, show_origin).await,
         ConfigCommands::Set { key, value, scope } => set_value(&key, &value, &scope).await,
-        ConfigCommands::Edit { local, user, mcp } => edit_config(local, user, mcp).await,
+        ConfigCommands::Edit {
+            local,
+            user,
+            mcp,
+            scope,
+        } => edit_config(local, user, mcp, scope).await,
         ConfigCommands::Import { file, scope, yes } => import_config(&file, &scope, yes).await,
     }
 }
 
-async fn show_config(_section: Option<String>) -> Result<()> {
+async fn show_config(_section: Option<String>, json: bool) -> Result<()> {
     let resolver = ConfigResolver::load()?;
     let config = resolver.resolved();
     let scopes = resolver.get_scope_paths()?;
+
+    // JSON output mode
+    if json {
+        let output = serde_json::json!({
+            "providers": config.providers,
+            "sync": config.sync,
+            "servers": config.servers,
+            "secrets": config.secrets,
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+        return Ok(());
+    }
 
     println!("{}", ds::primary("⚙️  Resolved Configuration"));
     println!();
@@ -438,10 +455,29 @@ async fn set_value(key: &str, value: &str, scope: &str) -> Result<()> {
     Ok(())
 }
 
-async fn edit_config(local_flag: bool, user: bool, mcp: bool) -> Result<()> {
+async fn edit_config(
+    local_flag: bool,
+    user: bool,
+    mcp: bool,
+    scope: Option<String>,
+) -> Result<()> {
     let cwd = env::current_dir()?;
 
-    let path = if local_flag {
+    // Determine which config file to edit
+    // Priority: explicit --scope > individual flags > default (team/project)
+    let path = if let Some(ref scope_str) = scope {
+        match scope_str.as_str() {
+            "local" => local::config_path(&cwd),
+            "global" => global::config_path()?,
+            "team" => team::mcp_config_path(&cwd),
+            _ => {
+                return Err(SpnError::ConfigError(format!(
+                    "Invalid scope: {}. Use: global, team, or local",
+                    scope_str
+                )));
+            }
+        }
+    } else if local_flag {
         local::config_path(&cwd)
     } else if user {
         global::config_path()?
@@ -460,14 +496,19 @@ async fn edit_config(local_flag: bool, user: bool, mcp: bool) -> Result<()> {
 
     if !path.exists() {
         println!("⚠️  File does not exist: {}", path.display());
-        if local_flag {
+        // Handle --scope option or individual flags
+        let is_local = local_flag || scope.as_deref() == Some("local");
+        let is_global = user || scope.as_deref() == Some("global");
+        let is_team = mcp || scope.as_deref() == Some("team");
+
+        if is_local {
             println!("   Creating local config...");
             local::save(&cwd, &Default::default())?;
             local::ensure_gitignored(&cwd)?;
-        } else if user {
+        } else if is_global {
             println!("   Creating global config...");
             global::save(&Default::default())?;
-        } else if mcp {
+        } else if is_team {
             println!("   Creating MCP config...");
             team::save_mcp(&cwd, &Default::default())?;
         } else {
