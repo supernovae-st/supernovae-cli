@@ -35,6 +35,7 @@ impl NotificationService {
 
     /// Create a disabled notification service (for testing).
     #[must_use]
+    #[allow(dead_code)] // Reserved for tests
     pub fn disabled() -> Self {
         Self {
             enabled: false,
@@ -43,11 +44,13 @@ impl NotificationService {
     }
 
     /// Enable or disable native notifications.
+    #[allow(dead_code)] // Reserved for daemon config API
     pub fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
     }
 
     /// Enable or disable logging.
+    #[allow(dead_code)] // Reserved for daemon config API
     pub fn set_log_enabled(&mut self, enabled: bool) {
         self.log_enabled = enabled;
     }
@@ -97,6 +100,7 @@ impl NotificationService {
     }
 
     /// Notify that multiple foreign MCPs were detected.
+    #[allow(dead_code)] // Reserved for batch notification API
     pub fn notify_foreign_batch(&self, count: usize, sources: &[ForeignSource]) {
         if count == 0 {
             return;
@@ -129,6 +133,7 @@ impl NotificationService {
     }
 
     /// Notify about MCP sync completion.
+    #[allow(dead_code)] // Reserved for sync notification API
     pub fn notify_sync_complete(&self, synced_count: usize) {
         if !self.log_enabled && !self.enabled {
             return;

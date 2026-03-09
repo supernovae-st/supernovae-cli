@@ -30,7 +30,7 @@ pub enum InstallStatus {
     /// Tool is not installed.
     NotInstalled,
     /// Tool is outdated (current version < latest).
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Reserved for version update checking
     Outdated { current: String, latest: String },
 }
 
@@ -44,7 +44,7 @@ impl InstallStatus {
     }
 
     /// Returns the version if installed.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Reserved for version display
     pub fn version(&self) -> Option<&str> {
         match self {
             InstallStatus::Installed { version, .. } => Some(version),
@@ -54,7 +54,7 @@ impl InstallStatus {
     }
 
     /// Returns the path if installed.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Reserved for path display
     pub fn path(&self) -> Option<&PathBuf> {
         match self {
             InstallStatus::Installed { path, .. } => Some(path),
@@ -178,15 +178,16 @@ fn get_binary_version(path: &PathBuf) -> String {
 
 /// Errors that can occur during installation.
 #[derive(Error, Debug)]
-#[allow(dead_code)]
 pub enum InstallError {
     #[error("Installation failed for {tool}: {message}")]
     InstallFailed { tool: String, message: String },
 
     #[error("Missing tool: {0}. Run `spn setup {0}` to install.")]
+    #[allow(dead_code)] // Reserved for CLI error handling
     MissingTool(String),
 
     #[error("No suitable installation method found (cargo or brew required)")]
+    #[allow(dead_code)] // Reserved for install method detection
     NoInstallMethod,
 
     #[error("IO error: {0}")]
@@ -199,9 +200,11 @@ pub enum InstallError {
     ExtractError(String),
 
     #[error("Unsupported platform: {0}")]
+    #[allow(dead_code)] // Reserved for platform detection
     UnsupportedPlatform(String),
 
     #[error("User cancelled installation")]
+    #[allow(dead_code)] // Reserved for interactive install
     Cancelled,
 }
 

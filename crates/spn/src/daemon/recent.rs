@@ -130,7 +130,7 @@ impl RecentProjects {
 
     /// Check if a project is tracked.
     #[must_use]
-    #[allow(dead_code)] // Used in Phase 2: WatcherService
+    #[allow(dead_code)] // Used in tests
     pub fn contains(&self, path: &Path) -> bool {
         let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
         self.projects.iter().any(|p| p.path == canonical)
@@ -138,14 +138,14 @@ impl RecentProjects {
 
     /// Get the number of tracked projects.
     #[must_use]
-    #[allow(dead_code)] // Used in Phase 2: WatcherService
+    #[allow(dead_code)] // Used in tests and future daemon status API
     pub fn len(&self) -> usize {
         self.projects.len()
     }
 
     /// Check if there are no tracked projects.
     #[must_use]
-    #[allow(dead_code)] // Used in Phase 2: WatcherService
+    #[allow(dead_code)] // Used in tests and future daemon status API
     pub fn is_empty(&self) -> bool {
         self.projects.is_empty()
     }

@@ -38,17 +38,14 @@
 
 pub mod agents;
 pub mod autonomy;
-#[allow(dead_code)] // Phase 1 foundation - used in Phase 2: WatcherService
 mod differ;
 mod error;
-#[allow(dead_code)] // Phase 1 foundation - used in Phase 2: WatcherService
 mod foreign;
 mod handler;
 pub mod jobs;
 pub mod mcp;
 pub mod memory;
 mod model_manager;
-#[allow(dead_code)] // Phase 1 foundation - used in Phase 2: WatcherService
 mod notifications;
 pub mod proactive;
 mod recent;

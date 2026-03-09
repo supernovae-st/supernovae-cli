@@ -27,21 +27,21 @@ pub struct McpDiff {
 impl McpDiff {
     /// Check if there are any foreign MCPs.
     #[must_use]
-    #[allow(dead_code)] // Used in Phase 2: WatcherService
+    #[allow(dead_code)] // Reserved for future daemon status API
     pub fn has_foreign(&self) -> bool {
         !self.foreign.is_empty()
     }
 
     /// Check if there are any missing MCPs.
     #[must_use]
-    #[allow(dead_code)] // Used in Phase 2: WatcherService
+    #[allow(dead_code)] // Reserved for future daemon status API
     pub fn has_missing(&self) -> bool {
         !self.missing.is_empty()
     }
 
     /// Check if all MCPs are synced (no foreign, no missing).
     #[must_use]
-    #[allow(dead_code)] // Used in Phase 2: WatcherService
+    #[allow(dead_code)] // Reserved for future daemon status API
     pub fn is_synced(&self) -> bool {
         self.foreign.is_empty() && self.missing.is_empty()
     }
@@ -56,7 +56,6 @@ impl McpDiff {
 /// # Returns
 /// A `McpDiff` showing what's different between the two configs.
 #[must_use]
-#[allow(dead_code)] // Used in Phase 2: WatcherService
 pub fn diff_mcp_configs(
     spn_servers: &[(String, McpServer)],
     client_servers: &[(String, McpServer)],
@@ -125,6 +124,7 @@ struct McpJsonConfig {
 /// Root structure for Claude Code config (~/.claude.json or .mcp.json).
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)] // Reserved for Claude Code-specific parsing
 struct ClaudeJsonConfig {
     #[serde(default)]
     mcp_servers: FxHashMap<String, JsonMcpServer>,

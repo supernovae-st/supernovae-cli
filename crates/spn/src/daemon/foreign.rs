@@ -61,6 +61,7 @@ pub struct ForeignMcpServer {
 
 impl ForeignMcpServer {
     /// Create from command and args.
+    #[allow(dead_code)] // Reserved for daemon adopt API
     pub fn stdio(command: impl Into<String>, args: Vec<String>) -> Self {
         Self {
             command: Some(command.into()),
@@ -71,6 +72,7 @@ impl ForeignMcpServer {
     }
 
     /// Create from URL.
+    #[allow(dead_code)] // Reserved for daemon adopt API
     pub fn sse(url: impl Into<String>) -> Self {
         Self {
             command: None,
@@ -183,6 +185,7 @@ impl ForeignTracker {
     /// Mark an MCP name as ignored.
     ///
     /// Also removes from pending if present.
+    #[allow(dead_code)] // Reserved for daemon ignore API
     pub fn ignore(&mut self, name: &str) {
         // Remove from pending
         self.pending.retain(|m| m.name != name);
@@ -194,23 +197,27 @@ impl ForeignTracker {
     }
 
     /// Remove an MCP from pending (after user adopts it).
+    #[allow(dead_code)] // Reserved for daemon adopt API
     pub fn remove_pending(&mut self, name: &str) {
         self.pending.retain(|m| m.name != name);
     }
 
     /// Get all pending foreign MCPs.
     #[must_use]
+    #[allow(dead_code)] // Reserved for daemon status API
     pub fn pending(&self) -> &[ForeignMcp] {
         &self.pending
     }
 
     /// Get count of pending MCPs.
     #[must_use]
+    #[allow(dead_code)] // Reserved for daemon status API
     pub fn pending_count(&self) -> usize {
         self.pending.len()
     }
 
     /// Clear all pending MCPs.
+    #[allow(dead_code)] // Reserved for daemon clear API
     pub fn clear_pending(&mut self) {
         self.pending.clear();
     }
