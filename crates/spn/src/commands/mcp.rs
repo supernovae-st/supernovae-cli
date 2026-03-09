@@ -677,21 +677,52 @@ fn create_server_from_alias(alias: &str, npm: &NpmClient) -> McpServer {
 
 /// Sync MCP config to editors.
 fn sync_to_editors(_name: &str, sync_to: Option<&str>) {
-    // For now, just print what would be synced
-    // Full sync implementation will come in Phase 2-3
-    if let Some(targets) = sync_to {
-        println!(
-            "{} {} {}",
-            ds::muted("→"),
-            ds::muted("Would sync to:"),
-            ds::primary(targets)
-        );
+    use crate::sync::config::SyncConfig;
+    use crate::sync::mcp_sync::sync_mcp_to_editors;
+    use crate::sync::types::IdeTarget;
+
+    // Determine which editors to sync to
+    let targets: Vec<IdeTarget> = if let Some(targets_str) = sync_to {
+        // Parse comma-separated targets
+        targets_str
+            .split(',')
+            .filter_map(|s| IdeTarget::from_str(s.trim()))
+            .collect()
     } else {
+        // Use configured editors from sync config
+        SyncConfig::load()
+            .map(|c| c.enabled_targets.into_iter().collect())
+            .unwrap_or_default()
+    };
+
+    if targets.is_empty() {
         println!(
             "{} {}",
             ds::muted("→"),
-            ds::muted("Will sync to configured editors on next `spn sync`")
+            ds::muted("No editors configured. Run `spn sync --enable <editor>` first")
         );
+        return;
+    }
+
+    // Perform the sync
+    let results = sync_mcp_to_editors(&targets, None);
+
+    for result in results {
+        if result.success {
+            println!(
+                "{} Synced to {} ({} servers)",
+                ds::success("✓"),
+                ds::highlight(result.target.display_name()),
+                result.servers_synced
+            );
+        } else if let Some(err) = result.error {
+            println!(
+                "{} {} sync failed: {}",
+                ds::warning("⚠"),
+                result.target.display_name(),
+                err
+            );
+        }
     }
 }
 
