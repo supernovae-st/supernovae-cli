@@ -14,7 +14,16 @@ use crate::storage::LocalStorage;
 struct PackageInfo {
     name: String,
     versions: Vec<VersionInfo>,
-    installed: Option<String>,
+    installed: Option<InstalledInfo>,
+}
+
+/// Installed package info for JSON output.
+#[derive(Debug, Serialize)]
+struct InstalledInfo {
+    version: String,
+    path: String,
+    checksum: String,
+    installed_at: String,
 }
 
 /// Version info for JSON output.
@@ -49,13 +58,20 @@ pub async fn run(package: &str, json: bool) -> Result<()> {
         .filter(|e| e.is_available())
         .max_by(|a, b| a.semver().ok().cmp(&b.semver().ok()));
 
-    // Check if installed locally
+    // Check if installed locally (with full details)
     let storage =
         LocalStorage::new().map_err(|e| SpnError::ConfigError(format!("Storage error: {}", e)))?;
-    let installed = storage.installed_version(package).ok().flatten();
+    let installed_pkg = storage.get_installed(package).ok().flatten();
 
     // JSON output
     if json {
+        let installed = installed_pkg.map(|p| InstalledInfo {
+            version: p.version,
+            path: p.path.to_string_lossy().to_string(),
+            checksum: p.checksum,
+            installed_at: p.installed_at,
+        });
+
         let info = PackageInfo {
             name: package.to_string(),
             versions: entries
@@ -91,9 +107,14 @@ pub async fn run(package: &str, json: bool) -> Result<()> {
         println!("   {} ... and {} more", ds::primary("•"), entries.len() - 5);
     }
 
-    if let Some(ref version) = installed {
+    // Show detailed installation info
+    if let Some(ref pkg) = installed_pkg {
         println!();
-        println!("   {} Installed: {}", ds::success("✓"), version);
+        println!("   {}", ds::highlight("Installed:"));
+        println!("   {} Version:  {}", ds::success("✓"), pkg.version);
+        println!("   {} Path:     {}", ds::muted("•"), pkg.path.display());
+        println!("   {} Checksum: {}", ds::muted("•"), &pkg.checksum[..20.min(pkg.checksum.len())]);
+        println!("   {} Date:     {}", ds::muted("•"), &pkg.installed_at[..10.min(pkg.installed_at.len())]);
     }
 
     Ok(())
@@ -119,7 +140,12 @@ mod tests {
                     latest: false,
                 },
             ],
-            installed: Some("1.0.0".to_string()),
+            installed: Some(InstalledInfo {
+                version: "1.0.0".to_string(),
+                path: "/home/user/.spn/packages/test-package/1.0.0".to_string(),
+                checksum: "sha256:abc123".to_string(),
+                installed_at: "2024-01-01T00:00:00Z".to_string(),
+            }),
         };
 
         let json = serde_json::to_string(&info).unwrap();
@@ -127,7 +153,8 @@ mod tests {
         assert!(json.contains("1.0.0"));
         assert!(json.contains("0.9.0"));
         assert!(json.contains("\"latest\":true"));
-        assert!(json.contains("\"installed\":\"1.0.0\""));
+        assert!(json.contains("\"version\":\"1.0.0\"")); // In installed
+        assert!(json.contains("\"path\":\"/home/user/.spn/packages"));
     }
 
     #[test]
@@ -153,5 +180,21 @@ mod tests {
         let json = serde_json::to_string(&info).unwrap();
         assert!(json.contains("\"yanked\":true"));
         assert!(json.contains("\"latest\":false"));
+    }
+
+    #[test]
+    fn test_installed_info_serialization() {
+        let info = InstalledInfo {
+            version: "2.0.0".to_string(),
+            path: "/tmp/test".to_string(),
+            checksum: "sha256:xyz".to_string(),
+            installed_at: "2024-06-15T12:00:00Z".to_string(),
+        };
+
+        let json = serde_json::to_string(&info).unwrap();
+        assert!(json.contains("\"version\":\"2.0.0\""));
+        assert!(json.contains("\"path\":\"/tmp/test\""));
+        assert!(json.contains("\"checksum\":\"sha256:xyz\""));
+        assert!(json.contains("\"installed_at\":\"2024-06-15"));
     }
 }
