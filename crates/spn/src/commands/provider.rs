@@ -22,9 +22,47 @@ use crate::ux::design_system as ds;
 use crate::ProviderCommands;
 
 use dialoguer::{Confirm, Password};
+#[cfg(unix)]
+use spn_client::SpnClient;
 use std::io::IsTerminal;
 use std::str::FromStr;
+#[cfg(unix)]
+use tracing::debug;
 use zeroize::Zeroizing;
+
+/// Notify the daemon to refresh its cached secret for a provider.
+///
+/// This is called after storing a secret in the keychain to ensure the daemon
+/// has the latest value. If the daemon is not running, this is a no-op.
+#[cfg(unix)]
+async fn notify_daemon_refresh(provider: &str) {
+    match SpnClient::connect().await {
+        Ok(mut client) => {
+            match client.refresh_secret(provider).await {
+                Ok(refreshed) => {
+                    if refreshed {
+                        debug!("Daemon cache refreshed for {}", provider);
+                    } else {
+                        debug!("Provider {} not in daemon cache", provider);
+                    }
+                }
+                Err(e) => {
+                    debug!("Failed to refresh daemon cache for {}: {}", provider, e);
+                }
+            }
+        }
+        Err(_) => {
+            // Daemon not running, no cache to refresh
+            debug!("Daemon not running, skipping cache refresh for {}", provider);
+        }
+    }
+}
+
+/// No-op on non-Unix platforms.
+#[cfg(not(unix))]
+async fn notify_daemon_refresh(_provider: &str) {
+    // Daemon is Unix-only
+}
 
 /// Run a provider management command.
 pub async fn run(command: ProviderCommands) -> Result<()> {
@@ -228,6 +266,9 @@ async fn run_set(provider: &str, key: Option<String>, storage: Option<String>) -
         let result = run_quick_setup(provider, &k, backend)
             .map_err(|e| SpnError::CommandFailed(format!("Failed: {}", e)))?;
 
+        // Notify daemon to refresh its cache (if running)
+        notify_daemon_refresh(provider).await;
+
         println!(
             "{} {} {} {}",
             ds::success(ds::icon::SUCCESS),
@@ -247,6 +288,9 @@ async fn run_set(provider: &str, key: Option<String>, storage: Option<String>) -
     // Interactive wizard mode (no --key, no --storage)
     match run_wizard(provider) {
         Ok(Some(result)) => {
+            // Notify daemon to refresh its cache (if running)
+            notify_daemon_refresh(provider).await;
+
             // Wizard handles all output, just log success
             tracing::info!(
                 provider = provider,
@@ -311,6 +355,10 @@ async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result
         StorageBackend::Keychain => {
             SpnKeyring::set(provider, &api_key)
                 .map_err(|e| SpnError::CommandFailed(format!("Failed to store key: {}", e)))?;
+
+            // Notify daemon to refresh its cache (if running)
+            notify_daemon_refresh(provider).await;
+
             println!(
                 "{}",
                 ds::success_line(format!(
