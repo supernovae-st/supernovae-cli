@@ -92,7 +92,9 @@ jobs:
         run: |
           # Ignore RUSTSEC-2024-0384: instant is unmaintained (transitive via reqwest-retry)
           # Not a security vulnerability, just unmaintained
-          cargo audit --deny warnings --ignore RUSTSEC-2024-0384
+          # Ignore RUSTSEC-2026-0009: time crate DoS (transitive via ratatui/notify-rust)
+          # Waiting for upstream to update their dependencies
+          cargo audit --deny warnings --ignore RUSTSEC-2024-0384 --ignore RUSTSEC-2026-0009
 
   # Feature flag matrix tests
   feature-matrix:
