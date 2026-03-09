@@ -72,14 +72,18 @@ impl McpServer {
                 Err(e) => {
                     let response = McpResponse::error(None, -32700, format!("Parse error: {}", e));
                     let response_str = serde_json::to_string(&response)?;
+                    // Write errors indicate client disconnect - exit loop instead of continuing
                     if let Err(write_err) = stdout.write_all(response_str.as_bytes()).await {
-                        error!("Failed to write MCP error response: {}", write_err);
+                        error!("Failed to write MCP error response, client likely disconnected: {}", write_err);
+                        break;
                     }
                     if let Err(write_err) = stdout.write_all(b"\n").await {
-                        error!("Failed to write newline: {}", write_err);
+                        error!("Failed to write newline, client likely disconnected: {}", write_err);
+                        break;
                     }
                     if let Err(flush_err) = stdout.flush().await {
-                        error!("Failed to flush stdout: {}", flush_err);
+                        error!("Failed to flush stdout, client likely disconnected: {}", flush_err);
+                        break;
                     }
                     continue;
                 }
