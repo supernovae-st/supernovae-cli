@@ -22,6 +22,7 @@ use crate::ux::design_system as ds;
 use crate::ProviderCommands;
 
 use dialoguer::{Confirm, Password};
+use std::io::IsTerminal;
 use std::str::FromStr;
 use zeroize::Zeroizing;
 
@@ -40,12 +41,12 @@ pub async fn run(command: ProviderCommands) -> Result<()> {
             };
             run_set(&provider, key, storage).await
         }
-        ProviderCommands::Get { provider, unmask } => {
+        ProviderCommands::Get { provider, unmask, yes } => {
             let provider = match provider {
                 Some(p) => p,
                 None => prompts::select_provider()?,
             };
-            run_get(&provider, unmask).await
+            run_get(&provider, unmask, yes).await
         }
         ProviderCommands::Delete { provider } => {
             let provider = match provider {
@@ -425,15 +426,37 @@ async fn run_set_with_storage(provider: &str, storage: Option<String>) -> Result
 }
 
 /// Get an API key for a provider.
-async fn run_get(provider: &str, unmask: bool) -> Result<()> {
+async fn run_get(provider: &str, unmask: bool, skip_confirm: bool) -> Result<()> {
     match resolve_api_key(provider) {
         Some((key, source)) => {
             if unmask {
-                // DANGEROUS: Print full key
-                eprintln!(
-                    "{}",
-                    ds::warning_line("Exposing full API key - use only for scripts!")
-                );
+                // Check if running in interactive mode (TTY)
+                let is_interactive = std::io::stdout().is_terminal();
+
+                // Require confirmation in interactive mode unless --yes is passed
+                if is_interactive && !skip_confirm {
+                    eprintln!();
+                    eprintln!(
+                        "{} {}",
+                        ds::warning(format!("{} SECURITY WARNING:", ds::icon::WARNING)),
+                        ds::warning("Full API key will be exposed")
+                    );
+                    eprintln!("  {} Key may appear in terminal scrollback history", ds::muted("•"));
+                    eprintln!("  {} Visible in screen recordings/sharing", ds::muted("•"));
+                    eprintln!();
+
+                    let confirm = Confirm::new()
+                        .with_prompt("Are you sure you want to display the full key?")
+                        .default(false)
+                        .interact()
+                        .map_err(|e| SpnError::InvalidInput(e.to_string()))?;
+
+                    if !confirm {
+                        eprintln!("{}", ds::info_line("Cancelled. Key was not displayed."));
+                        return Ok(());
+                    }
+                }
+
                 // Key is printed to stdout for scripting
                 println!("{}", *key);
                 // key is automatically zeroized when it goes out of scope

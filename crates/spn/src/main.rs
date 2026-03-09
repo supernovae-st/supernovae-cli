@@ -1248,6 +1248,9 @@ enum ProviderCommands {
         /// Show full key (DANGEROUS - only for scripts)
         #[arg(long)]
         unmask: bool,
+        /// Skip confirmation prompt when using --unmask
+        #[arg(short, long)]
+        yes: bool,
     },
     /// Delete API key for a provider
     Delete {
