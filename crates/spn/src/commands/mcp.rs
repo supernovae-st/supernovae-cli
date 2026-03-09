@@ -495,12 +495,24 @@ async fn run_logs(
     }
 
     if follow {
-        // For follow mode, we'd need to implement tail -f behavior
-        // This is a placeholder for now - real implementation would use notify or similar
-        println!(
-            "{}",
-            ds::info_line("Follow mode not yet implemented. Use: tail -f ~/.spn/logs/mcp/*.log")
-        );
+        // Follow mode: watch log file for new content
+        if servers.len() == 1 {
+            let log_file = logs_dir.join(format!("{}.log", &servers[0]));
+            if log_file.exists() {
+                return follow_log_file(&log_file, level).await;
+            } else {
+                return Err(SpnError::CommandFailed(format!(
+                    "Log file not found: {}",
+                    log_file.display()
+                )));
+            }
+        } else {
+            // Multi-server follow not yet supported
+            println!(
+                "{}",
+                ds::warning_line("Follow mode requires specifying a single server. Use: spn mcp logs <server> --follow")
+            );
+        }
     }
 
     Ok(())
@@ -519,6 +531,122 @@ fn print_colored_log_line(line: &str) {
     } else {
         println!("    {}", line);
     }
+}
+
+/// Check if a log line matches the level filter.
+///
+/// Looks for log level markers like `[INFO]`, `INFO:`, or ` INFO ` to avoid
+/// false matches on words like "information" or "Debug info".
+fn should_show_line(line: &str, level_filter: Option<&str>) -> bool {
+    let Some(filter) = level_filter else {
+        return true;
+    };
+
+    let line_upper = line.to_uppercase();
+
+    // Helper to check for log level markers (e.g., [INFO], INFO:, INFO])
+    let has_level = |level: &str| {
+        line_upper.contains(&format!("[{}]", level))
+            || line_upper.contains(&format!("[{}:", level))
+            || line_upper.contains(&format!("{}]", level))
+            || line_upper.contains(&format!("{}: ", level))
+            || line_upper.contains(&format!(" {} ", level))
+    };
+
+    let filter_upper = filter.to_uppercase();
+
+    // Level hierarchy: TRACE < DEBUG < INFO < WARN < ERROR
+    match filter_upper.as_str() {
+        "TRACE" => true, // Show all
+        "DEBUG" => !has_level("TRACE"),
+        "INFO" => has_level("INFO") || has_level("WARN") || has_level("ERROR"),
+        "WARN" => has_level("WARN") || has_level("ERROR"),
+        "ERROR" => has_level("ERROR"),
+        _ => true,
+    }
+}
+
+/// Follow log file output in real-time (like tail -f).
+///
+/// Uses the notify crate for file watching and tokio for async handling.
+async fn follow_log_file(log_path: &std::path::Path, level_filter: Option<&str>) -> Result<()> {
+    use notify::{RecommendedWatcher, RecursiveMode, Watcher};
+    use std::io::{BufRead, BufReader, Seek, SeekFrom};
+    use tokio::sync::mpsc;
+
+    // 1. Open file and seek to end
+    let mut file = std::fs::File::open(log_path)?;
+    let mut position = file.seek(SeekFrom::End(0))?;
+
+    // 2. Set up file watcher with mpsc channel
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let mut watcher = RecommendedWatcher::new(
+        move |res: std::result::Result<notify::Event, notify::Error>| {
+            let _ = tx.send(res);
+        },
+        notify::Config::default(),
+    )
+    .map_err(|e| SpnError::ConfigError(format!("Failed to create file watcher: {}", e)))?;
+
+    watcher
+        .watch(log_path, RecursiveMode::NonRecursive)
+        .map_err(|e| SpnError::ConfigError(format!("Failed to watch log file: {}", e)))?;
+
+    // 3. Print header
+    println!(
+        "{}",
+        ds::info_line(format!(
+            "Following {}... (Ctrl+C to stop)",
+            log_path.display()
+        ))
+    );
+    println!();
+
+    // 4. Event loop with Ctrl+C handling
+    loop {
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {
+                println!();
+                println!("{}", ds::info_line("Stopped following logs"));
+                break;
+            }
+            event = rx.recv() => {
+                match event {
+                    Some(Ok(ev)) => {
+                        // Only process modify events
+                        if ev.kind.is_modify() {
+                            // Read new content from last position
+                            if let Err(e) = file.seek(SeekFrom::Start(position)) {
+                                tracing::warn!("Failed to seek: {}", e);
+                                continue;
+                            }
+
+                            let reader = BufReader::new(&file);
+                            for line in reader.lines().map_while(std::result::Result::ok) {
+                                if should_show_line(&line, level_filter) {
+                                    print_colored_log_line(&line);
+                                }
+                            }
+
+                            // Update position to end
+                            if let Ok(new_pos) = file.seek(SeekFrom::End(0)) {
+                                position = new_pos;
+                            }
+                        }
+                    }
+                    Some(Err(e)) => {
+                        tracing::warn!("Watch error: {}", e);
+                    }
+                    None => {
+                        // Channel closed
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Determine scope from flags (default to global).
