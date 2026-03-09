@@ -239,7 +239,8 @@ fn daemon_pid_path() -> PathBuf {
 /// Check if a process with given PID is running.
 #[cfg(unix)]
 fn is_process_running(pid: u32) -> bool {
-    // Use kill(0) to check if process exists without sending signal
+    // SAFETY: kill(pid, 0) is always safe to call. Signal 0 doesn't send any signal,
+    // it just checks if the process exists and we have permission to signal it.
     unsafe { libc::kill(pid as libc::pid_t, 0) == 0 }
 }
 

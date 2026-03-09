@@ -116,12 +116,14 @@ async fn stop() -> Result<()> {
     println!("{} Stopping daemon (PID: {})...", ds::warning("🛑"), pid);
 
     // Send SIGTERM
+    // SAFETY: kill() is safe to call with any PID. SIGTERM requests graceful shutdown.
     let result = unsafe { libc::kill(pid, libc::SIGTERM) };
 
     if result == 0 {
         // Wait for process to exit
         for _ in 0..10 {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            // SAFETY: kill(pid, 0) is safe - signal 0 just checks if process exists.
             let check = unsafe { libc::kill(pid, 0) };
             if check != 0 {
                 println!("{} Daemon stopped", ds::success("✓"));
@@ -131,6 +133,7 @@ async fn stop() -> Result<()> {
 
         // Still running, force kill
         println!("{} Sending SIGKILL...", ds::warning("⚠"));
+        // SAFETY: kill() is safe to call. SIGKILL forcibly terminates the process.
         unsafe { libc::kill(pid, libc::SIGKILL) };
         println!("{} Daemon force stopped", ds::success("✓"));
     } else {
@@ -347,6 +350,7 @@ fn is_daemon_running() -> bool {
     if let Ok(pid_str) = fs::read_to_string(&pid_file) {
         if let Ok(pid) = pid_str.trim().parse::<i32>() {
             // Check if process is alive
+            // SAFETY: kill(pid, 0) is safe - signal 0 just checks if process exists.
             let result = unsafe { libc::kill(pid, 0) };
             return result == 0;
         }

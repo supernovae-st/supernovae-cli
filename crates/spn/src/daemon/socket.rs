@@ -34,6 +34,7 @@ impl SocketUtils {
         let metadata = fs::metadata(path).map_err(DaemonError::IoError)?;
 
         let file_uid = std::os::unix::fs::MetadataExt::uid(&metadata);
+        // SAFETY: getuid() is always safe to call and returns the current user's UID.
         let current_uid = unsafe { libc::getuid() };
 
         if file_uid != current_uid {
@@ -67,9 +68,12 @@ pub fn verify_peer_credentials(stream: &StdUnixStream) -> Result<PeerCredentials
     use std::os::unix::io::AsRawFd;
 
     let fd = stream.as_raw_fd();
+    // SAFETY: zeroed() is safe for libc::ucred which is a plain data struct.
     let mut cred: libc::ucred = unsafe { std::mem::zeroed() };
     let mut len = std::mem::size_of::<libc::ucred>() as libc::socklen_t;
 
+    // SAFETY: fd is a valid file descriptor from the stream. cred points to valid memory
+    // of the correct size. getsockopt with SO_PEERCRED reads peer credentials.
     let result = unsafe {
         libc::getsockopt(
             fd,
@@ -93,6 +97,7 @@ pub fn verify_peer_credentials(stream: &StdUnixStream) -> Result<PeerCredentials
     };
 
     // Verify UID matches
+    // SAFETY: getuid() is always safe to call and returns the current user's UID.
     let daemon_uid = unsafe { libc::getuid() };
     if peer.uid != daemon_uid {
         return Err(DaemonError::Unauthorized {
@@ -126,6 +131,7 @@ pub fn verify_peer_credentials(stream: &StdUnixStream) -> Result<PeerCredentials
         cr_groups: [libc::gid_t; 16],
     }
 
+    // SAFETY: zeroed() is safe for xucred which is a plain data struct (repr(C)).
     let mut cred: xucred = unsafe { std::mem::zeroed() };
     let mut len = std::mem::size_of::<xucred>() as libc::socklen_t;
 
@@ -134,6 +140,8 @@ pub fn verify_peer_credentials(stream: &StdUnixStream) -> Result<PeerCredentials
     // SOL_LOCAL = 0 on macOS
     const SOL_LOCAL: libc::c_int = 0;
 
+    // SAFETY: fd is a valid file descriptor from the stream. cred points to valid memory
+    // of the correct size. getsockopt with LOCAL_PEERCRED reads peer credentials on macOS.
     let result = unsafe {
         libc::getsockopt(
             fd,
@@ -161,6 +169,7 @@ pub fn verify_peer_credentials(stream: &StdUnixStream) -> Result<PeerCredentials
     };
 
     // Verify UID matches
+    // SAFETY: getuid() is always safe to call and returns the current user's UID.
     let daemon_uid = unsafe { libc::getuid() };
     if peer.uid != daemon_uid {
         return Err(DaemonError::Unauthorized {

@@ -121,6 +121,8 @@ impl LockedBuffer {
             .map_err(|_| MemoryError::AllocationFailed)?;
 
         // Allocate zeroed memory
+        // SAFETY: layout is valid (checked above), and we verify ptr is non-null before
+        // calling NonNull::new_unchecked. The allocation is page-aligned for mlock efficiency.
         let ptr = unsafe {
             let ptr = alloc_zeroed(layout);
             if ptr.is_null() {
@@ -149,6 +151,8 @@ impl LockedBuffer {
     fn page_size() -> usize {
         #[cfg(unix)]
         {
+            // SAFETY: sysconf(_SC_PAGESIZE) is always safe to call and returns the
+            // system page size or -1 on error (which we cast to usize).
             unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize }
         }
         #[cfg(not(unix))]
@@ -163,6 +167,8 @@ impl LockedBuffer {
     /// and continue. This is a defense-in-depth measure, not a hard requirement.
     #[cfg(unix)]
     fn try_lock(&mut self) -> Result<(), MemoryError> {
+        // SAFETY: ptr is valid and points to at least layout.size() bytes of allocated memory.
+        // mlock is safe to call on any valid memory region we own.
         let result =
             unsafe { libc::mlock(self.ptr.as_ptr() as *const libc::c_void, self.layout.size()) };
 
@@ -198,6 +204,8 @@ impl LockedBuffer {
     /// Try to exclude memory from core dumps.
     #[cfg(target_os = "linux")]
     fn try_dontdump(&self) {
+        // SAFETY: ptr is valid and points to at least layout.size() bytes of memory we own.
+        // MADV_DONTDUMP is an advisory flag that never fails in a way that affects correctness.
         unsafe {
             libc::madvise(
                 self.ptr.as_ptr() as *mut libc::c_void,
@@ -217,6 +225,8 @@ impl LockedBuffer {
     #[cfg(unix)]
     fn unlock(&self) {
         if self.locked {
+            // SAFETY: ptr is valid and layout.size() matches the originally locked region.
+            // munlock is safe to call on memory we previously locked with mlock.
             unsafe {
                 libc::munlock(self.ptr.as_ptr() as *const libc::c_void, self.layout.size());
             }
@@ -241,6 +251,8 @@ impl LockedBuffer {
             });
         }
 
+        // SAFETY: We verified data.len() <= capacity above. ptr is valid for writes of
+        // at least layout.size() bytes. data and ptr don't overlap (data is borrowed immutably).
         unsafe {
             std::ptr::copy_nonoverlapping(data.as_ptr(), self.ptr.as_ptr(), data.len());
         }
@@ -250,11 +262,15 @@ impl LockedBuffer {
 
     /// Get the buffer contents as a slice.
     pub fn as_slice(&self) -> &[u8] {
+        // SAFETY: ptr is valid and points to at least self.len bytes of initialized memory.
+        // The lifetime of the returned slice is tied to &self, ensuring no aliasing.
         unsafe { std::slice::from_raw_parts(self.ptr.as_ptr(), self.len) }
     }
 
     /// Get the buffer contents as a mutable slice.
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
+        // SAFETY: ptr is valid and points to at least self.len bytes of initialized memory.
+        // The lifetime of the returned slice is tied to &mut self, ensuring exclusive access.
         unsafe { std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len) }
     }
 
@@ -288,6 +304,8 @@ impl LockedBuffer {
 impl Drop for LockedBuffer {
     fn drop(&mut self) {
         // 1. Zeroize the memory
+        // SAFETY: ptr is valid and points to layout.size() bytes. We use the full
+        // capacity (not self.len) to ensure ALL allocated memory is zeroed.
         unsafe {
             let slice = std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.layout.size());
             slice.zeroize();
@@ -297,6 +315,8 @@ impl Drop for LockedBuffer {
         self.unlock();
 
         // 3. Deallocate
+        // SAFETY: ptr was allocated with this exact layout in new(), and we're in drop
+        // so this memory will never be accessed again.
         unsafe {
             dealloc(self.ptr.as_ptr(), self.layout);
         }
@@ -368,12 +388,15 @@ pub fn mlock_available() -> bool {
     #[cfg(unix)]
     {
         // Try to lock a small buffer
+        // SAFETY: sysconf(_SC_PAGESIZE) is always safe to call.
         let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize };
         let layout = match Layout::from_size_align(page_size, page_size) {
             Ok(l) => l,
             Err(_) => return false,
         };
 
+        // SAFETY: We allocate a page-aligned buffer, test mlock, unlock, and deallocate.
+        // All operations use the same valid ptr and layout. Memory is freed before returning.
         unsafe {
             let ptr = alloc_zeroed(layout);
             if ptr.is_null() {
@@ -401,9 +424,12 @@ pub fn mlock_limit() -> Option<u64> {
     use std::mem::MaybeUninit;
 
     let mut rlim = MaybeUninit::<libc::rlimit>::uninit();
+    // SAFETY: getrlimit writes to the provided pointer. We pass an uninitialized buffer
+    // and only read it after confirming success (result == 0).
     let result = unsafe { libc::getrlimit(libc::RLIMIT_MEMLOCK, rlim.as_mut_ptr()) };
 
     if result == 0 {
+        // SAFETY: getrlimit returned 0, so the buffer is now fully initialized.
         let rlim = unsafe { rlim.assume_init() };
         if rlim.rlim_cur == libc::RLIM_INFINITY {
             Some(u64::MAX)

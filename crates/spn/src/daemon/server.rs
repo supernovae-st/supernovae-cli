@@ -205,6 +205,8 @@ impl DaemonServer {
         {
             use std::os::unix::io::AsRawFd;
             let fd = file.as_raw_fd();
+            // SAFETY: fd is a valid file descriptor from the just-created file.
+            // flock with LOCK_EX|LOCK_NB attempts a non-blocking exclusive lock.
             let result = unsafe { libc::flock(fd, libc::LOCK_EX | libc::LOCK_NB) };
             if result != 0 {
                 return Err(DaemonError::LockFailed {
@@ -236,12 +238,15 @@ impl DaemonServer {
         // Set restrictive umask BEFORE bind to prevent race condition.
         // umask(0o077) means new files get permissions & ~0o077 = 0o700 max.
         // For sockets, this results in 0o600 (rw-------).
+        // SAFETY: umask() is always safe to call. It atomically sets the new mask
+        // and returns the previous mask. This is a process-wide setting.
         let old_umask = unsafe { libc::umask(0o077) };
 
         // Bind (socket is created with restricted permissions immediately)
         let bind_result = UnixListener::bind(path);
 
         // Restore original umask regardless of bind result
+        // SAFETY: umask() is always safe to call.
         unsafe { libc::umask(old_umask) };
 
         let listener = bind_result.map_err(|source| DaemonError::BindFailed {
@@ -520,6 +525,8 @@ async fn handle_connection(
 
 /// Check if a process is running.
 fn is_process_running(pid: u32) -> bool {
+    // SAFETY: kill(pid, 0) is always safe to call. Signal 0 doesn't send any signal,
+    // it just checks if the process exists and we have permission to signal it.
     unsafe { libc::kill(pid as libc::pid_t, 0) == 0 }
 }
 
