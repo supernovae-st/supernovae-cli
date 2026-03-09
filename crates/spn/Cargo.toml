@@ -1,6 +1,6 @@
 [package]
 name = "spn-cli"
-version = "0.15.2"
+version = "0.15.3"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "The Agentic AI Toolkit - unified CLI for models, secrets, MCP servers, workflows, and AI agents"

@@ -7,7 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.3](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.15.3) - 2026-03-09
+
 ### Added
+
+- **daemon**: Add `--skip-preload` flag for immediate daemon availability
+  - Daemon socket created instantly without waiting for keychain
+  - Useful when you need fast startup and lazy loading
+- **daemon**: Add `--lazy` flag for on-demand secret loading
+  - Secrets loaded on first request instead of at startup
+  - Combines with `--skip-preload` for zero-blocking startup
+- **daemon**: Add progress output during secret preload
+  - Shows `[1/13] Loaded: anthropic` style progress
+  - Summary with loaded/not found/error counts
+- **client**: Add `RefreshSecret` IPC message for cache invalidation
+  - Allows external tools to trigger daemon cache refresh
+  - Returns whether secret was already cached
+
+### Changed
+
+- **daemon**: Use `get_or_load()` in GetSecret handler for lazy loading
+  - Secrets not in cache are automatically loaded on-demand
+  - Seamless experience whether preloaded or lazy
+- **provider**: Auto-refresh daemon cache after `spn provider set`
+  - Daemon automatically picks up new secrets without restart
+  - No manual cache invalidation needed
+
+### Fixed
+
+- **jobs**: Use `&Path` instead of `&PathBuf` in `validate_workflow_path`
 
 - **config**: Implement nested key path resolution for `spn config set`
   - Support dot notation: `providers.<name>.model`, `sync.auto_sync`, etc.
