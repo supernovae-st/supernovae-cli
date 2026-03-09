@@ -2,9 +2,8 @@
 
 use secrecy::ExposeSecret;
 use serde_json::{json, Value};
-use std::io::{BufRead, BufReader, Write};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tracing::{debug, error, info};
 
 use super::protocol::{
@@ -34,53 +33,67 @@ impl McpServer {
     /// Run the MCP server over stdio.
     ///
     /// Reads JSON-RPC requests from stdin, processes them, and writes responses to stdout.
+    /// Uses async I/O to avoid blocking the tokio runtime.
     pub async fn run(self) -> std::io::Result<()> {
         info!("Starting MCP server over stdio");
 
-        let server = Arc::new(Mutex::new(self));
-        let stdin = std::io::stdin();
-        let reader = BufReader::new(stdin.lock());
-        let mut stdout = std::io::stdout();
+        // Use Arc for shared ownership - no Mutex needed since we don't mutate self
+        let server = Arc::new(self);
+        let stdin = tokio::io::stdin();
+        let mut reader = BufReader::new(stdin);
+        let mut stdout = tokio::io::stdout();
+        let mut line = String::new();
 
-        for line in reader.lines() {
-            let line = match line {
-                Ok(l) => l,
+        loop {
+            line.clear();
+            let bytes_read = match reader.read_line(&mut line).await {
+                Ok(0) => break, // EOF
+                Ok(n) => n,
                 Err(e) => {
                     error!("Error reading stdin: {}", e);
                     break;
                 }
             };
 
-            if line.is_empty() {
+            if bytes_read == 0 {
+                break;
+            }
+
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
                 continue;
             }
 
-            debug!("Received: {}", line);
+            debug!("Received: {}", trimmed);
 
             // Parse request
-            let request: McpRequest = match serde_json::from_str(&line) {
+            let request: McpRequest = match serde_json::from_str(trimmed) {
                 Ok(r) => r,
                 Err(e) => {
                     let response = McpResponse::error(None, -32700, format!("Parse error: {}", e));
-                    if let Err(write_err) = writeln!(stdout, "{}", serde_json::to_string(&response)?) {
+                    let response_str = serde_json::to_string(&response)?;
+                    if let Err(write_err) = stdout.write_all(response_str.as_bytes()).await {
                         error!("Failed to write MCP error response: {}", write_err);
                     }
-                    if let Err(flush_err) = stdout.flush() {
+                    if let Err(write_err) = stdout.write_all(b"\n").await {
+                        error!("Failed to write newline: {}", write_err);
+                    }
+                    if let Err(flush_err) = stdout.flush().await {
                         error!("Failed to flush stdout: {}", flush_err);
                     }
                     continue;
                 }
             };
 
-            // Handle request
-            let server = server.lock().await;
+            // Handle request - no mutex needed, handle_request takes &self
             let response = server.handle_request(request).await;
 
             // Write response
             let response_str = serde_json::to_string(&response)?;
             debug!("Sending: {}", response_str);
-            writeln!(stdout, "{}", response_str)?;
-            stdout.flush()?;
+            stdout.write_all(response_str.as_bytes()).await?;
+            stdout.write_all(b"\n").await?;
+            stdout.flush().await?;
         }
 
         info!("MCP server shutting down");
