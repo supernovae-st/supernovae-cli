@@ -10,6 +10,7 @@ use crate::prompts;
 use crate::{ApisCommands, McpCommands};
 
 use crate::ux::design_system as ds;
+use spn_client::SpnClient;
 
 // Re-export spn-mcp config types for the apis subcommand
 use spn_mcp::config::{apis_dir, load_all_apis, load_api, validate};
@@ -1506,6 +1507,9 @@ async fn run_status(_mcp: &McpConfigManager, json: bool) -> Result<()> {
     );
     println!();
 
+    // Watcher status (if daemon is running)
+    render_watcher_status().await;
+
     // Hint for foreign MCPs
     println!(
         "  {} {}",
@@ -1514,6 +1518,166 @@ async fn run_status(_mcp: &McpConfigManager, json: bool) -> Result<()> {
     );
 
     Ok(())
+}
+
+/// Render watcher status section (if daemon is running).
+async fn render_watcher_status() {
+    // Try to connect to daemon and get watcher status
+    let status = match SpnClient::connect().await {
+        Ok(mut client) => match client.watcher_status().await {
+            Ok(s) => s,
+            Err(_) => return, // Silently skip if watcher status unavailable
+        },
+        Err(_) => return, // Daemon not running, skip watcher section
+    };
+
+    // Section header
+    println!(
+        "{}",
+        ds::primary(
+            "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
+        )
+    );
+    println!(
+        "{}",
+        ds::primary(
+            "┃  👁 WATCHER STATUS                                                           ┃"
+        )
+    );
+    println!(
+        "{}",
+        ds::primary(
+            "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
+        )
+    );
+    println!();
+
+    // Status summary
+    let status_icon = if status.is_running {
+        ds::success("●")
+    } else {
+        ds::muted("○")
+    };
+    let status_label = if status.is_running {
+        ds::success("Running")
+    } else {
+        ds::muted("Stopped")
+    };
+
+    println!(
+        "  Status: {} {}    Watched: {} paths    Debounce: {}ms",
+        status_icon,
+        status_label,
+        ds::highlight(status.watched_count.to_string()),
+        status.debounce_ms
+    );
+    println!();
+
+    // Recent projects (if any)
+    if !status.recent_projects.is_empty() {
+        println!("  {}", ds::muted("Recent Projects:"));
+        for proj in &status.recent_projects {
+            let relative_time = format_relative_time(&proj.last_used);
+            // Shorten path for display
+            let display_path = shorten_home_path(&proj.path);
+            println!(
+                "    {} {}  {}",
+                ds::muted("•"),
+                display_path,
+                ds::muted(format!("({})", relative_time))
+            );
+        }
+        println!();
+    }
+
+    // Foreign MCPs pending adoption (if any)
+    if !status.foreign_pending.is_empty() {
+        println!(
+            "  {} ({} pending):",
+            ds::warning("Foreign MCPs Detected"),
+            ds::highlight(status.foreign_pending.len().to_string())
+        );
+        for mcp in &status.foreign_pending {
+            let scope_str = if mcp.scope == "global" {
+                "global".to_string()
+            } else {
+                mcp.scope
+                    .strip_prefix("project:")
+                    .map(shorten_home_path)
+                    .unwrap_or(mcp.scope.clone())
+            };
+            println!(
+                "    {} {}  {} {} {}",
+                ds::warning("⚠"),
+                ds::highlight(&mcp.name),
+                ds::muted("from"),
+                format_source(&mcp.source),
+                ds::muted(format!("({})", scope_str))
+            );
+        }
+        println!();
+        println!(
+            "    {} {}",
+            ds::muted("→"),
+            ds::muted("Run `spn mcp adopt` to adopt these servers")
+        );
+        println!();
+    }
+}
+
+/// Format foreign source for display.
+fn format_source(source: &str) -> String {
+    match source {
+        "claude_code" => "Claude Code".to_string(),
+        "cursor" => "Cursor".to_string(),
+        "windsurf" => "Windsurf".to_string(),
+        _ => source.to_string(),
+    }
+}
+
+/// Shorten home directory paths for display.
+fn shorten_home_path(path: &str) -> String {
+    if let Some(home) = dirs::home_dir() {
+        let home_str = home.display().to_string();
+        if path.starts_with(&home_str) {
+            return path.replacen(&home_str, "~", 1);
+        }
+    }
+    path.to_string()
+}
+
+/// Format ISO 8601 timestamp to relative time (e.g., "2 min ago").
+fn format_relative_time(iso_time: &str) -> String {
+    use chrono::{DateTime, Utc};
+
+    let parsed = match DateTime::parse_from_rfc3339(iso_time) {
+        Ok(dt) => dt.with_timezone(&Utc),
+        Err(_) => return iso_time.to_string(),
+    };
+
+    let now = Utc::now();
+    let duration = now.signed_duration_since(parsed);
+
+    if duration.num_seconds() < 60 {
+        "just now".to_string()
+    } else if duration.num_minutes() < 60 {
+        let mins = duration.num_minutes();
+        format!("{} min ago", mins)
+    } else if duration.num_hours() < 24 {
+        let hours = duration.num_hours();
+        if hours == 1 {
+            "1 hour ago".to_string()
+        } else {
+            format!("{} hours ago", hours)
+        }
+    } else {
+        let days = duration.num_days();
+        if days == 1 {
+            "1 day ago".to_string()
+        } else {
+            format!("{} days ago", days)
+        }
+    }
 }
 
 // ============================================================================
