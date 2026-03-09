@@ -3,7 +3,7 @@
 //! Submit and manage background Nika workflow jobs.
 
 use crate::daemon::jobs::{Job, JobScheduler, JobState, JobStore};
-use crate::error::Result;
+use crate::error::{Result, SpnError};
 use crate::ux::design_system as ds;
 use crate::JobsCommands;
 use chrono::{DateTime, Local};
@@ -122,6 +122,75 @@ async fn list(all: bool, json: bool) -> Result<()> {
     Ok(())
 }
 
+/// Validate workflow path for security.
+///
+/// Security: Canonicalize and validate path to prevent path traversal attacks.
+/// We resolve the path to its absolute form (following symlinks) and verify:
+/// 1. The path is canonical (no .. components after resolution)
+/// 2. The file has a valid workflow extension (.nika.yaml or .yaml)
+/// 3. The path is within allowed directories
+fn validate_workflow_path(path: &PathBuf) -> std::result::Result<PathBuf, String> {
+    // Canonicalize the path (resolves symlinks and ..)
+    let canonical = match path.canonicalize() {
+        Ok(p) => p,
+        Err(e) => {
+            return Err(format!("Invalid workflow path: {}", e));
+        }
+    };
+
+    // Validate file extension (must be a Nika workflow file)
+    let extension_valid = canonical
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|name| name.ends_with(".nika.yaml") || name.ends_with(".yaml"))
+        .unwrap_or(false);
+
+    if !extension_valid {
+        return Err("Workflow file must have .nika.yaml or .yaml extension".to_string());
+    }
+
+    // Security: Validate canonical path is within allowed directories.
+    // This prevents symlink attacks where an attacker creates a symlink to
+    // a sensitive .yaml file outside the expected workflow locations.
+    // Allowed directories (specific, not full home to prevent ~/Downloads attacks):
+    // 1. Current working directory and subdirectories (EXCEPT root "/" to prevent bypass)
+    // 2. User's ~/.spn/workflows/ directory
+    // 3. User's ~/.local/share/spn/workflows/ directory (XDG convention)
+    // 4. User's ~/Documents/nika-workflows/ directory (user-visible location)
+    let cwd = std::env::current_dir().ok();
+    // Security: Reject root directory as CWD - would allow all paths via starts_with("/")
+    let cwd_safe = cwd.filter(|p| p.as_os_str() != "/" && p.as_os_str() != "\\");
+
+    let allowed_bases: Vec<PathBuf> = vec![
+        cwd_safe,
+        dirs::home_dir().map(|h| h.join(".spn").join("workflows")),
+        dirs::home_dir().map(|h| h.join(".local").join("share").join("spn").join("workflows")),
+        dirs::home_dir().map(|h| h.join("Documents").join("nika-workflows")),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+
+    let is_allowed = allowed_bases
+        .iter()
+        .any(|base| canonical.starts_with(base));
+
+    if !is_allowed {
+        return Err(format!(
+            "Workflow path must be within current directory or allowed directories.\n\
+             Allowed:\n  \
+             - Current directory\n  \
+             - ~/.spn/workflows/\n  \
+             - ~/.local/share/spn/workflows/\n  \
+             - ~/Documents/nika-workflows/\n\
+             Got: {}",
+            canonical.display()
+        ));
+    }
+
+    Ok(canonical)
+}
+
 /// Submit a new job.
 async fn submit(
     workflow: PathBuf,
@@ -131,13 +200,15 @@ async fn submit(
 ) -> Result<()> {
     // Validate workflow exists
     if !workflow.exists() {
-        println!(
-            "{} Workflow not found: {}",
-            ds::error("✗"),
+        return Err(SpnError::NotFound(format!(
+            "Workflow not found: {}",
             workflow.display()
-        );
-        return Ok(());
+        )));
     }
+
+    // Security: Validate path to prevent path traversal attacks
+    let canonical = validate_workflow_path(&workflow)
+        .map_err(|e| SpnError::InvalidInput(e.to_string()))?;
 
     let store = Arc::new(JobStore::new(jobs_dir()?));
     store.init().await?;
@@ -145,15 +216,12 @@ async fn submit(
     let scheduler = JobScheduler::new(store);
 
     if !scheduler.has_nika() {
-        println!(
-            "{} Nika not found. Install with: {}",
-            ds::warning("⚠"),
-            ds::highlight("spn setup nika")
-        );
-        return Ok(());
+        return Err(SpnError::CommandNotFound(
+            "nika not found. Install with: spn setup nika".to_string(),
+        ));
     }
 
-    let mut job = Job::new(workflow.clone())
+    let mut job = Job::new(canonical.clone())
         .with_priority(priority)
         .with_args(args);
 
@@ -222,13 +290,10 @@ async fn status(id: &str) -> Result<()> {
                     }
                 }
             }
+            Ok(())
         }
-        None => {
-            println!("{} Job not found: {}", ds::error("✗"), id);
-        }
+        None => Err(SpnError::NotFound(format!("Job not found: {}", id))),
     }
-
-    Ok(())
 }
 
 /// Cancel a job.
@@ -255,16 +320,16 @@ async fn cancel(id: &str) -> Result<()> {
 
             if scheduler.cancel(&status.job.id).await {
                 println!("{} Job {} cancelled", ds::success("✓"), status.job.id);
+                Ok(())
             } else {
-                println!("{} Failed to cancel job", ds::error("✗"));
+                Err(SpnError::CommandFailed(format!(
+                    "Failed to cancel job {}",
+                    status.job.id
+                )))
             }
         }
-        None => {
-            println!("{} Job not found: {}", ds::error("✗"), id);
-        }
+        None => Err(SpnError::NotFound(format!("Job not found: {}", id))),
     }
-
-    Ok(())
 }
 
 /// Show job output.
@@ -292,13 +357,10 @@ async fn output(id: &str, follow: bool) -> Result<()> {
             } else {
                 println!("{} No output available", ds::warning("⚠"));
             }
+            Ok(())
         }
-        None => {
-            println!("{} Job not found: {}", ds::error("✗"), id);
-        }
+        None => Err(SpnError::NotFound(format!("Job not found: {}", id))),
     }
-
-    Ok(())
 }
 
 /// Follow job output until completion.
