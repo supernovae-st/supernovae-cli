@@ -7,6 +7,7 @@
 
 pub mod add;
 pub mod backup;
+pub mod cache;
 pub mod completion;
 pub mod config;
 pub mod daemon;

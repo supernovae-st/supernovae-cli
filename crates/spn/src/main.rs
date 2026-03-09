@@ -334,6 +334,12 @@ enum Commands {
         command: commands::backup::BackupCommands,
     },
 
+    /// Manage package cache (downloaded tarballs)
+    Cache {
+        #[command(subcommand)]
+        command: CacheCommands,
+    },
+
     /// Manage local LLM models (Ollama)
     #[command(visible_alias = "m")]
     #[command(
@@ -405,6 +411,18 @@ pub enum CompletionCommands {
     },
     /// Show completion installation status
     Status,
+}
+
+#[derive(Subcommand)]
+enum CacheCommands {
+    /// Clear downloaded package cache
+    Clear,
+    /// Show cache information (size, location)
+    Info {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1365,6 +1383,14 @@ async fn main() {
         Commands::Daemon { command } => commands::daemon::run(command).await,
         Commands::Jobs { command } => commands::jobs::run(command).await,
         Commands::Backup { command } => commands::backup::run(command).await,
+        Commands::Cache { command } => match command {
+            CacheCommands::Clear => {
+                commands::cache::run(commands::cache::CacheCommand::Clear).await
+            }
+            CacheCommands::Info { json } => {
+                commands::cache::run(commands::cache::CacheCommand::Info { json }).await
+            }
+        },
         Commands::Model { command } => commands::model::execute(command).await,
         Commands::Completion { command } => match command {
             CompletionCommands::Bash { output } => commands::completion::run("bash", output).await,
