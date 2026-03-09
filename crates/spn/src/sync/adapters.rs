@@ -314,15 +314,50 @@ impl IdeAdapter for WindsurfAdapter {
         &self,
         _project_root: &Path,
         package_name: &str,
-        _package_path: &Path,
-        _manifest: &PackageManifest,
+        package_path: &Path,
+        manifest: &PackageManifest,
     ) -> SyncResult {
-        // Windsurf sync not yet implemented
+        let mut synced = Vec::new();
+        let config_path = self.config_path(_project_root);
+
+        // Load existing Windsurf MCP config
+        let mut config = match load_json_config(&config_path, None) {
+            Ok(c) => c,
+            Err(e) => {
+                return SyncResult {
+                    package: package_name.to_string(),
+                    target: self.target(),
+                    success: false,
+                    synced: vec![],
+                    error: Some(format!("Failed to read Windsurf config: {}", e)),
+                };
+            }
+        };
+
+        // Add MCP server if present
+        if let Some(mcp) = &manifest.mcp {
+            let server_name = mcp_server_name(package_name);
+            let server_config = build_mcp_config(package_path, mcp);
+            insert_mcp_server(&mut config, &server_name, server_config);
+            synced.push(SyncedItem::McpServer(server_name));
+        }
+
+        // Write updated config back
+        if let Err(e) = write_json_config(&config_path, &config) {
+            return SyncResult {
+                package: package_name.to_string(),
+                target: self.target(),
+                success: false,
+                synced,
+                error: Some(format!("Failed to write Windsurf config: {}", e)),
+            };
+        }
+
         SyncResult {
             package: package_name.to_string(),
             target: self.target(),
             success: true,
-            synced: vec![],
+            synced,
             error: None,
         }
     }
