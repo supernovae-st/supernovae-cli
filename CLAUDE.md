@@ -1,12 +1,12 @@
 # supernovae-cli
 
-**SuperNovae CLI (`spn`)** v0.15.0 — The Agentic AI Toolkit for the SuperNovae ecosystem.
+**SuperNovae CLI (`spn`)** v0.15.2 — The Agentic AI Toolkit for the SuperNovae ecosystem.
 
 ## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  spn — The Agentic AI Toolkit v0.15.0                                           │
+│  spn — The Agentic AI Toolkit v0.15.2                                           │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │  Package Commands:                                                              │
@@ -99,7 +99,7 @@
 │              │                                               │                  │
 │              ▼                                               ▼                  │
 │  ┌────────────────────────┐                   ┌────────────────────────┐        │
-│  │  spn-cli (v0.15.0)     │                   │  Nika (v0.21.1)        │        │
+│  │  spn-cli (v0.15.2)     │                   │  Nika (v0.21.1)        │        │
 │  │  • provider set/get    │                   │  • spn-daemon feature  │        │
 │  │  • model pull/load     │                   │  • KNOWN_PROVIDERS     │        │
 │  │  • setup wizard        │                   │  • Unified secrets     │        │
@@ -374,7 +374,7 @@ cargo install --path crates/spn
 | spn-ollama | 0.1.4 | [Published](https://crates.io/crates/spn-ollama) |
 | spn-client | 0.3.1 | [Published](https://crates.io/crates/spn-client) |
 | spn-mcp | 0.1.2 | [Published](https://crates.io/crates/spn-mcp) |
-| spn-cli | 0.15.0 | [Published](https://crates.io/crates/spn-cli) |
+| spn-cli | 0.15.2 | [Published](https://crates.io/crates/spn-cli) |
 
 ## Storage Layout
 
