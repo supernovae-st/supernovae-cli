@@ -116,7 +116,10 @@ impl WatcherService {
     fn global_watch_paths() -> Vec<PathBuf> {
         let home = match dirs::home_dir() {
             Some(h) => h,
-            None => return Vec::new(),
+            None => {
+                warn!("HOME directory not set, skipping global config watches");
+                return Vec::new();
+            }
         };
 
         vec![

@@ -30,7 +30,11 @@ pub async fn run(command: JobsCommands) -> Result<()> {
 
 /// Get the job store path.
 fn jobs_dir() -> Result<PathBuf> {
-    let home = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
+    let home = dirs::home_dir().ok_or_else(|| {
+        anyhow::anyhow!(
+            "HOME directory not set. Set the HOME environment variable or run from a user session."
+        )
+    })?;
     Ok(home.join(".spn/jobs"))
 }
 
