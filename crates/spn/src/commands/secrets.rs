@@ -506,25 +506,103 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
             }
         }
     } else {
-        // SOPS encryption
-        println!("{}", ds::warning("SOPS encryption not yet implemented."));
-        println!();
-        println!(
-            "For now, use {} to export plaintext:",
-            ds::primary("--plaintext")
-        );
-        println!(
-            "  {} {}",
-            ds::primary("spn secrets export --plaintext -o"),
-            ds::muted("secrets.yaml")
-        );
-        println!();
-        println!("Then encrypt with SOPS:");
-        println!(
-            "  {} {}",
-            ds::primary("sops encrypt"),
-            ds::muted("secrets.yaml > secrets.enc.yaml")
-        );
+        // SOPS encryption - check if sops is available
+        let sops_available = std::process::Command::new("sops")
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+
+        if !sops_available {
+            println!("{}", ds::warning("SOPS not found in PATH."));
+            println!();
+            println!("Install SOPS to enable encrypted exports:");
+            println!(
+                "  {} {}",
+                ds::primary("brew install sops"),
+                ds::muted("# macOS")
+            );
+            println!(
+                "  {} {}",
+                ds::primary("apt install sops"),
+                ds::muted("# Debian/Ubuntu")
+            );
+            println!();
+            println!(
+                "Or use {} to export plaintext:",
+                ds::primary("--plaintext")
+            );
+            println!(
+                "  {} {}",
+                ds::primary("spn secrets export --plaintext -o"),
+                ds::muted("secrets.yaml")
+            );
+            return Ok(());
+        }
+
+        // Check for .sops.yaml config
+        let sops_config_exists = std::path::Path::new(".sops.yaml").exists()
+            || dirs::home_dir()
+                .map(|h| h.join(".sops.yaml").exists())
+                .unwrap_or(false);
+
+        if !sops_config_exists {
+            println!(
+                "{}",
+                ds::warning("No .sops.yaml configuration found.")
+            );
+            println!();
+            println!("SOPS requires encryption key configuration. Create a .sops.yaml file:");
+            println!();
+            println!("{}", ds::muted("# Example using AGE key:"));
+            println!("{}", ds::primary("creation_rules:"));
+            println!("{}", ds::primary("  - path_regex: .*\\.enc\\.yaml$"));
+            println!(
+                "{}",
+                ds::primary("    age: age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+            );
+            println!();
+            println!("{}", ds::muted("Generate an AGE key with: age-keygen -o key.txt"));
+            println!();
+            return Ok(());
+        }
+
+        // Write plaintext to temp file, then encrypt with SOPS
+        let temp_dir = tempfile::tempdir()?;
+        let temp_file = temp_dir.path().join("secrets.yaml");
+        fs::write(&temp_file, &yaml)?;
+
+        let output_path = output.unwrap_or_else(|| "secrets.enc.yaml".to_string());
+
+        let sops_result = std::process::Command::new("sops")
+            .args(["encrypt", "--output", &output_path])
+            .arg(&temp_file)
+            .status();
+
+        match sops_result {
+            Ok(status) if status.success() => {
+                println!(
+                    "{} Exported {} secrets to {} (SOPS encrypted)",
+                    ds::success("✓"),
+                    export.get("providers").map(|p| p.len()).unwrap_or(0),
+                    ds::primary(&output_path)
+                );
+            }
+            Ok(status) => {
+                eprintln!(
+                    "{} SOPS encryption failed (exit code: {})",
+                    ds::error("✗"),
+                    status.code().unwrap_or(-1)
+                );
+                eprintln!();
+                eprintln!("Check your .sops.yaml configuration.");
+            }
+            Err(e) => {
+                eprintln!("{} Failed to run SOPS: {}", ds::error("✗"), e);
+            }
+        }
     }
 
     Ok(())
