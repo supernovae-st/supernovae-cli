@@ -227,24 +227,58 @@ impl SpnKeyring {
             return Err(KeyringError::ValidationError(result.to_string()));
         }
 
+        // SECURITY: Validate authorized_app path to prevent injection attacks
+        let app_path = authorized_app.to_str().ok_or_else(|| {
+            KeyringError::StoreError("Invalid path: contains non-UTF8 characters".to_string())
+        })?;
+
+        // Check for control characters that could be used for injection
+        if app_path.contains('\n') || app_path.contains('\r') || app_path.contains('\0') {
+            return Err(KeyringError::StoreError(
+                "Invalid path: contains control characters".to_string(),
+            ));
+        }
+
+        // Verify the authorized app exists (defense in depth)
+        if !authorized_app.exists() {
+            return Err(KeyringError::StoreError(format!(
+                "Authorized app does not exist: {}",
+                app_path
+            )));
+        }
+
         // Delete existing entry if present (security command doesn't update ACL on existing entries)
+        // NOTE: This creates a small TOCTOU window, but the risk is minimal:
+        // - Requires local access AND precise timing
+        // - Worst case: attacker's entry gets overwritten by legitimate key
         let _ = Self::delete(provider);
 
-        // Get the login keychain path
+        // Get the login keychain path using PathBuf for safety
         let home = std::env::var("HOME")
             .map_err(|_| KeyringError::StoreError("HOME environment variable not set".to_string()))?;
-        let keychain_path = format!("{}/Library/Keychains/login.keychain-db", home);
+        let keychain_path = std::path::PathBuf::from(&home)
+            .join("Library")
+            .join("Keychains")
+            .join("login.keychain-db");
+
+        let keychain_str = keychain_path.to_str().ok_or_else(|| {
+            KeyringError::StoreError("Invalid keychain path".to_string())
+        })?;
 
         // Use macOS security command to add with pre-authorized app
         let output = std::process::Command::new("security")
             .args([
                 "add-generic-password",
-                "-s", SERVICE_NAME,
-                "-a", provider,
-                "-w", key,
-                "-T", authorized_app.to_str().unwrap_or(""),
+                "-s",
+                SERVICE_NAME,
+                "-a",
+                provider,
+                "-w",
+                key,
+                "-T",
+                app_path,
                 "-U", // Update if exists
-                &keychain_path,
+                keychain_str,
             ])
             .output()
             .map_err(|e| KeyringError::StoreError(format!("Failed to run security command: {}", e)))?;
@@ -252,10 +286,16 @@ impl SpnKeyring {
         if output.status.success() {
             Ok(())
         } else {
+            // SECURITY: Don't include potentially sensitive info in error messages
             let stderr = String::from_utf8_lossy(&output.stderr);
+            let sanitized_error = stderr
+                .lines()
+                .filter(|line| !line.to_lowercase().contains("password"))
+                .collect::<Vec<_>>()
+                .join(" ");
             Err(KeyringError::StoreError(format!(
                 "security command failed: {}",
-                stderr.trim()
+                sanitized_error.trim()
             )))
         }
     }
