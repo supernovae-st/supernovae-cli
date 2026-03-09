@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **config**: Implement nested key path resolution for `spn config set`
+  - Support dot notation: `providers.<name>.model`, `sync.auto_sync`, etc.
+  - Type validation for booleans and storage backends
+- **config**: Implement key path resolution for `spn config get`
+- **secrets**: Implement SOPS encryption for `spn secrets export`
+  - Auto-detect sops binary and .sops.yaml configuration
+  - Provide helpful installation/configuration guidance
+- **setup**: Binary download for nika/novanet via GitHub releases
+  - Platform detection (macOS/Linux, x86_64/ARM64)
+  - Progress bar with download stats
+  - Automatic extraction and installation to ~/.spn/bin/
+- **jobs**: Implement `--follow` flag with polling and spinner
+- **mcp**: Implement `spn mcp logs --follow` with file watching
+  - Real-time log streaming using notify crate
+  - Level filtering support
+  - Graceful Ctrl+C handling
 - **daemon**: MCP auto-sync Phases 1-5
   - `RecentProjects` tracker for project-level file watching
   - `ForeignTracker` for detecting MCPs added directly to editors
@@ -25,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **sync**: Implement Windsurf adapter `sync_package` properly
+  - Previously returned silent success without syncing
+  - Now properly loads/updates/writes JSON config
+- **daemon**: Remove incorrect `dead_code` annotations from `recent.rs`
+  - `watch_paths()` and `cleanup()` ARE used in `watcher.rs`
 - **mcp**: Preserve env vars when adopting foreign MCPs
 - **daemon**: Fix TOCTOU race condition in `mark_our_write`
 
