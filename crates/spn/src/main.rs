@@ -1114,9 +1114,9 @@ pub enum ModelCommands {
         name: Option<String>,
     },
 
-    /// Delete a model
-    #[command(visible_alias = "rm")]
-    Delete {
+    /// Remove a model from local storage
+    #[command(visible_alias = "rm", visible_alias = "delete")]
+    Remove {
         /// Model name - prompts if omitted
         name: Option<String>,
 

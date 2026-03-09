@@ -331,7 +331,7 @@ fn print_commands() {
                 ("model pull", "Download from Ollama"),
                 ("model load", "Load into VRAM"),
                 ("model unload", "Release memory"),
-                ("model delete", "Remove local"),
+                ("model remove", "Remove local"),
                 ("model status", "Running + VRAM"),
                 ("model search", "Browse registry"),
                 ("model info", "Details + params"),

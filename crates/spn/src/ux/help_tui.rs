@@ -124,7 +124,7 @@ static SECTIONS: &[Section] = &[
             Command::new("model pull <name>", "Download model from registry"),
             Command::new("model load <name>", "Load model into VRAM"),
             Command::new("model unload <name>", "Release model from memory"),
-            Command::new("model delete <name>", "Delete local model"),
+            Command::new("model remove <name>", "Remove local model"),
             Command::new("model status", "Show running models + VRAM"),
             Command::new("model search <q>", "Search available models"),
             Command::new("model info <name>", "Show model details"),

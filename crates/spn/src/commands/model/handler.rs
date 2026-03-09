@@ -36,7 +36,7 @@ pub async fn run(command: ModelCommands) -> Result<()> {
             };
             unload(&name).await
         }
-        ModelCommands::Delete { name, yes } => {
+        ModelCommands::Remove { name, yes } => {
             let name = match name {
                 Some(n) => n,
                 None => prompts::select_model()?,

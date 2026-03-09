@@ -431,7 +431,7 @@ fn show_models_help() {
     );
     println!(
         "  {}    Remove model",
-        ds::command("spn model delete <name>")
+        ds::command("spn model remove <name>")
     );
     println!(
         "  {}  Search available",
