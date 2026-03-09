@@ -119,13 +119,11 @@ impl RecentProjects {
     ///
     /// Returns paths of all tracked projects, most recent first.
     #[must_use]
-    #[allow(dead_code)] // Used in Phase 2: WatcherService
     pub fn watch_paths(&self) -> Vec<PathBuf> {
         self.projects.iter().map(|p| p.path.clone()).collect()
     }
 
     /// Remove projects whose directories no longer exist.
-    #[allow(dead_code)] // Used in Phase 2: WatcherService
     pub fn cleanup(&mut self) {
         self.projects.retain(|p| p.path.exists());
     }
