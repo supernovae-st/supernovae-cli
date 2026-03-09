@@ -260,8 +260,36 @@ impl RequestHandler {
             };
         }
 
+        // Security: Canonicalize and validate path to prevent path traversal attacks.
+        // We resolve the path to its absolute form (following symlinks) and verify:
+        // 1. The path is canonical (no .. components after resolution)
+        // 2. The file has a valid workflow extension (.nika.yaml or .yaml)
+        let canonical = match path.canonicalize() {
+            Ok(p) => p,
+            Err(e) => {
+                return Response::Error {
+                    message: format!("Invalid workflow path: {}", e),
+                };
+            }
+        };
+
+        // Validate file extension (must be a Nika workflow file)
+        let extension_valid = canonical
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|name| name.ends_with(".nika.yaml") || name.ends_with(".yaml"))
+            .unwrap_or(false);
+
+        if !extension_valid {
+            return Response::Error {
+                message: "Workflow file must have .nika.yaml or .yaml extension".to_string(),
+            };
+        }
+
         // Create job with optional name and priority
-        let mut job = Job::new(path).with_args(args).with_priority(priority);
+        let mut job = Job::new(canonical)
+            .with_args(args)
+            .with_priority(priority);
         if let Some(n) = name {
             job = job.with_name(n);
         }
