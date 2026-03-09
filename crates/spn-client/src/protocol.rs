@@ -244,6 +244,11 @@ pub enum Request {
     #[serde(rename = "LIST_PROVIDERS")]
     ListProviders,
 
+    /// Refresh/reload a secret from keychain into daemon cache.
+    /// Used after `spn provider set` to invalidate stale cached values.
+    #[serde(rename = "REFRESH_SECRET")]
+    RefreshSecret { provider: String },
+
     // ==================== Model Commands ====================
     /// List all installed models.
     #[serde(rename = "MODEL_LIST")]
@@ -369,6 +374,14 @@ pub enum Response {
 
     /// Provider list response.
     Providers { providers: Vec<String> },
+
+    /// Secret refresh response.
+    Refreshed {
+        /// Whether the secret was found and reloaded
+        refreshed: bool,
+        /// The provider that was refreshed
+        provider: String,
+    },
 
     // ==================== Model Responses ====================
     /// List of installed models.

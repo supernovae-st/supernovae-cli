@@ -349,6 +349,38 @@ impl SpnClient {
         Ok(self.list_env_providers())
     }
 
+    /// Refresh a secret in the daemon cache.
+    ///
+    /// This should be called after `spn provider set` to invalidate stale values.
+    /// Returns `true` if the secret was found and reloaded.
+    #[cfg(unix)]
+    pub async fn refresh_secret(&mut self, provider: &str) -> Result<bool, Error> {
+        if self.fallback_mode {
+            // In fallback mode, there's no cache to refresh
+            return Ok(true);
+        }
+
+        let response = self
+            .send_request(Request::RefreshSecret {
+                provider: provider.to_string(),
+            })
+            .await?;
+
+        match response {
+            Response::Refreshed { refreshed, .. } => Ok(refreshed),
+            Response::Error { message } => Err(Error::DaemonError(message)),
+            _ => Err(Error::UnexpectedResponse),
+        }
+    }
+
+    /// Refresh a secret in the daemon cache.
+    ///
+    /// On non-Unix platforms, this is a no-op since there's no daemon.
+    #[cfg(not(unix))]
+    pub async fn refresh_secret(&mut self, _provider: &str) -> Result<bool, Error> {
+        Ok(true) // No daemon cache to refresh
+    }
+
     /// Get watcher status (recent projects, foreign MCPs, watched paths).
     ///
     /// Returns status information about the MCP config watcher.
