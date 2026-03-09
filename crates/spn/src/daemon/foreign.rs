@@ -141,8 +141,9 @@ impl ForeignTracker {
             .map_err(|e| SpnError::ConfigError(format!("Failed to parse foreign.yaml: {e}")))
     }
 
-    /// Save foreign tracker to ~/.spn/foreign.yaml.
-    pub fn save(&self) -> Result<()> {
+    /// Save foreign tracker to ~/.spn/foreign.yaml (sync version for non-async contexts).
+    #[allow(dead_code)] // Keep for non-async contexts like tests
+    pub fn save_sync(&self) -> Result<()> {
         let path = Self::file_path()?;
 
         // Ensure parent directory exists
@@ -155,6 +156,27 @@ impl ForeignTracker {
             .map_err(|e| SpnError::ConfigError(format!("Failed to serialize foreign.yaml: {e}")))?;
 
         std::fs::write(&path, content)
+            .map_err(|e| SpnError::ConfigError(format!("Failed to write foreign.yaml: {e}")))?;
+
+        Ok(())
+    }
+
+    /// Save foreign tracker to ~/.spn/foreign.yaml (async version).
+    pub async fn save(&self) -> Result<()> {
+        let path = Self::file_path()?;
+
+        // Ensure parent directory exists
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| SpnError::ConfigError(format!("Failed to create .spn dir: {e}")))?;
+        }
+
+        let content = serde_yaml::to_string(self)
+            .map_err(|e| SpnError::ConfigError(format!("Failed to serialize foreign.yaml: {e}")))?;
+
+        tokio::fs::write(&path, content)
+            .await
             .map_err(|e| SpnError::ConfigError(format!("Failed to write foreign.yaml: {e}")))?;
 
         Ok(())

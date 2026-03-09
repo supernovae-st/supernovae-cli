@@ -1899,7 +1899,7 @@ async fn run_adopt(mcp: &McpConfigManager, all: bool, json: bool) -> Result<()> 
     if claude.is_available(&home) {
         let config_path = claude.config_path(&home);
         if config_path.exists() {
-            if let Ok(client_servers) = parse_client_config(&config_path) {
+            if let Ok(client_servers) = parse_client_config(&config_path).await {
                 let diff = diff_mcp_configs(&spn_servers, &client_servers);
                 for (name, server) in diff.foreign {
                     let mcp_server = convert_server(&server);
@@ -1914,7 +1914,7 @@ async fn run_adopt(mcp: &McpConfigManager, all: bool, json: bool) -> Result<()> 
     if cursor.is_available(&home) {
         let config_path = cursor.config_path(&home);
         if config_path.exists() {
-            if let Ok(client_servers) = parse_client_config(&config_path) {
+            if let Ok(client_servers) = parse_client_config(&config_path).await {
                 let diff = diff_mcp_configs(&spn_servers, &client_servers);
                 for (name, server) in diff.foreign {
                     // Skip if already found in another client
@@ -1933,7 +1933,7 @@ async fn run_adopt(mcp: &McpConfigManager, all: bool, json: bool) -> Result<()> 
     if windsurf.is_available(&home) {
         let config_path = windsurf.config_path(&home);
         if config_path.exists() {
-            if let Ok(client_servers) = parse_client_config(&config_path) {
+            if let Ok(client_servers) = parse_client_config(&config_path).await {
                 let diff = diff_mcp_configs(&spn_servers, &client_servers);
                 for (name, server) in diff.foreign {
                     // Skip if already found in another client

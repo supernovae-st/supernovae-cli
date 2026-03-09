@@ -130,7 +130,7 @@ struct ClaudeJsonConfig {
     mcp_servers: FxHashMap<String, JsonMcpServer>,
 }
 
-/// Parse a client MCP config file and extract servers.
+/// Parse a client MCP config file and extract servers (async version).
 ///
 /// Supports:
 /// - Cursor format: `{ "mcpServers": { ... } }`
@@ -139,8 +139,9 @@ struct ClaudeJsonConfig {
 ///
 /// # Errors
 /// Returns error if file cannot be read or parsed.
-pub fn parse_client_config(path: &Path) -> Result<Vec<(String, McpServer)>> {
-    let content = std::fs::read_to_string(path)
+pub async fn parse_client_config(path: &Path) -> Result<Vec<(String, McpServer)>> {
+    let content = tokio::fs::read_to_string(path)
+        .await
         .map_err(|e| SpnError::ConfigError(format!("Failed to read {}: {e}", path.display())))?;
 
     parse_mcp_json(&content)

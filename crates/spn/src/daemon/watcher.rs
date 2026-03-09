@@ -271,19 +271,17 @@ impl WatcherService {
     /// 1. Memory leaks from accumulating entries
     /// 2. False positives if the file is later modified by someone else
     ///
-    /// The TOCTOU window is intentionally narrow: we only consider it "our write"
-    /// if the current content matches what we wrote. If content changed between
-    /// our write and this check, we correctly treat it as an external change.
-    fn is_our_write(&mut self, path: &Path) -> bool {
+    /// Takes the already-loaded content to avoid:
+    /// 1. TOCTOU race (file could change between mark and check)
+    /// 2. Blocking I/O in async context
+    fn is_our_write(&mut self, path: &Path, content: &[u8]) -> bool {
         // Remove entry first to make this one-shot (fixes memory leak)
         if let Some(expected) = self.our_writes.remove(path) {
-            if let Ok(content) = std::fs::read(path) {
-                let current = Self::compute_checksum(&content);
-                if expected == current {
-                    return true;
-                }
+            let current = Self::compute_checksum(content);
+            if expected == current {
+                return true;
             }
-            // Content changed or couldn't read - treat as external change
+            // Content changed - treat as external change
         }
         false
     }
@@ -361,8 +359,17 @@ impl WatcherService {
             return;
         }
 
-        // Skip if this is our own write
-        if self.is_our_write(path) {
+        // Read file content once (async, non-blocking)
+        let content = match tokio::fs::read(path).await {
+            Ok(c) => c,
+            Err(e) => {
+                debug!("Could not read {}: {}", path.display(), e);
+                return;
+            }
+        };
+
+        // Skip if this is our own write (pass content to avoid TOCTOU + blocking I/O)
+        if self.is_our_write(path, &content) {
             debug!("Ignoring our own write to {}", path.display());
             return;
         }
@@ -383,8 +390,8 @@ impl WatcherService {
             }
         };
 
-        // Parse the client config
-        let client_mcps = match parse_client_config(path) {
+        // Parse the client config (async, non-blocking)
+        let client_mcps = match parse_client_config(path).await {
             Ok(m) => m,
             Err(e) => {
                 warn!("Failed to parse {}: {}", path.display(), e);
@@ -446,8 +453,8 @@ impl WatcherService {
             let _ = self.event_tx.send(WatchEvent::ForeignMcpDetected(foreign));
         }
 
-        // Save foreign tracker
-        if let Err(e) = self.foreign.save() {
+        // Save foreign tracker (async)
+        if let Err(e) = self.foreign.save().await {
             error!("Failed to save foreign tracker: {}", e);
         }
     }

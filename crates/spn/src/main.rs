@@ -1439,7 +1439,8 @@ async fn main() {
             // Attempt to touch project, but don't fail if it errors
             if let Ok(mut recent) = daemon::RecentProjects::load() {
                 recent.touch(cwd);
-                let _ = recent.save();
+                // Use sync version since we're not in an async context
+                let _ = recent.save_sync();
             }
         }
     }
