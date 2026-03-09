@@ -213,6 +213,9 @@ impl WatcherService {
         self.recent = RecentProjects::load().unwrap_or_default();
         self.recent.cleanup();
 
+        // Clean up stale debounce entries to prevent memory leaks
+        self.cleanup_debounce();
+
         // Add watches for any new projects
         self.start_project_watches()?;
 
@@ -235,6 +238,19 @@ impl WatcherService {
         true
     }
 
+    /// Clean up stale debounce entries to prevent memory leaks.
+    ///
+    /// Removes entries that haven't been touched in over 60 seconds.
+    /// Called periodically during refresh_watch_list.
+    fn cleanup_debounce(&mut self) {
+        const STALE_THRESHOLD_SECS: u64 = 60;
+        let now = Instant::now();
+        let threshold = Duration::from_secs(STALE_THRESHOLD_SECS);
+
+        self.last_event
+            .retain(|_, last_time| now.duration_since(*last_time) < threshold);
+    }
+
     /// Mark that we're about to write content to a file.
     ///
     /// Call this BEFORE writing, passing the exact content you're about to write.
@@ -246,12 +262,25 @@ impl WatcherService {
     }
 
     /// Check if this change was caused by us.
-    fn is_our_write(&self, path: &Path) -> bool {
-        if let Some(expected) = self.our_writes.get(path) {
+    ///
+    /// IMPORTANT: This is a one-shot check. If the checksum matches, the entry
+    /// is REMOVED from our_writes to prevent:
+    /// 1. Memory leaks from accumulating entries
+    /// 2. False positives if the file is later modified by someone else
+    ///
+    /// The TOCTOU window is intentionally narrow: we only consider it "our write"
+    /// if the current content matches what we wrote. If content changed between
+    /// our write and this check, we correctly treat it as an external change.
+    fn is_our_write(&mut self, path: &Path) -> bool {
+        // Remove entry first to make this one-shot (fixes memory leak)
+        if let Some(expected) = self.our_writes.remove(path) {
             if let Ok(content) = std::fs::read(path) {
                 let current = Self::compute_checksum(&content);
-                return *expected == current;
+                if expected == current {
+                    return true;
+                }
             }
+            // Content changed or couldn't read - treat as external change
         }
         false
     }
