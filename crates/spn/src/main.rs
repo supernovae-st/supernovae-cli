@@ -110,6 +110,10 @@ enum Commands {
     Remove {
         /// Package name
         package: String,
+
+        /// Skip confirmation prompt
+        #[arg(long, short)]
+        yes: bool,
     },
 
     /// Install packages from spn.yaml
@@ -483,6 +487,10 @@ enum McpCommands {
         /// Remove from project config
         #[arg(short, long)]
         project: bool,
+
+        /// Skip confirmation prompt
+        #[arg(long, short = 'y')]
+        yes: bool,
     },
     /// List installed MCP servers
     #[command(visible_alias = "l", visible_alias = "ls")]
@@ -1337,7 +1345,7 @@ async fn main() {
 
     let result = match cli.command {
         Commands::Add { package, r#type } => commands::add::run(&package, r#type.as_deref()).await,
-        Commands::Remove { package } => commands::remove::run(&package).await,
+        Commands::Remove { package, yes } => commands::remove::run(&package, yes).await,
         Commands::Install { frozen } => commands::install::run(frozen).await,
         Commands::Update { package } => commands::update::run(package.as_deref()).await,
         Commands::Outdated => commands::outdated::run().await,

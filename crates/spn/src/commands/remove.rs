@@ -2,11 +2,11 @@
 //!
 //! Removes a package from the project's spn.yaml manifest and local storage.
 
-use crate::ux::design_system as ds;
-
 use crate::error::{Result, SpnError};
 use crate::manifest::{SpnLockfile, SpnManifest};
+use crate::prompts;
 use crate::storage::LocalStorage;
+use crate::ux::design_system as ds;
 
 /// Options for the remove command.
 pub struct RemoveOptions {
@@ -15,13 +15,17 @@ pub struct RemoveOptions {
 
     /// Only update manifest (don't remove from disk).
     pub manifest_only: bool,
+
+    /// Skip confirmation prompt.
+    pub skip_confirm: bool,
 }
 
 /// Run the remove command.
-pub async fn run(package: &str) -> Result<()> {
+pub async fn run(package: &str, skip_confirm: bool) -> Result<()> {
     let options = RemoveOptions {
         package: package.to_string(),
         manifest_only: false,
+        skip_confirm,
     };
 
     run_with_options(options).await
@@ -45,10 +49,10 @@ pub async fn run_with_options(options: RemoveOptions) -> Result<()> {
         SpnManifest::from_file(&manifest_path).map_err(|_e| SpnError::ManifestNotFound)?;
 
     // 2. Check if package exists in dependencies
-    let was_dep = manifest.dependencies.remove(&options.package).is_some();
-    let was_dev_dep = manifest.dev_dependencies.remove(&options.package).is_some();
+    let in_deps = manifest.dependencies.contains_key(&options.package);
+    let in_dev_deps = manifest.dev_dependencies.contains_key(&options.package);
 
-    if !was_dep && !was_dev_dep {
+    if !in_deps && !in_dev_deps {
         println!(
             "   {} Package {} not found in manifest",
             ds::warning("⚠"),
@@ -57,7 +61,22 @@ pub async fn run_with_options(options: RemoveOptions) -> Result<()> {
         return Ok(());
     }
 
-    // 3. Save manifest
+    // 3. Confirm deletion (unless --yes)
+    let dep_type = if in_deps {
+        "dependencies"
+    } else {
+        "dev-dependencies"
+    };
+    if !options.skip_confirm && !prompts::confirm_delete(&options.package, Some(dep_type))? {
+        println!("{}", ds::info_line("Cancelled"));
+        return Ok(());
+    }
+
+    // 4. Actually remove from manifest
+    let was_dep = manifest.dependencies.remove(&options.package).is_some();
+    let _was_dev_dep = manifest.dev_dependencies.remove(&options.package).is_some();
+
+    // 5. Save manifest
     manifest
         .write_to_file(&manifest_path)
         .map_err(|e| SpnError::ConfigError(format!("Failed to save manifest: {}", e)))?;
@@ -69,7 +88,7 @@ pub async fn run_with_options(options: RemoveOptions) -> Result<()> {
     };
     println!("   {} Removed from {}", ds::success("✓"), dep_type);
 
-    // 4. Remove from local storage (unless manifest-only)
+    // 6. Remove from local storage (unless manifest-only)
     if !options.manifest_only {
         let storage = LocalStorage::new()
             .map_err(|e| SpnError::ConfigError(format!("Storage error: {}", e)))?;
@@ -88,7 +107,7 @@ pub async fn run_with_options(options: RemoveOptions) -> Result<()> {
         }
     }
 
-    // 5. Update lockfile
+    // 7. Update lockfile
     let lockfile_path = manifest_path
         .parent()
         .map(|p| p.join("spn.lock"))
@@ -142,10 +161,12 @@ mod tests {
         let options = RemoveOptions {
             package: "@test/pkg".to_string(),
             manifest_only: false,
+            skip_confirm: true,
         };
 
         assert_eq!(options.package, "@test/pkg");
         assert!(!options.manifest_only);
+        assert!(options.skip_confirm);
     }
 
     #[tokio::test]
@@ -154,7 +175,8 @@ mod tests {
         let temp = tempfile::TempDir::new().unwrap();
         std::env::set_current_dir(temp.path()).unwrap();
 
-        let result = run("@test/pkg").await;
+        // Use skip_confirm=true for non-interactive tests
+        let result = run("@test/pkg", true).await;
         assert!(result.is_err());
     }
 }
