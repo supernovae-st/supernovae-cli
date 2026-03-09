@@ -289,14 +289,16 @@ impl RequestHandler {
         // Security: Validate canonical path is within allowed directories.
         // This prevents symlink attacks where an attacker creates a symlink to
         // a sensitive .yaml file outside the expected workflow locations.
-        // Allowed directories:
+        // Allowed directories (specific, not full home to prevent ~/Downloads attacks):
         // 1. Current working directory and subdirectories
         // 2. User's ~/.spn/workflows/ directory
-        // 3. User's home directory (for personal workflows)
+        // 3. User's ~/.local/share/spn/workflows/ directory (XDG convention)
+        // 4. User's ~/Documents/nika-workflows/ directory (user-visible location)
         let allowed_bases: Vec<std::path::PathBuf> = vec![
             std::env::current_dir().ok(),
             dirs::home_dir().map(|h| h.join(".spn").join("workflows")),
-            dirs::home_dir(),
+            dirs::home_dir().map(|h| h.join(".local").join("share").join("spn").join("workflows")),
+            dirs::home_dir().map(|h| h.join("Documents").join("nika-workflows")),
         ]
         .into_iter()
         .flatten()
