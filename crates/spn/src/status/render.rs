@@ -4,6 +4,9 @@
 //! - Box drawing characters
 //! - Progress bars
 //! - Color coding
+//!
+//! Note: Terminal width utilities are available in `crate::ux::tables` for
+//! future responsive improvements.
 
 use crate::ux::design_system as ds;
 

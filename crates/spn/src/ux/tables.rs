@@ -267,9 +267,49 @@ fn strip_ansi(s: &str) -> String {
 }
 
 /// Get terminal width (with fallback).
-#[allow(dead_code)]
 pub fn terminal_width() -> usize {
     Term::stdout().size().1 as usize
+}
+
+/// Get content width for dashboard rendering.
+///
+/// Returns a width clamped between MIN_WIDTH and MAX_WIDTH for consistent
+/// formatting across different terminal sizes.
+pub fn content_width() -> usize {
+    const MIN_WIDTH: usize = 60;
+    const MAX_WIDTH: usize = 100;
+
+    let width = terminal_width();
+    // Leave 2 chars margin on each side
+    let usable = width.saturating_sub(4);
+    usable.clamp(MIN_WIDTH, MAX_WIDTH)
+}
+
+/// Truncate a string to fit within max_len, adding "..." if needed.
+pub fn truncate(s: &str, max_len: usize) -> String {
+    if max_len <= 3 {
+        return "...".to_string();
+    }
+
+    let stripped = strip_ansi(s);
+    if stripped.len() <= max_len {
+        s.to_string()
+    } else {
+        // Account for "..." suffix
+        let truncate_at = max_len.saturating_sub(3);
+
+        // Find a good break point (don't break in middle of word if possible)
+        let break_at = s[..truncate_at.min(s.len())]
+            .rfind(|c: char| c.is_whitespace() || c == '/')
+            .unwrap_or(truncate_at.min(s.len()));
+
+        format!("{}...", &s[..break_at])
+    }
+}
+
+/// Create a horizontal border line of specified width.
+pub fn border_line(width: usize, left: &str, fill: &str, right: &str) -> String {
+    format!("{}{}{}", left, fill.repeat(width), right)
 }
 
 // ============================================================================
@@ -315,5 +355,49 @@ mod tests {
         let rendered = table.render();
         assert!(rendered.contains("A"));
         assert!(rendered.contains("B"));
+    }
+
+    #[test]
+    fn test_terminal_width() {
+        let width = terminal_width();
+        // Should return a reasonable value (at least 20, likely 80+)
+        assert!(width >= 20);
+    }
+
+    #[test]
+    fn test_content_width() {
+        let width = content_width();
+        // Should be between 60 and 100
+        assert!(width >= 60);
+        assert!(width <= 100);
+    }
+
+    #[test]
+    fn test_truncate_short_string() {
+        // String shorter than max_len should be unchanged
+        assert_eq!(truncate("hello", 10), "hello");
+    }
+
+    #[test]
+    fn test_truncate_long_string() {
+        // String longer than max_len should be truncated with "..."
+        let result = truncate("this is a very long string", 15);
+        assert!(result.ends_with("..."));
+        assert!(result.len() <= 15);
+    }
+
+    #[test]
+    fn test_truncate_at_word_boundary() {
+        // Should break at word boundary when possible
+        let result = truncate("hello world test", 12);
+        assert!(result.ends_with("..."));
+        // Should break at "hello" rather than in middle of "world"
+        assert_eq!(result, "hello...");
+    }
+
+    #[test]
+    fn test_border_line() {
+        let border = border_line(5, "[", "-", "]");
+        assert_eq!(border, "[-----]");
     }
 }
