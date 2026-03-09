@@ -49,6 +49,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **mcp**: Preserve env vars when adopting foreign MCPs
 - **daemon**: Fix TOCTOU race condition in `mark_our_write`
 
+### Security
+
+- **daemon**: Add path traversal protection in job submit
+  - Validates canonical path is within allowed directories (cwd, ~/.spn/workflows/, home)
+  - Prevents symlink attacks targeting sensitive .yaml files
+- **mcp**: Use async I/O for MCP server stdin
+  - Switch from `std::io` to `tokio::io` for non-blocking reads
+  - Prevents blocking the tokio runtime
+- **cli**: Replace `.unwrap()` with proper error handling in add/update commands
+  - Returns clear error messages instead of panicking
+- **cli**: Enable `validate_editor()` in production
+  - Validates $EDITOR for dangerous shell metacharacters before execution
+  - Provides clear error messages for suspicious patterns
+
 ## [0.15.2](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.15.2) - 2026-03-08
 
 ### Fixed
