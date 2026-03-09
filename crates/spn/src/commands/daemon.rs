@@ -26,7 +26,11 @@ const MAX_POLL_INTERVAL: Duration = Duration::from_millis(200);
 /// Run a daemon command.
 pub async fn run(command: DaemonCommands) -> Result<()> {
     match command {
-        DaemonCommands::Start { foreground } => start(foreground).await,
+        DaemonCommands::Start {
+            foreground,
+            skip_preload,
+            lazy,
+        } => start(foreground, skip_preload, lazy).await,
         DaemonCommands::Stop => stop().await,
         DaemonCommands::Status { json } => status(json).await,
         DaemonCommands::Restart => restart().await,
@@ -37,7 +41,7 @@ pub async fn run(command: DaemonCommands) -> Result<()> {
 }
 
 /// Start the daemon.
-async fn start(foreground: bool) -> Result<()> {
+async fn start(foreground: bool, skip_preload: bool, lazy: bool) -> Result<()> {
     // Check if already running
     if is_daemon_running() {
         println!("{} Daemon is already running", ds::warning("⚠"));
@@ -49,11 +53,23 @@ async fn start(foreground: bool) -> Result<()> {
         println!("{} Starting daemon in foreground...", ds::success("🚀"));
         println!("   Socket: {:?}", paths::socket()?);
         println!("   PID file: {:?}", paths::pid_file()?);
+        if skip_preload {
+            println!("   Preload: {} (skipped)", ds::warning("disabled"));
+        } else if lazy {
+            println!("   Mode: {} (load on first request)", ds::primary("lazy"));
+        }
         println!();
         println!("Press Ctrl+C to stop");
 
-        let config =
+        let mut config =
             DaemonConfig::new().map_err(|e| anyhow::anyhow!("Configuration error: {}", e))?;
+
+        // Apply flags
+        if skip_preload {
+            config.preload_secrets = false;
+        }
+        config.lazy_secrets = lazy;
+
         let mut server = DaemonServer::new(config);
 
         server
@@ -67,9 +83,18 @@ async fn start(foreground: bool) -> Result<()> {
         // Get the path to the current executable
         let exe = std::env::current_exe()?;
 
+        // Build args with flags
+        let mut args = vec!["daemon".to_string(), "start".to_string(), "--foreground".to_string()];
+        if skip_preload {
+            args.push("--skip-preload".to_string());
+        }
+        if lazy {
+            args.push("--lazy".to_string());
+        }
+
         // Spawn detached process with --foreground flag
         let child = Command::new(exe)
-            .args(["daemon", "start", "--foreground"])
+            .args(&args)
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
@@ -334,7 +359,8 @@ async fn restart() -> Result<()> {
             interval = std::cmp::min(interval * 2, MAX_POLL_INTERVAL);
         }
     }
-    start(false).await
+    // Auto-start with default options (preload enabled, lazy disabled)
+    start(false, false, false).await
 }
 
 /// Check if the daemon is running.

@@ -39,6 +39,8 @@ pub struct DaemonConfig {
     pub preload_secrets: bool,
     /// Whether to watch MCP configs for auto-sync
     pub watch_mcp_configs: bool,
+    /// Whether to load secrets lazily on first request
+    pub lazy_secrets: bool,
 }
 
 impl DaemonConfig {
@@ -51,6 +53,7 @@ impl DaemonConfig {
             pid_file: paths::pid_file().map_err(|e| DaemonError::ConfigError(e.to_string()))?,
             preload_secrets: true,
             watch_mcp_configs: true,
+            lazy_secrets: false,
         })
     }
 }
@@ -564,6 +567,7 @@ mod tests {
             pid_file: dir.path().join("test.pid"),
             preload_secrets: false,
             watch_mcp_configs: false, // Disable watcher in tests
+            lazy_secrets: false,
         };
 
         let _server = DaemonServer::new(config);

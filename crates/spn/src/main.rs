@@ -999,6 +999,14 @@ enum DaemonCommands {
         /// Run in foreground (don't daemonize)
         #[arg(long)]
         foreground: bool,
+
+        /// Skip preloading secrets at startup (avoids keychain popups)
+        #[arg(long)]
+        skip_preload: bool,
+
+        /// Enable lazy loading (load secrets on first request)
+        #[arg(long)]
+        lazy: bool,
     },
     /// Stop the daemon
     Stop,
