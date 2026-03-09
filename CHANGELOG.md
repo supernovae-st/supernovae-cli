@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.4](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.15.4) - 2026-03-09
+
+### Fixed
+
+- **client**: Bump spn-client to 0.3.3 with RefreshSecret and WatcherStatus IPC
+  - Fix crates.io publish that was missing new IPC protocol types
+  - All v0.15.3 features now properly available via cargo install
+
 ## [0.15.3](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.15.3) - 2026-03-09
 
 ### Added
