@@ -62,8 +62,12 @@ impl McpServer {
                 Ok(r) => r,
                 Err(e) => {
                     let response = McpResponse::error(None, -32700, format!("Parse error: {}", e));
-                    let _ = writeln!(stdout, "{}", serde_json::to_string(&response)?);
-                    let _ = stdout.flush();
+                    if let Err(write_err) = writeln!(stdout, "{}", serde_json::to_string(&response)?) {
+                        error!("Failed to write MCP error response: {}", write_err);
+                    }
+                    if let Err(flush_err) = stdout.flush() {
+                        error!("Failed to flush stdout: {}", flush_err);
+                    }
                     continue;
                 }
             };
