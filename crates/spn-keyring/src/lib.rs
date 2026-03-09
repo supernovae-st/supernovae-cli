@@ -242,8 +242,7 @@ impl SpnKeyring {
         // Verify the authorized app exists (defense in depth)
         if !authorized_app.exists() {
             return Err(KeyringError::StoreError(format!(
-                "Authorized app does not exist: {}",
-                app_path
+                "Authorized app does not exist: {app_path}"
             )));
         }
 
@@ -281,7 +280,7 @@ impl SpnKeyring {
                 keychain_str,
             ])
             .output()
-            .map_err(|e| KeyringError::StoreError(format!("Failed to run security command: {}", e)))?;
+            .map_err(|e| KeyringError::StoreError(format!("Failed to run security command: {e}")))?;
 
         if output.status.success() {
             Ok(())
