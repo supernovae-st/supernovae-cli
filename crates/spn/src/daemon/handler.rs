@@ -286,6 +286,35 @@ impl RequestHandler {
             };
         }
 
+        // Security: Validate canonical path is within allowed directories.
+        // This prevents symlink attacks where an attacker creates a symlink to
+        // a sensitive .yaml file outside the expected workflow locations.
+        // Allowed directories:
+        // 1. Current working directory and subdirectories
+        // 2. User's ~/.spn/workflows/ directory
+        // 3. User's home directory (for personal workflows)
+        let allowed_bases: Vec<std::path::PathBuf> = vec![
+            std::env::current_dir().ok(),
+            dirs::home_dir().map(|h| h.join(".spn").join("workflows")),
+            dirs::home_dir(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        let is_allowed = allowed_bases
+            .iter()
+            .any(|base| canonical.starts_with(base));
+
+        if !is_allowed {
+            return Response::Error {
+                message: format!(
+                    "Workflow path must be within current directory or home directory: {}",
+                    canonical.display()
+                ),
+            };
+        }
+
         // Create job with optional name and priority
         let mut job = Job::new(canonical)
             .with_args(args)
