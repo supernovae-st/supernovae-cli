@@ -129,7 +129,7 @@ async fn list(all: bool, json: bool) -> Result<()> {
 /// 1. The path is canonical (no .. components after resolution)
 /// 2. The file has a valid workflow extension (.nika.yaml or .yaml)
 /// 3. The path is within allowed directories
-fn validate_workflow_path(path: &PathBuf) -> std::result::Result<PathBuf, String> {
+fn validate_workflow_path(path: &std::path::Path) -> std::result::Result<PathBuf, String> {
     // Canonicalize the path (resolves symlinks and ..)
     let canonical = match path.canonicalize() {
         Ok(p) => p,
