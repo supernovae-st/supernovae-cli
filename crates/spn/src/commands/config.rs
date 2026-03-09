@@ -168,41 +168,53 @@ async fn list_config(show_origin: bool) -> Result<()> {
     println!("{}", ds::primary("📋 Configuration Values"));
     println!();
 
+    // Helper to format origin
+    let format_origin = |key: &str| -> String {
+        if show_origin {
+            resolver
+                .get_origin(key)
+                .map(|o| format!(" ({})", o))
+                .unwrap_or_default()
+        } else {
+            String::new()
+        }
+    };
+
     // List providers
     if !config.providers.is_empty() {
         for (name, provider) in &config.providers {
             if let Some(model) = &provider.model {
-                if show_origin {
-                    // TODO: Implement proper origin tracking
-                    println!("  providers.{}.model = {} (global)", name, model);
-                } else {
-                    println!("  providers.{}.model = {}", name, model);
-                }
+                let key = format!("providers.{}.model", name);
+                println!("  {} = {}{}", key, model, format_origin(&key));
+            }
+            if let Some(endpoint) = &provider.endpoint {
+                let key = format!("providers.{}.endpoint", name);
+                println!("  {} = {}{}", key, endpoint, format_origin(&key));
             }
         }
     }
 
     // List sync config
     if !config.sync.enabled_editors.is_empty() {
-        println!("  sync.enabled_editors = {:?}", config.sync.enabled_editors);
+        let key = "sync.enabled_editors";
+        println!(
+            "  {} = {:?}{}",
+            key,
+            config.sync.enabled_editors,
+            format_origin(key)
+        );
     }
     if config.sync.auto_sync {
-        println!("  sync.auto_sync = true");
+        let key = "sync.auto_sync";
+        println!("  {} = true{}", key, format_origin(key));
     }
 
     // List servers
     if !config.servers.is_empty() {
         for name in config.servers.keys() {
-            println!("  servers.{} = <configured>", name);
+            let key = format!("servers.{}", name);
+            println!("  {} = <configured>{}", key, format_origin(&key));
         }
-    }
-
-    if show_origin {
-        println!();
-        println!(
-            "   {}",
-            ds::muted("Use 'spn config get <key> --show-origin' for detailed origin info")
-        );
     }
 
     Ok(())
