@@ -1,0 +1,55 @@
+[package]
+name = "spn-backends"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Backend abstraction layer for SuperNovae model management"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/supernovae-st/supernovae-cli"
+readme = "README.md"
+keywords = ["llm", "ai", "model-backend", "orchestration"]
+categories = ["api-bindings", "asynchronous"]
+
+[features]
+default = []
+# Cloud provider backends
+anthropic = ["dep:reqwest"]
+openai = ["dep:reqwest"]
+mistral = ["dep:reqwest"]
+groq = ["dep:reqwest"]
+deepseek = ["dep:reqwest"]
+gemini = ["dep:reqwest"]
+# All cloud backends
+cloud = ["anthropic", "openai", "mistral", "groq", "deepseek", "gemini"]
+# Full backend suite
+full = ["cloud"]
+
+[dependencies]
+spn-core = { version = "0.1.2", path = "../spn-core" }
+thiserror = "2"
+tracing = "0.1"
+tokio = { version = "1.36", features = ["sync"] }
+async-trait = "0.1"
+
+# Optional: HTTP client for cloud backends
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls-webpki-roots", "stream"], optional = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures-util = "0.3"
+
+# Performance
+rustc-hash = "2.1"
+
+[dev-dependencies]
+tokio = { version = "1.36", features = ["rt-multi-thread", "macros"] }
+pretty_assertions = "1.4"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"

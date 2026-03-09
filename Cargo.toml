@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/spn",
+    "crates/spn-backends",
     "crates/spn-client",
     "crates/spn-core",
     "crates/spn-keyring",
