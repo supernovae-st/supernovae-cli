@@ -5,7 +5,7 @@
 use std::env;
 use std::path::Path;
 
-use crate::config::{global, local, scope::ScopeType, team, ConfigResolver};
+use crate::config::{global, local, resolver::format_value, scope::ScopeType, team, ConfigResolver};
 use crate::error::{Result, SpnError};
 use crate::ux::design_system as ds;
 use crate::ConfigCommands;
@@ -209,26 +209,42 @@ async fn list_config(show_origin: bool) -> Result<()> {
 }
 
 async fn get_value(key: &str, show_origin: bool) -> Result<()> {
-    let _resolver = ConfigResolver::load()?;
+    let resolver = ConfigResolver::load()?;
 
-    // TODO: Implement key path resolution
-    // For now, just show a message
-    println!(
-        "{} Getting value for key: {}",
-        ds::primary("🔍"),
-        ds::highlight(key)
-    );
+    // Get value from resolved config
+    match resolver.get_value(key) {
+        Some(value) => {
+            let formatted = format_value(&value);
+            println!("{}", formatted);
 
-    if show_origin {
-        println!();
-        println!(
-            "   {} Origin tracking not yet implemented",
-            ds::warning("⚠️")
-        );
-        println!(
-            "   {} This will show which scope defined this value",
-            ds::muted("→")
-        );
+            if show_origin {
+                // Show which scope defined this value
+                if let Some(origin) = resolver.get_origin(key) {
+                    println!();
+                    println!(
+                        "   {} Defined in: {}",
+                        ds::muted("↳"),
+                        ds::highlight(origin.to_string())
+                    );
+                }
+            }
+        }
+        None => {
+            println!(
+                "{} Key not found: {}",
+                ds::warning("⚠"),
+                ds::highlight(key)
+            );
+            println!();
+            println!(
+                "   {} Available top-level keys: providers, sync, secrets, servers",
+                ds::muted("→")
+            );
+            println!(
+                "   {} Example: spn config get providers.anthropic.model",
+                ds::muted("→")
+            );
+        }
     }
 
     Ok(())
