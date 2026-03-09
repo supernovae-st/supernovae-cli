@@ -8,6 +8,7 @@ use crate::daemon::{
 use crate::error::Result;
 use crate::ux::design_system as ds;
 use crate::DaemonCommands;
+use spn_client::{IpcSchedulerStats, Request, Response, SpnClient, WatcherStatusInfo};
 use std::fs;
 use std::process::Command;
 use std::sync::Arc;
@@ -151,14 +152,46 @@ async fn status(json: bool) -> Result<()> {
     let socket_exists = socket_path.exists();
     let pid = get_daemon_pid();
 
+    // Try to get detailed status from daemon if running
+    let (watcher_status, job_stats) = if running {
+        query_daemon_status().await
+    } else {
+        (None, None)
+    };
+
     if json {
-        let status = serde_json::json!({
+        let mut status = serde_json::json!({
             "running": running,
             "socket": socket_path.to_string_lossy(),
             "socket_exists": socket_exists,
             "pid_file": pid_file_path.to_string_lossy(),
             "pid": pid,
         });
+
+        // Add detailed status if available
+        if let Some(watcher) = &watcher_status {
+            status["watcher"] = serde_json::json!({
+                "is_running": watcher.is_running,
+                "watched_count": watcher.watched_count,
+                "watched_paths": watcher.watched_paths,
+                "debounce_ms": watcher.debounce_ms,
+                "recent_projects": watcher.recent_projects,
+                "foreign_pending": watcher.foreign_pending,
+                "foreign_ignored": watcher.foreign_ignored,
+            });
+        }
+        if let Some(jobs) = &job_stats {
+            status["jobs"] = serde_json::json!({
+                "total": jobs.total,
+                "pending": jobs.pending,
+                "running": jobs.running,
+                "completed": jobs.completed,
+                "failed": jobs.failed,
+                "cancelled": jobs.cancelled,
+                "has_nika": jobs.has_nika,
+            });
+        }
+
         println!("{}", serde_json::to_string_pretty(&status)?);
     } else {
         println!("{}", ds::highlight("spn daemon status"));
@@ -168,6 +201,71 @@ async fn status(json: bool) -> Result<()> {
             println!("  Status:  {} running", ds::success("●"));
             if let Some(pid) = pid {
                 println!("  PID:     {}", pid);
+            }
+
+            // Display watcher service status
+            if let Some(watcher) = &watcher_status {
+                println!();
+                println!("  {}", ds::highlight("Watcher Service"));
+                println!(
+                    "  ├── Watched paths:       {}",
+                    ds::primary(watcher.watched_count.to_string())
+                );
+                println!(
+                    "  ├── Recent projects:     {}",
+                    ds::primary(watcher.recent_projects.len().to_string())
+                );
+
+                let foreign_count = watcher.foreign_pending.len();
+                if foreign_count > 0 {
+                    println!(
+                        "  └── Foreign MCPs:        {} {}",
+                        ds::warning(foreign_count.to_string()),
+                        ds::warning("(pending adoption)")
+                    );
+                    for mcp in &watcher.foreign_pending {
+                        println!(
+                            "      └── {} (from {})",
+                            ds::highlight(&mcp.name),
+                            mcp.source
+                        );
+                    }
+                } else {
+                    println!(
+                        "  └── Foreign MCPs:        {}",
+                        ds::success("0 (none detected)")
+                    );
+                }
+            }
+
+            // Display job scheduler status
+            if let Some(jobs) = &job_stats {
+                println!();
+                println!("  {}", ds::highlight("Job Scheduler"));
+                println!(
+                    "  ├── Total jobs:          {}",
+                    ds::primary(jobs.total.to_string())
+                );
+
+                if jobs.running > 0 {
+                    println!(
+                        "  ├── Running:             {}",
+                        ds::success(jobs.running.to_string())
+                    );
+                }
+                if jobs.pending > 0 {
+                    println!(
+                        "  ├── Pending:             {}",
+                        ds::warning(jobs.pending.to_string())
+                    );
+                }
+
+                let nika_status = if jobs.has_nika {
+                    ds::success("available")
+                } else {
+                    ds::warning("not found")
+                };
+                println!("  └── Nika binary:         {}", nika_status);
             }
         } else {
             println!("  Status:  {} stopped", ds::error("○"));
@@ -191,6 +289,26 @@ async fn status(json: bool) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Query detailed status from daemon via IPC.
+async fn query_daemon_status() -> (Option<WatcherStatusInfo>, Option<IpcSchedulerStats>) {
+    // Try to connect to daemon
+    let mut client = match SpnClient::connect().await {
+        Ok(c) => c,
+        Err(_) => return (None, None),
+    };
+
+    // Query watcher status
+    let watcher_status = client.watcher_status().await.ok();
+
+    // Query job stats
+    let job_stats = match client.send_request(Request::JobStats).await {
+        Ok(Response::JobStatsResult { stats }) => Some(stats),
+        _ => None,
+    };
+
+    (watcher_status, job_stats)
 }
 
 /// Restart the daemon.
