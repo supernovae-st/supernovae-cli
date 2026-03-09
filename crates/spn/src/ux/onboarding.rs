@@ -205,7 +205,7 @@ fn check_daemon_running() -> bool {
 ///
 /// Attempts TCP connection to 127.0.0.1:11434 with 100ms timeout.
 fn check_ollama_running() -> bool {
-    let addr: SocketAddr = "127.0.0.1:11434".parse().expect("valid address");
+    let addr = SocketAddr::from(([127, 0, 0, 1], 11434));
     TcpStream::connect_timeout(&addr, Duration::from_millis(100)).is_ok()
 }
 
