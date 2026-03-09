@@ -13,9 +13,13 @@
 //! }
 //! ```
 
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
+use indicatif::{ProgressBar, ProgressStyle};
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use thiserror::Error;
 
 /// Install status for an ecosystem tool.
@@ -188,6 +192,15 @@ pub enum InstallError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
+    #[error("HTTP error: {0}")]
+    Http(String),
+
+    #[error("Failed to extract archive: {0}")]
+    ExtractError(String),
+
+    #[error("Unsupported platform: {0}")]
+    UnsupportedPlatform(String),
+
     #[error("User cancelled installation")]
     Cancelled,
 }
@@ -230,8 +243,216 @@ impl InstallMethod {
     }
 }
 
+/// Get the target triple for the current platform.
+fn get_target_triple() -> Result<&'static str, InstallError> {
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    return Ok("aarch64-apple-darwin");
+
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    return Ok("x86_64-apple-darwin");
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    return Ok("x86_64-unknown-linux-gnu");
+
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+    return Ok("aarch64-unknown-linux-gnu");
+
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    return Ok("x86_64-pc-windows-msvc");
+
+    #[cfg(not(any(
+        all(target_os = "macos", target_arch = "aarch64"),
+        all(target_os = "macos", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        all(target_os = "windows", target_arch = "x86_64"),
+    )))]
+    return Err(InstallError::UnsupportedPlatform(format!(
+        "{}-{}",
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    )));
+}
+
+/// Build HTTP client with retry middleware.
+fn build_http_client() -> ClientWithMiddleware {
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+    let retry_middleware = RetryTransientMiddleware::new_with_policy(retry_policy);
+
+    ClientBuilder::new(reqwest::Client::new())
+        .with(retry_middleware)
+        .build()
+}
+
+/// Download and install a binary from GitHub releases.
+///
+/// Downloads from `https://github.com/{org}/{repo}/releases/latest/download/{binary}-{target}.tar.gz`
+/// and installs to `~/.spn/bin/{binary}`.
+async fn download_and_install_binary(
+    tool_name: &str,
+    github_org: &str,
+    github_repo: &str,
+) -> Result<(), InstallError> {
+    use futures_util::StreamExt;
+
+    let target = get_target_triple()?;
+
+    // Get install directory
+    let paths = spn_client::SpnPaths::new().map_err(|e| InstallError::InstallFailed {
+        tool: tool_name.to_string(),
+        message: format!("Failed to get spn paths: {}", e),
+    })?;
+
+    let bin_dir = paths.bin_dir();
+    std::fs::create_dir_all(&bin_dir)?;
+
+    // Build download URL
+    let tarball_name = format!("{}-{}.tar.gz", tool_name, target);
+    let url = format!(
+        "https://github.com/{}/{}/releases/latest/download/{}",
+        github_org, github_repo, tarball_name
+    );
+
+    // Create temp file for download
+    let temp_dir = tempfile::tempdir()?;
+    let tarball_path = temp_dir.path().join(&tarball_name);
+
+    // Download with progress bar
+    let client = build_http_client();
+    let response = client
+        .get(&url)
+        .header(
+            "User-Agent",
+            format!("spn/{}", env!("CARGO_PKG_VERSION")),
+        )
+        .send()
+        .await
+        .map_err(|e| InstallError::Http(e.to_string()))?;
+
+    if !response.status().is_success() {
+        return Err(InstallError::Http(format!(
+            "HTTP {}: {}",
+            response.status(),
+            url
+        )));
+    }
+
+    let total_size = response.content_length();
+    let pb = if let Some(size) = total_size {
+        let pb = ProgressBar::new(size);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template(
+                    "📥 Downloading {msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})",
+                )
+                .unwrap()
+                .progress_chars("#>-"),
+        );
+        pb.set_message(tool_name.to_string());
+        pb
+    } else {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} 📥 Downloading {msg} {bytes}")
+                .unwrap(),
+        );
+        pb.set_message(tool_name.to_string());
+        pb
+    };
+
+    // Stream download to file
+    let mut file = std::fs::File::create(&tarball_path)?;
+    let mut downloaded: u64 = 0;
+    let mut stream = response.bytes_stream();
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| InstallError::Http(e.to_string()))?;
+        file.write_all(&chunk)?;
+        downloaded += chunk.len() as u64;
+        pb.set_position(downloaded);
+    }
+
+    pb.finish_with_message(format!("✅ Downloaded {}", tool_name));
+
+    // Extract tarball
+    let extract_pb = ProgressBar::new_spinner();
+    extract_pb.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.green} 📦 Extracting {msg}")
+            .unwrap(),
+    );
+    extract_pb.set_message(tool_name.to_string());
+    extract_pb.enable_steady_tick(std::time::Duration::from_millis(100));
+
+    let tarball_file = std::fs::File::open(&tarball_path)?;
+    let decoder = flate2::read::GzDecoder::new(tarball_file);
+    let mut archive = tar::Archive::new(decoder);
+
+    // Extract to temp directory first
+    let extract_dir = temp_dir.path().join("extract");
+    std::fs::create_dir_all(&extract_dir)?;
+    archive
+        .unpack(&extract_dir)
+        .map_err(|e| InstallError::ExtractError(e.to_string()))?;
+
+    extract_pb.finish_with_message(format!("✅ Extracted {}", tool_name));
+
+    // Find the binary in extracted files (could be at root or in a directory)
+    let binary_name = if cfg!(windows) {
+        format!("{}.exe", tool_name)
+    } else {
+        tool_name.to_string()
+    };
+
+    let binary_src = find_binary_in_dir(&extract_dir, &binary_name).ok_or_else(|| {
+        InstallError::ExtractError(format!("Binary '{}' not found in archive", binary_name))
+    })?;
+
+    // Copy to bin directory
+    let binary_dest = bin_dir.join(&binary_name);
+    std::fs::copy(&binary_src, &binary_dest)?;
+
+    // Make executable on Unix
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&binary_dest)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_dest, perms)?;
+    }
+
+    println!("✅ Installed {} to {}", tool_name, binary_dest.display());
+
+    Ok(())
+}
+
+/// Find a binary in a directory (recursively, but shallow).
+fn find_binary_in_dir(dir: &std::path::Path, binary_name: &str) -> Option<PathBuf> {
+    // Check root first
+    let root_path = dir.join(binary_name);
+    if root_path.exists() && root_path.is_file() {
+        return Some(root_path);
+    }
+
+    // Check one level deep
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                let nested = path.join(binary_name);
+                if nested.exists() && nested.is_file() {
+                    return Some(nested);
+                }
+            }
+        }
+    }
+
+    None
+}
+
 /// Install Nika workflow engine.
-pub fn install_nika(method: InstallMethod) -> Result<(), InstallError> {
+pub async fn install_nika(method: InstallMethod) -> Result<(), InstallError> {
     match method {
         InstallMethod::Cargo => {
             let status = Command::new("cargo")
@@ -258,11 +479,7 @@ pub fn install_nika(method: InstallMethod) -> Result<(), InstallError> {
             }
         }
         InstallMethod::Binary => {
-            // TODO: Implement binary download
-            return Err(InstallError::InstallFailed {
-                tool: "nika".into(),
-                message: "Binary download not yet implemented. Use cargo or brew.".into(),
-            });
+            download_and_install_binary("nika", "supernovae-st", "nika").await?;
         }
     }
 
@@ -270,7 +487,7 @@ pub fn install_nika(method: InstallMethod) -> Result<(), InstallError> {
 }
 
 /// Install NovaNet CLI.
-pub fn install_novanet(method: InstallMethod) -> Result<(), InstallError> {
+pub async fn install_novanet(method: InstallMethod) -> Result<(), InstallError> {
     match method {
         InstallMethod::Cargo => {
             let status = Command::new("cargo")
@@ -297,11 +514,7 @@ pub fn install_novanet(method: InstallMethod) -> Result<(), InstallError> {
             }
         }
         InstallMethod::Binary => {
-            // TODO: Implement binary download
-            return Err(InstallError::InstallFailed {
-                tool: "novanet".into(),
-                message: "Binary download not yet implemented. Use cargo or brew.".into(),
-            });
+            download_and_install_binary("novanet", "supernovae-st", "novanet").await?;
         }
     }
 

@@ -184,7 +184,7 @@ pub async fn run(command: Option<SetupCommands>, quick: bool) -> Result<()> {
                 .map_err(dialog_err)?;
 
             if install {
-                install_ecosystem_tool(tool)?;
+                install_ecosystem_tool(tool).await?;
             }
         }
     }
@@ -1890,7 +1890,7 @@ fn print_ecosystem_status(tools: &EcosystemTools) {
 }
 
 /// Install an ecosystem tool interactively.
-fn install_ecosystem_tool(tool: &str) -> Result<()> {
+async fn install_ecosystem_tool(tool: &str) -> Result<()> {
     let method = InstallMethod::best_available().ok_or_else(|| {
         SpnError::NotFound("No installation method available (cargo or brew required)".into())
     })?;
@@ -1904,8 +1904,8 @@ fn install_ecosystem_tool(tool: &str) -> Result<()> {
     );
 
     let result = match tool {
-        "nika" => crate::interop::detect::install_nika(method),
-        "novanet" => crate::interop::detect::install_novanet(method),
+        "nika" => crate::interop::detect::install_nika(method).await,
+        "novanet" => crate::interop::detect::install_novanet(method).await,
         _ => return Err(SpnError::NotFound(format!("Unknown tool: {}", tool))),
     };
 

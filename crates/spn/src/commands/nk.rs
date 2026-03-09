@@ -43,7 +43,7 @@ pub async fn run(command: NikaCommands) -> Result<()> {
                     ds::muted(method.display_name())
                 );
 
-                match install_nika(method) {
+                match install_nika(method).await {
                     Ok(()) => {
                         eprintln!("  {} Nika installed successfully", ds::command("✓"));
                         eprintln!();

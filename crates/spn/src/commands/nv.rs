@@ -46,7 +46,7 @@ pub async fn run(command: NovaNetCommands) -> Result<()> {
                     ds::muted(method.display_name())
                 );
 
-                match install_novanet(method) {
+                match install_novanet(method).await {
                     Ok(()) => {
                         eprintln!("  {} NovaNet installed successfully", ds::command("✓"));
                         eprintln!();
