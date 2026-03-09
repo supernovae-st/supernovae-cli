@@ -33,6 +33,7 @@ pub enum WatchEvent {
     /// MCP sync needed (spn config changed).
     SyncNeeded,
     /// Watch list updated (new project added).
+    #[allow(dead_code)] // Phase 2: emitted when refresh_watch_list is called
     WatchListUpdated,
 }
 
@@ -206,6 +207,7 @@ impl WatcherService {
     }
 
     /// Refresh the watch list from recent projects.
+    #[allow(dead_code)] // Phase 2: called when tracking new projects
     pub fn refresh_watch_list(&mut self) -> Result<()> {
         // Reload recent projects
         self.recent = RecentProjects::load().unwrap_or_default();
@@ -237,6 +239,7 @@ impl WatcherService {
     ///
     /// Call this BEFORE writing, passing the exact content you're about to write.
     /// This allows `is_our_write` to correctly identify our own changes.
+    #[allow(dead_code)] // Phase 2: used when daemon syncs config to clients
     pub fn mark_our_write(&mut self, path: &Path, content: &[u8]) {
         let checksum = Self::compute_checksum(content);
         self.our_writes.insert(path.to_path_buf(), checksum);
@@ -421,6 +424,7 @@ impl WatcherService {
     ///
     /// This should be spawned as a tokio task. It's fully async and will not
     /// block the executor.
+    #[allow(dead_code)] // Alternative to select! integration in server.rs
     pub async fn run(&mut self) -> Result<()> {
         info!("Watcher event loop started");
 
@@ -440,18 +444,27 @@ impl WatcherService {
     }
 
     /// Get the foreign tracker (for status display).
+    #[allow(dead_code)] // Phase 2: exposed via daemon status API
     pub fn foreign_tracker(&self) -> &ForeignTracker {
         &self.foreign
     }
 
     /// Get the recent projects (for status display).
+    #[allow(dead_code)] // Phase 2: exposed via daemon status API
     pub fn recent_projects(&self) -> &RecentProjects {
         &self.recent
     }
 
     /// Get count of watched paths.
+    #[allow(dead_code)] // Phase 2: exposed via daemon status API
     pub fn watched_count(&self) -> usize {
         self.watched_paths.len()
+    }
+
+    /// Get the watched paths (for status display).
+    #[allow(dead_code)] // Phase 2: exposed via daemon status API
+    pub fn watched_paths(&self) -> &FxHashSet<PathBuf> {
+        &self.watched_paths
     }
 }
 
