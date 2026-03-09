@@ -26,6 +26,7 @@ use super::{
     watcher::{WatchEvent, WatcherService},
     DaemonError,
 };
+use crate::sync::{config::SyncConfig, mcp_sync::sync_mcp_to_editors};
 
 /// Daemon server configuration.
 #[derive(Debug, Clone)]
@@ -316,7 +317,27 @@ impl DaemonServer {
                         }
                         WatchEvent::SyncNeeded => {
                             info!("MCP sync needed (spn config changed)");
-                            // TODO: Trigger sync to clients
+                            // Load sync config to get enabled targets
+                            match SyncConfig::load() {
+                                Ok(sync_config) => {
+                                    let targets: Vec<_> = sync_config.enabled_targets.iter().copied().collect();
+                                    if targets.is_empty() {
+                                        debug!("No enabled sync targets, skipping auto-sync");
+                                    } else {
+                                        let results = sync_mcp_to_editors(&targets, None);
+                                        let success_count = results.iter().filter(|r| r.success).count();
+                                        let fail_count = results.len() - success_count;
+                                        if fail_count > 0 {
+                                            warn!("MCP sync: {} succeeded, {} failed", success_count, fail_count);
+                                        } else {
+                                            info!("MCP sync: {} targets synced successfully", success_count);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    warn!("Failed to load sync config: {}", e);
+                                }
+                            }
                         }
                         WatchEvent::WatchListUpdated => {
                             debug!("Watch list updated");
