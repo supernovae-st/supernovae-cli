@@ -120,3 +120,122 @@ pub struct InitializeResult {
     pub capabilities: ServerCapabilities,
     pub server_info: ServerInfo,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mcp_request_deserialize_with_params() {
+        let json = r#"{
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": "test"}
+        }"#;
+
+        let request: McpRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(request.method, "tools/call");
+        assert_eq!(request.id, Some(serde_json::json!(1)));
+        assert_eq!(request.params["name"], "test");
+    }
+
+    #[test]
+    fn test_mcp_request_deserialize_without_params() {
+        let json = r#"{
+            "jsonrpc": "2.0",
+            "id": "abc-123",
+            "method": "initialize"
+        }"#;
+
+        let request: McpRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(request.method, "initialize");
+        assert_eq!(request.id, Some(serde_json::json!("abc-123")));
+        assert!(request.params.is_null());
+    }
+
+    #[test]
+    fn test_mcp_request_deserialize_notification() {
+        let json = r#"{
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized"
+        }"#;
+
+        let request: McpRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(request.method, "notifications/initialized");
+        assert!(request.id.is_none());
+    }
+
+    #[test]
+    fn test_mcp_response_success_serialize() {
+        let response = McpResponse::success(
+            Some(serde_json::json!(1)),
+            serde_json::json!({"status": "ok"}),
+        );
+
+        let json = serde_json::to_string(&response).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed["jsonrpc"], "2.0");
+        assert_eq!(parsed["id"], 1);
+        assert_eq!(parsed["result"]["status"], "ok");
+        assert!(parsed.get("error").is_none());
+    }
+
+    #[test]
+    fn test_mcp_response_error_serialize() {
+        let response = McpResponse::error(Some(serde_json::json!(2)), PARSE_ERROR, "Invalid JSON");
+
+        let json = serde_json::to_string(&response).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed["jsonrpc"], "2.0");
+        assert_eq!(parsed["id"], 2);
+        assert_eq!(parsed["error"]["code"], PARSE_ERROR);
+        assert_eq!(parsed["error"]["message"], "Invalid JSON");
+        assert!(parsed.get("result").is_none());
+    }
+
+    #[test]
+    fn test_mcp_response_notification_serialize() {
+        let response = McpResponse::notification(serde_json::json!({"event": "ready"}));
+
+        let json = serde_json::to_string(&response).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed["jsonrpc"], "2.0");
+        assert!(parsed.get("id").is_none());
+        assert_eq!(parsed["result"]["event"], "ready");
+    }
+
+    #[test]
+    fn test_error_codes_are_standard_jsonrpc() {
+        // JSON-RPC 2.0 standard error codes
+        assert_eq!(PARSE_ERROR, -32700);
+        assert_eq!(INVALID_REQUEST, -32600);
+        assert_eq!(METHOD_NOT_FOUND, -32601);
+        assert_eq!(INVALID_PARAMS, -32602);
+        assert_eq!(INTERNAL_ERROR, -32603);
+    }
+
+    #[test]
+    fn test_initialize_result_serialize() {
+        let result = InitializeResult {
+            protocol_version: "2024-11-05".into(),
+            capabilities: ServerCapabilities {
+                tools: ToolCapabilities { list_changed: false },
+            },
+            server_info: ServerInfo {
+                name: "spn".into(),
+                version: "0.15.2".into(),
+            },
+        };
+
+        let json = serde_json::to_string(&result).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed["protocolVersion"], "2024-11-05");
+        assert_eq!(parsed["serverInfo"]["name"], "spn");
+        assert_eq!(parsed["capabilities"]["tools"]["listChanged"], false);
+    }
+}
