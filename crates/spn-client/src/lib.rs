@@ -52,8 +52,8 @@ mod protocol;
 pub use error::Error;
 pub use paths::{PathError, SpnPaths};
 pub use protocol::{
-    IpcJobState, IpcJobStatus, IpcSchedulerStats, ModelProgress, Request, Response,
-    PROTOCOL_VERSION,
+    ForeignMcpInfo, IpcJobState, IpcJobStatus, IpcSchedulerStats, ModelProgress,
+    RecentProjectInfo, Request, Response, WatcherStatusInfo, PROTOCOL_VERSION,
 };
 pub use secrecy::{ExposeSecret, SecretString};
 
@@ -347,6 +347,36 @@ impl SpnClient {
     #[cfg(not(unix))]
     pub async fn list_providers(&mut self) -> Result<Vec<String>, Error> {
         Ok(self.list_env_providers())
+    }
+
+    /// Get watcher status (recent projects, foreign MCPs, watched paths).
+    ///
+    /// Returns status information about the MCP config watcher.
+    #[cfg(unix)]
+    pub async fn watcher_status(&mut self) -> Result<WatcherStatusInfo, Error> {
+        if self.fallback_mode {
+            return Err(Error::DaemonError(
+                "Watcher status not available in fallback mode".into(),
+            ));
+        }
+
+        let response = self.send_request(Request::WatcherStatus).await?;
+
+        match response {
+            Response::WatcherStatusResult { status } => Ok(status),
+            Response::Error { message } => Err(Error::DaemonError(message)),
+            _ => Err(Error::UnexpectedResponse),
+        }
+    }
+
+    /// Get watcher status.
+    ///
+    /// On non-Unix platforms, returns an error since the daemon is not available.
+    #[cfg(not(unix))]
+    pub async fn watcher_status(&mut self) -> Result<WatcherStatusInfo, Error> {
+        Err(Error::DaemonError(
+            "Watcher status not available on non-Unix platforms".into(),
+        ))
     }
 
     /// Send a request to the daemon and receive a response.
