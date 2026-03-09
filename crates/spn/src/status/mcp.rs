@@ -194,10 +194,7 @@ pub async fn collect() -> Vec<McpServerStatus> {
         let emoji = mcp_emoji(&name);
 
         // Get client sync for this server
-        let client_sync = sync_status
-            .get(&name)
-            .cloned()
-            .unwrap_or_default();
+        let client_sync = sync_status.get(&name).cloned().unwrap_or_default();
 
         statuses.push(McpServerStatus {
             name,

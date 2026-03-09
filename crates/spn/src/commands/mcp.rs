@@ -1606,10 +1606,7 @@ async fn run_status(_mcp: &McpConfigManager, json: bool) -> Result<()> {
         ds::muted("Client Sync"),
         ds::muted("Credential")
     );
-    println!(
-        "  {}",
-        ds::muted("─".repeat(74))
-    );
+    println!("  {}", ds::muted("─".repeat(74)));
 
     // Server rows
     for status in &statuses {
@@ -1886,8 +1883,7 @@ async fn run_adopt(mcp: &McpConfigManager, all: bool, json: bool) -> Result<()> 
     let convert_server = |server: &spn_core::McpServer| -> McpServer {
         let cmd = server.command.as_deref().unwrap_or("npx");
         // Convert Vec<(String, String)> to FxHashMap<String, String>
-        let env: rustc_hash::FxHashMap<String, String> =
-            server.env.iter().cloned().collect();
+        let env: rustc_hash::FxHashMap<String, String> = server.env.iter().cloned().collect();
         McpServer::new(cmd)
             .with_args(server.args.clone())
             .with_env(env)
@@ -1981,15 +1977,21 @@ async fn run_adopt(mcp: &McpConfigManager, all: bool, json: bool) -> Result<()> 
     // Show found foreign MCPs
     println!(
         "{}",
-        ds::primary("╔═══════════════════════════════════════════════════════════════════════════════╗")
+        ds::primary(
+            "╔═══════════════════════════════════════════════════════════════════════════════╗"
+        )
     );
     println!(
         "{}",
-        ds::primary("║  🔍 FOREIGN MCP DETECTION                                                     ║")
+        ds::primary(
+            "║  🔍 FOREIGN MCP DETECTION                                                     ║"
+        )
     );
     println!(
         "{}",
-        ds::primary("╚═══════════════════════════════════════════════════════════════════════════════╝")
+        ds::primary(
+            "╚═══════════════════════════════════════════════════════════════════════════════╝"
+        )
     );
     println!();
 

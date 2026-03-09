@@ -38,8 +38,8 @@ async fn clear() -> Result<()> {
 
 /// Show cache info.
 async fn info(json: bool) -> Result<()> {
-    let paths = spn_client::SpnPaths::new()
-        .map_err(|e| anyhow::anyhow!("Failed to get paths: {}", e))?;
+    let paths =
+        spn_client::SpnPaths::new().map_err(|e| anyhow::anyhow!("Failed to get paths: {}", e))?;
     let cache_dir = paths.cache_dir();
     let tarballs_dir = cache_dir.join("tarballs");
 

@@ -4,7 +4,9 @@
 
 use std::env;
 
-use crate::config::{global, local, resolver::format_value, scope::ScopeType, team, ConfigResolver};
+use crate::config::{
+    global, local, resolver::format_value, scope::ScopeType, team, ConfigResolver,
+};
 use crate::error::{Result, SpnError};
 use crate::ux::design_system as ds;
 use crate::ConfigCommands;
@@ -27,9 +29,8 @@ fn parse_editor(editor: &str) -> Result<ParsedEditor> {
     }
 
     // Parse using shell_words for proper quoting/escaping handling
-    let parts = shell_words::split(editor).map_err(|e| {
-        SpnError::ConfigError(format!("Invalid EDITOR syntax: {}", e))
-    })?;
+    let parts = shell_words::split(editor)
+        .map_err(|e| SpnError::ConfigError(format!("Invalid EDITOR syntax: {}", e)))?;
 
     if parts.is_empty() {
         return Err(SpnError::ConfigError("EDITOR is empty".to_string()));
@@ -306,11 +307,7 @@ async fn get_value(key: &str, show_origin: bool) -> Result<()> {
             }
         }
         None => {
-            println!(
-                "{} Key not found: {}",
-                ds::warning("⚠"),
-                ds::highlight(key)
-            );
+            println!("{} Key not found: {}", ds::warning("⚠"), ds::highlight(key));
             println!();
             println!(
                 "   {} Available top-level keys: providers, sync, secrets, servers",
@@ -455,12 +452,7 @@ async fn set_value(key: &str, value: &str, scope: &str) -> Result<()> {
     Ok(())
 }
 
-async fn edit_config(
-    local_flag: bool,
-    user: bool,
-    mcp: bool,
-    scope: Option<String>,
-) -> Result<()> {
+async fn edit_config(local_flag: bool, user: bool, mcp: bool, scope: Option<String>) -> Result<()> {
     let cwd = env::current_dir()?;
 
     // Determine which config file to edit

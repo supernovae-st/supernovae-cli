@@ -530,10 +530,7 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
                 ds::muted("# Debian/Ubuntu")
             );
             println!();
-            println!(
-                "Or use {} to export plaintext:",
-                ds::primary("--plaintext")
-            );
+            println!("Or use {} to export plaintext:", ds::primary("--plaintext"));
             println!(
                 "  {} {}",
                 ds::primary("spn secrets export --plaintext -o"),
@@ -549,10 +546,7 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
                 .unwrap_or(false);
 
         if !sops_config_exists {
-            println!(
-                "{}",
-                ds::warning("No .sops.yaml configuration found.")
-            );
+            println!("{}", ds::warning("No .sops.yaml configuration found."));
             println!();
             println!("SOPS requires encryption key configuration. Create a .sops.yaml file:");
             println!();
@@ -564,7 +558,10 @@ async fn run_export(output: Option<String>, plaintext: bool) -> Result<()> {
                 ds::primary("    age: age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
             );
             println!();
-            println!("{}", ds::muted("Generate an AGE key with: age-keygen -o key.txt"));
+            println!(
+                "{}",
+                ds::muted("Generate an AGE key with: age-keygen -o key.txt")
+            );
             println!();
             return Ok(());
         }

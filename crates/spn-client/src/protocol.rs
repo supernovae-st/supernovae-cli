@@ -751,10 +751,7 @@ mod tests {
         let status = WatcherStatusInfo {
             is_running: true,
             watched_count: 8,
-            watched_paths: vec![
-                "~/.spn/mcp.yaml".into(),
-                "~/.claude.json".into(),
-            ],
+            watched_paths: vec!["~/.spn/mcp.yaml".into(), "~/.claude.json".into()],
             debounce_ms: 500,
             recent_projects: vec![RecentProjectInfo {
                 path: "/Users/test/project".into(),

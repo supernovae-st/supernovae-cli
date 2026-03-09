@@ -256,7 +256,10 @@ mod tests {
             scope: ForeignScope::Global,
             config_path: PathBuf::from("/home/user/.cursor/mcp.json"),
             detected: Utc::now(),
-            server: ForeignMcpServer::stdio("npx", vec!["-y".to_string(), "@example/mcp".to_string()]),
+            server: ForeignMcpServer::stdio(
+                "npx",
+                vec!["-y".to_string(), "@example/mcp".to_string()],
+            ),
         }
     }
 

@@ -145,7 +145,9 @@ pub fn format_value(value: &Value) -> String {
             let items: Vec<String> = arr.iter().map(format_value).collect();
             format!("[{}]", items.join(", "))
         }
-        Value::Object(_) => serde_json::to_string_pretty(value).unwrap_or_else(|_| "{}".to_string()),
+        Value::Object(_) => {
+            serde_json::to_string_pretty(value).unwrap_or_else(|_| "{}".to_string())
+        }
         Value::Null => "null".to_string(),
     }
 }

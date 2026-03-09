@@ -113,8 +113,16 @@ pub async fn run(package: &str, json: bool) -> Result<()> {
         println!("   {}", ds::highlight("Installed:"));
         println!("   {} Version:  {}", ds::success("✓"), pkg.version);
         println!("   {} Path:     {}", ds::muted("•"), pkg.path.display());
-        println!("   {} Checksum: {}", ds::muted("•"), &pkg.checksum[..20.min(pkg.checksum.len())]);
-        println!("   {} Date:     {}", ds::muted("•"), &pkg.installed_at[..10.min(pkg.installed_at.len())]);
+        println!(
+            "   {} Checksum: {}",
+            ds::muted("•"),
+            &pkg.checksum[..20.min(pkg.checksum.len())]
+        );
+        println!(
+            "   {} Date:     {}",
+            ds::muted("•"),
+            &pkg.installed_at[..10.min(pkg.installed_at.len())]
+        );
     }
 
     Ok(())

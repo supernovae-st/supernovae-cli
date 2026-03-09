@@ -37,23 +37,24 @@ use zeroize::Zeroizing;
 #[cfg(unix)]
 async fn notify_daemon_refresh(provider: &str) {
     match SpnClient::connect().await {
-        Ok(mut client) => {
-            match client.refresh_secret(provider).await {
-                Ok(refreshed) => {
-                    if refreshed {
-                        debug!("Daemon cache refreshed for {}", provider);
-                    } else {
-                        debug!("Provider {} not in daemon cache", provider);
-                    }
-                }
-                Err(e) => {
-                    debug!("Failed to refresh daemon cache for {}: {}", provider, e);
+        Ok(mut client) => match client.refresh_secret(provider).await {
+            Ok(refreshed) => {
+                if refreshed {
+                    debug!("Daemon cache refreshed for {}", provider);
+                } else {
+                    debug!("Provider {} not in daemon cache", provider);
                 }
             }
-        }
+            Err(e) => {
+                debug!("Failed to refresh daemon cache for {}: {}", provider, e);
+            }
+        },
         Err(_) => {
             // Daemon not running, no cache to refresh
-            debug!("Daemon not running, skipping cache refresh for {}", provider);
+            debug!(
+                "Daemon not running, skipping cache refresh for {}",
+                provider
+            );
         }
     }
 }
@@ -79,7 +80,11 @@ pub async fn run(command: ProviderCommands) -> Result<()> {
             };
             run_set(&provider, key, storage).await
         }
-        ProviderCommands::Get { provider, unmask, yes } => {
+        ProviderCommands::Get {
+            provider,
+            unmask,
+            yes,
+        } => {
             let provider = match provider {
                 Some(p) => p,
                 None => prompts::select_provider()?,
@@ -489,7 +494,10 @@ async fn run_get(provider: &str, unmask: bool, skip_confirm: bool) -> Result<()>
                         ds::warning(format!("{} SECURITY WARNING:", ds::icon::WARNING)),
                         ds::warning("Full API key will be exposed")
                     );
-                    eprintln!("  {} Key may appear in terminal scrollback history", ds::muted("•"));
+                    eprintln!(
+                        "  {} Key may appear in terminal scrollback history",
+                        ds::muted("•")
+                    );
                     eprintln!("  {} Visible in screen recordings/sharing", ds::muted("•"));
                     eprintln!();
 

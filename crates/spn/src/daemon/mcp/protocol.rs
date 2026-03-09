@@ -223,7 +223,9 @@ mod tests {
         let result = InitializeResult {
             protocol_version: "2024-11-05".into(),
             capabilities: ServerCapabilities {
-                tools: ToolCapabilities { list_changed: false },
+                tools: ToolCapabilities {
+                    list_changed: false,
+                },
             },
             server_info: ServerInfo {
                 name: "spn".into(),

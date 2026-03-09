@@ -52,8 +52,8 @@ mod protocol;
 pub use error::Error;
 pub use paths::{PathError, SpnPaths};
 pub use protocol::{
-    ForeignMcpInfo, IpcJobState, IpcJobStatus, IpcSchedulerStats, ModelProgress,
-    RecentProjectInfo, Request, Response, WatcherStatusInfo, PROTOCOL_VERSION,
+    ForeignMcpInfo, IpcJobState, IpcJobStatus, IpcSchedulerStats, ModelProgress, RecentProjectInfo,
+    Request, Response, WatcherStatusInfo, PROTOCOL_VERSION,
 };
 pub use secrecy::{ExposeSecret, SecretString};
 

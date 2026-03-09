@@ -324,10 +324,7 @@ async fn download_and_install_binary(
     let client = build_http_client();
     let response = client
         .get(&url)
-        .header(
-            "User-Agent",
-            format!("spn/{}", env!("CARGO_PKG_VERSION")),
-        )
+        .header("User-Agent", format!("spn/{}", env!("CARGO_PKG_VERSION")))
         .send()
         .await
         .map_err(|e| InstallError::Http(e.to_string()))?;

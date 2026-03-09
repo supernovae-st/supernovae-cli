@@ -300,7 +300,10 @@ mod tests {
         let servers = parse_mcp_json(json).unwrap();
 
         assert_eq!(servers.len(), 1);
-        assert_eq!(servers[0].1.url, Some("http://localhost:3000/mcp".to_string()));
+        assert_eq!(
+            servers[0].1.url,
+            Some("http://localhost:3000/mcp".to_string())
+        );
     }
 
     #[test]

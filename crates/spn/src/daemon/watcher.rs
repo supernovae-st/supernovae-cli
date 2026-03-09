@@ -130,7 +130,9 @@ impl WatcherService {
             // Claude Code global
             home.join(".claude.json"),
             // Windsurf global
-            home.join(".codeium").join("windsurf").join("mcp_config.json"),
+            home.join(".codeium")
+                .join("windsurf")
+                .join("mcp_config.json"),
         ]
     }
 
@@ -182,7 +184,9 @@ impl WatcherService {
 
         self.watcher
             .watch(&canonical, RecursiveMode::NonRecursive)
-            .map_err(|e| SpnError::ConfigError(format!("Failed to watch {}: {e}", path.display())))?;
+            .map_err(|e| {
+                SpnError::ConfigError(format!("Failed to watch {}: {e}", path.display()))
+            })?;
 
         self.watched_paths.insert(canonical.clone());
         debug!("Watching: {}", canonical.display());
@@ -199,9 +203,9 @@ impl WatcherService {
             return Ok(());
         }
 
-        self.watcher
-            .unwatch(&canonical)
-            .map_err(|e| SpnError::ConfigError(format!("Failed to unwatch {}: {e}", path.display())))?;
+        self.watcher.unwatch(&canonical).map_err(|e| {
+            SpnError::ConfigError(format!("Failed to unwatch {}: {e}", path.display()))
+        })?;
 
         self.watched_paths.remove(&canonical);
         debug!("Unwatched: {}", canonical.display());
@@ -557,7 +561,10 @@ mod tests {
         let path = PathBuf::from("/Users/test/.cursor/mcp.json");
         let scope = WatcherService::determine_scope(&path);
         // Will be Project since we can't verify home dir in test
-        assert!(matches!(scope, ForeignScope::Global | ForeignScope::Project(_)));
+        assert!(matches!(
+            scope,
+            ForeignScope::Global | ForeignScope::Project(_)
+        ));
     }
 
     #[test]

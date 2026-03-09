@@ -71,7 +71,11 @@ impl NotificationService {
     }
 
     /// Send a native desktop notification.
-    fn send_native_notification(&self, name: &str, source: ForeignSource) -> Result<(), notify_rust::error::Error> {
+    fn send_native_notification(
+        &self,
+        name: &str,
+        source: ForeignSource,
+    ) -> Result<(), notify_rust::error::Error> {
         Notification::new()
             .summary("spn: Foreign MCP detected")
             .body(&format!("'{}' found in {}", name, source))
@@ -113,7 +117,10 @@ impl NotificationService {
         };
 
         if self.log_enabled {
-            eprintln!("[WATCH] {} foreign MCP(s) detected in {}", count, source_str);
+            eprintln!(
+                "[WATCH] {} foreign MCP(s) detected in {}",
+                count, source_str
+            );
         }
 
         if self.enabled {

@@ -84,7 +84,11 @@ async fn start(foreground: bool, skip_preload: bool, lazy: bool) -> Result<()> {
         let exe = std::env::current_exe()?;
 
         // Build args with flags
-        let mut args = vec!["daemon".to_string(), "start".to_string(), "--foreground".to_string()];
+        let mut args = vec![
+            "daemon".to_string(),
+            "start".to_string(),
+            "--foreground".to_string(),
+        ];
         if skip_preload {
             args.push("--skip-preload".to_string());
         }

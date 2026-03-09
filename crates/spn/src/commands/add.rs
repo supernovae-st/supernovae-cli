@@ -155,10 +155,9 @@ pub async fn run_with_options(options: AddOptions) -> Result<()> {
     println!();
 
     // 4. Add direct dependency to manifest
-    let root_pkg = packages
-        .iter()
-        .find(|p| p.is_direct)
-        .ok_or_else(|| SpnError::DependencyResolution("No direct package found in resolution".into()))?;
+    let root_pkg = packages.iter().find(|p| p.is_direct).ok_or_else(|| {
+        SpnError::DependencyResolution("No direct package found in resolution".into())
+    })?;
     let version_constraint = options
         .version
         .clone()

@@ -581,10 +581,7 @@ async fn test_watcher_status_ipc_flow() {
             assert_eq!(status.watched_count, 3);
             assert_eq!(status.watched_paths.len(), 2);
             assert_eq!(status.recent_projects.len(), 1);
-            assert_eq!(
-                status.recent_projects[0].path,
-                "/home/user/dev/myproject"
-            );
+            assert_eq!(status.recent_projects[0].path, "/home/user/dev/myproject");
             assert_eq!(status.foreign_pending.len(), 1);
             assert_eq!(status.foreign_pending[0].name, "foreign-server");
         }

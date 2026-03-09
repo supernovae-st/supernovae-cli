@@ -324,9 +324,7 @@ impl RequestHandler {
         .flatten()
         .collect();
 
-        let is_allowed = allowed_bases
-            .iter()
-            .any(|base| canonical.starts_with(base));
+        let is_allowed = allowed_bases.iter().any(|base| canonical.starts_with(base));
 
         if !is_allowed {
             return Response::Error {
@@ -338,9 +336,7 @@ impl RequestHandler {
         }
 
         // Create job with optional name and priority
-        let mut job = Job::new(canonical)
-            .with_args(args)
-            .with_priority(priority);
+        let mut job = Job::new(canonical).with_args(args).with_priority(priority);
         if let Some(n) = name {
             job = job.with_name(n);
         }

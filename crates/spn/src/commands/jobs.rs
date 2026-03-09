@@ -171,9 +171,7 @@ fn validate_workflow_path(path: &std::path::Path) -> std::result::Result<PathBuf
     .flatten()
     .collect();
 
-    let is_allowed = allowed_bases
-        .iter()
-        .any(|base| canonical.starts_with(base));
+    let is_allowed = allowed_bases.iter().any(|base| canonical.starts_with(base));
 
     if !is_allowed {
         return Err(format!(
@@ -207,8 +205,8 @@ async fn submit(
     }
 
     // Security: Validate path to prevent path traversal attacks
-    let canonical = validate_workflow_path(&workflow)
-        .map_err(|e| SpnError::InvalidInput(e.to_string()))?;
+    let canonical =
+        validate_workflow_path(&workflow).map_err(|e| SpnError::InvalidInput(e.to_string()))?;
 
     let store = Arc::new(JobStore::new(jobs_dir()?));
     store.init().await?;
@@ -364,10 +362,7 @@ async fn output(id: &str, follow: bool) -> Result<()> {
 }
 
 /// Follow job output until completion.
-async fn follow_job_output(
-    store: &JobStore,
-    job_id: &crate::daemon::jobs::JobId,
-) -> Result<()> {
+async fn follow_job_output(store: &JobStore, job_id: &crate::daemon::jobs::JobId) -> Result<()> {
     use std::io::Write;
     use std::time::Duration;
 

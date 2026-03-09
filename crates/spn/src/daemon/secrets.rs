@@ -41,7 +41,8 @@ impl SecretManager {
 
     /// Set lazy loading mode.
     pub fn set_lazy_mode(&self, lazy: bool) {
-        self.lazy_mode.store(lazy, std::sync::atomic::Ordering::SeqCst);
+        self.lazy_mode
+            .store(lazy, std::sync::atomic::Ordering::SeqCst);
     }
 
     /// Check if lazy loading mode is enabled.
@@ -56,21 +57,13 @@ impl SecretManager {
     /// multiple prompts throughout the session.
     pub async fn preload_all(&self) -> Result<usize, DaemonError> {
         let total = KNOWN_PROVIDERS.len();
-        info!(
-            "Preloading secrets from keychain ({} providers)...",
-            total
-        );
+        info!("Preloading secrets from keychain ({} providers)...", total);
         let mut loaded = 0;
         let mut not_found = 0;
         let mut errors = 0;
 
         for (idx, provider) in KNOWN_PROVIDERS.iter().enumerate() {
-            debug!(
-                "[{}/{}] Loading {}...",
-                idx + 1,
-                total,
-                provider.id
-            );
+            debug!("[{}/{}] Loading {}...", idx + 1, total, provider.id);
             match self.load_from_keyring(provider.id).await {
                 Ok(true) => {
                     loaded += 1;

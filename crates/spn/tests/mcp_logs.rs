@@ -47,7 +47,10 @@ fn test_level_filtering_logic() {
     // ERROR filter - only errors
     assert!(should_show_line("[ERROR] Something failed", Some("error")));
     assert!(!should_show_line("[WARN] Something warned", Some("error")));
-    assert!(!should_show_line("[INFO] Something happened", Some("error")));
+    assert!(!should_show_line(
+        "[INFO] Something happened",
+        Some("error")
+    ));
 
     // WARN filter - warn and error
     assert!(should_show_line("[ERROR] Something failed", Some("warn")));
@@ -65,8 +68,14 @@ fn test_level_filtering_logic() {
     assert!(should_show_line("[ERROR] uppercase", Some("error")));
 
     // Should not match substrings in message text
-    assert!(!should_show_line("[DEBUG] Information about something", Some("info")));
-    assert!(!should_show_line("[DEBUG] Warning message text", Some("warn")));
+    assert!(!should_show_line(
+        "[DEBUG] Information about something",
+        Some("info")
+    ));
+    assert!(!should_show_line(
+        "[DEBUG] Warning message text",
+        Some("warn")
+    ));
 }
 
 /// Test log file creation for follow mode.
