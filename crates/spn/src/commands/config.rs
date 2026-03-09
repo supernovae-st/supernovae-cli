@@ -251,6 +251,9 @@ async fn get_value(key: &str, show_origin: bool) -> Result<()> {
 }
 
 async fn set_value(key: &str, value: &str, scope: &str) -> Result<()> {
+    use crate::config::types::ProviderConfig;
+    use rustc_hash::FxHashMap;
+
     let scope_type = ScopeType::from_str(scope).ok_or_else(|| {
         SpnError::ConfigError(format!(
             "Invalid scope: {}. Use: global, team, or local",
@@ -258,21 +261,120 @@ async fn set_value(key: &str, value: &str, scope: &str) -> Result<()> {
         ))
     })?;
 
+    let cwd = env::current_dir()?;
+
+    // Parse key path (e.g., "providers.anthropic.model")
+    let parts: Vec<&str> = key.split('.').collect();
+    if parts.is_empty() {
+        return Err(SpnError::ConfigError("Empty key".to_string()));
+    }
+
+    // Load config for the scope
+    let mut config = match scope_type {
+        ScopeType::Global => global::load()?,
+        ScopeType::Team => {
+            // Team scope doesn't support all config types
+            return Err(SpnError::ConfigError(
+                "Team scope only supports MCP servers. Use 'spn mcp add' instead.".to_string(),
+            ));
+        }
+        ScopeType::Local => local::load(&cwd)?,
+    };
+
+    // Apply the value based on the key path
+    match parts.as_slice() {
+        // providers.<name>.model
+        ["providers", provider_name, "model"] => {
+            let provider = config
+                .providers
+                .entry(provider_name.to_string())
+                .or_insert_with(|| ProviderConfig {
+                    model: None,
+                    endpoint: None,
+                    extra: FxHashMap::default(),
+                });
+            provider.model = Some(value.to_string());
+        }
+        // providers.<name>.endpoint
+        ["providers", provider_name, "endpoint"] => {
+            let provider = config
+                .providers
+                .entry(provider_name.to_string())
+                .or_insert_with(|| ProviderConfig {
+                    model: None,
+                    endpoint: None,
+                    extra: FxHashMap::default(),
+                });
+            provider.endpoint = Some(value.to_string());
+        }
+        // sync.auto_sync
+        ["sync", "auto_sync"] => {
+            config.sync.auto_sync = value.parse::<bool>().map_err(|_| {
+                SpnError::ConfigError(format!(
+                    "Invalid boolean value: {}. Use 'true' or 'false'.",
+                    value
+                ))
+            })?;
+        }
+        // sync.enabled_editors (comma-separated)
+        ["sync", "enabled_editors"] => {
+            config.sync.enabled_editors = value
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+        }
+        // secrets.default_storage
+        ["secrets", "default_storage"] => {
+            let valid = ["keychain", "env", "global"];
+            if !valid.contains(&value) {
+                return Err(SpnError::ConfigError(format!(
+                    "Invalid storage: {}. Use: keychain, env, or global",
+                    value
+                )));
+            }
+            config.secrets.default_storage = value.to_string();
+        }
+        // secrets.auto_migrate
+        ["secrets", "auto_migrate"] => {
+            config.secrets.auto_migrate = value.parse::<bool>().map_err(|_| {
+                SpnError::ConfigError(format!(
+                    "Invalid boolean value: {}. Use 'true' or 'false'.",
+                    value
+                ))
+            })?;
+        }
+        _ => {
+            return Err(SpnError::ConfigError(format!(
+                "Unknown key: {}. Supported keys:\n\
+                 - providers.<name>.model\n\
+                 - providers.<name>.endpoint\n\
+                 - sync.auto_sync\n\
+                 - sync.enabled_editors\n\
+                 - secrets.default_storage\n\
+                 - secrets.auto_migrate",
+                key
+            )));
+        }
+    }
+
+    // Save config
+    match scope_type {
+        ScopeType::Global => global::save(&config)?,
+        ScopeType::Local => {
+            local::save(&cwd, &config)?;
+            local::ensure_gitignored(&cwd)?;
+        }
+        ScopeType::Team => unreachable!(),
+    }
+
     println!(
-        "{} Setting {} = {} in {} scope",
-        ds::primary("✍️"),
+        "{} Set {} = {} in {} scope",
+        ds::success("✓"),
         ds::highlight(key),
         value,
         scope_type
     );
-
-    // TODO: Implement key path resolution and setting
-    println!();
-    println!(
-        "   {} Key path resolution not yet implemented",
-        ds::warning("⚠️")
-    );
-    println!("   {} Manual edit with: spn config edit", ds::muted("→"));
 
     Ok(())
 }
