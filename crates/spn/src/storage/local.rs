@@ -371,7 +371,6 @@ impl LocalStorage {
     }
 
     /// Get installed package info.
-    #[allow(dead_code)] // Reserved for future API
     pub fn get_installed(&self, name: &str) -> Result<Option<InstalledPackage>, StorageError> {
         let state = self.load_state()?;
         Ok(state.packages.get(name).cloned())
@@ -452,7 +451,6 @@ impl LocalStorage {
     }
 
     /// Clear the package cache.
-    #[allow(dead_code)] // Reserved for future API
     pub fn clear_cache(&self) -> Result<(), StorageError> {
         let tarballs_dir = self.cache_dir.join("tarballs");
         if tarballs_dir.exists() {
