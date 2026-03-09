@@ -12,6 +12,16 @@ use spn_client::{IpcSchedulerStats, Request, Response, SpnClient, WatcherStatusI
 use std::fs;
 use std::process::Command;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+/// Maximum time to wait for daemon to start.
+const DAEMON_START_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Initial polling interval for daemon startup check.
+const INITIAL_POLL_INTERVAL: Duration = Duration::from_millis(50);
+
+/// Maximum polling interval (caps exponential backoff).
+const MAX_POLL_INTERVAL: Duration = Duration::from_millis(200);
 
 /// Run a daemon command.
 pub async fn run(command: DaemonCommands) -> Result<()> {
@@ -67,10 +77,8 @@ async fn start(foreground: bool) -> Result<()> {
 
         match child {
             Ok(_) => {
-                // Wait a moment for the daemon to start
-                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-
-                if is_daemon_running() {
+                // Wait for daemon to start with polling (exponential backoff)
+                if wait_for_daemon_start(DAEMON_START_TIMEOUT).await {
                     println!("{} Daemon started successfully", ds::success("✓"));
                     if let Ok(socket) = paths::socket() {
                         println!("   Socket: {:?}", socket);
@@ -315,8 +323,13 @@ async fn query_daemon_status() -> (Option<WatcherStatusInfo>, Option<IpcSchedule
 async fn restart() -> Result<()> {
     if is_daemon_running() {
         stop().await?;
-        // Wait a moment
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        // Wait for daemon to fully stop with polling
+        let start_time = Instant::now();
+        let mut interval = INITIAL_POLL_INTERVAL;
+        while start_time.elapsed() < DAEMON_START_TIMEOUT && is_daemon_running() {
+            tokio::time::sleep(interval).await;
+            interval = std::cmp::min(interval * 2, MAX_POLL_INTERVAL);
+        }
     }
     start(false).await
 }
@@ -340,6 +353,27 @@ fn is_daemon_running() -> bool {
     }
 
     false
+}
+
+/// Wait for daemon to start with exponential backoff polling.
+///
+/// Returns `true` if daemon started within the timeout, `false` otherwise.
+/// Uses exponential backoff starting at 50ms, capped at 200ms intervals.
+async fn wait_for_daemon_start(timeout: Duration) -> bool {
+    let start = Instant::now();
+    let mut interval = INITIAL_POLL_INTERVAL;
+
+    while start.elapsed() < timeout {
+        if is_daemon_running() {
+            return true;
+        }
+        tokio::time::sleep(interval).await;
+        // Exponential backoff, capped at MAX_POLL_INTERVAL
+        interval = std::cmp::min(interval * 2, MAX_POLL_INTERVAL);
+    }
+
+    // Final check at timeout
+    is_daemon_running()
 }
 
 /// Get the daemon PID if running.
