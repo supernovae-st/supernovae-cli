@@ -7,8 +7,12 @@ use spn_client::{
 };
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{debug, warn};
+
+/// Timeout for model pull operations (30 minutes).
+/// Large models (70B+) can take 15-20 minutes on fast connections.
+const MODEL_PULL_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
 use super::foreign::{ForeignScope, ForeignTracker};
 use super::jobs::{Job, JobScheduler, JobState, JobStatus};
@@ -144,10 +148,18 @@ impl RequestHandler {
     }
 
     async fn handle_model_pull(&self, name: &str) -> Response {
-        match self.models.pull(name).await {
-            Ok(()) => Response::Success { success: true },
-            Err(e) => Response::Error {
+        match tokio::time::timeout(MODEL_PULL_TIMEOUT, self.models.pull(name)).await {
+            Ok(Ok(())) => Response::Success { success: true },
+            Ok(Err(e)) => Response::Error {
                 message: e.to_string(),
+            },
+            Err(_) => Response::Error {
+                message: format!(
+                    "Model pull timed out after {} minutes. \
+                     The model may be very large or there may be network issues. \
+                     Try again or check your connection.",
+                    MODEL_PULL_TIMEOUT.as_secs() / 60
+                ),
             },
         }
     }
