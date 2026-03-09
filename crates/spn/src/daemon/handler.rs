@@ -58,6 +58,7 @@ impl RequestHandler {
             Request::GetSecret { provider } => self.handle_get_secret(&provider).await,
             Request::HasSecret { provider } => self.handle_has_secret(&provider).await,
             Request::ListProviders => self.handle_list_providers().await,
+            Request::RefreshSecret { provider } => self.handle_refresh_secret(&provider).await,
 
             // Model commands
             Request::ModelList => self.handle_model_list().await,
@@ -105,8 +106,9 @@ impl RequestHandler {
     }
 
     async fn handle_get_secret(&self, provider: &str) -> Response {
-        match self.secrets.get_cached(provider).await {
-            Some(secret) => {
+        // Use get_or_load for lazy loading support - if not cached, load from keychain
+        match self.secrets.get_or_load(provider).await {
+            Ok(Some(secret)) => {
                 // NOTE: Security consideration - the secret is exposed as plain String in the
                 // Response for JSON serialization over IPC. This is acceptable because:
                 // 1. Unix socket uses peer credential verification (same UID only)
@@ -117,10 +119,16 @@ impl RequestHandler {
                     value: secret.expose_secret().to_string(),
                 }
             }
-            None => {
+            Ok(None) => {
                 warn!("Secret not found for provider: {}", provider);
                 Response::Error {
                     message: format!("Secret not found for provider: {}", provider),
+                }
+            }
+            Err(e) => {
+                warn!("Failed to get secret for {}: {}", provider, e);
+                Response::Error {
+                    message: format!("Failed to get secret for {}: {}", provider, e),
                 }
             }
         }
@@ -134,6 +142,18 @@ impl RequestHandler {
     async fn handle_list_providers(&self) -> Response {
         let providers = self.secrets.list_cached().await;
         Response::Providers { providers }
+    }
+
+    async fn handle_refresh_secret(&self, provider: &str) -> Response {
+        match self.secrets.reload_secret(provider).await {
+            Ok(refreshed) => Response::Refreshed {
+                refreshed,
+                provider: provider.to_string(),
+            },
+            Err(e) => Response::Error {
+                message: format!("Failed to refresh secret for {}: {}", provider, e),
+            },
+        }
     }
 
     // ==================== Model Handlers ====================
