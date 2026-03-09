@@ -481,3 +481,57 @@ fn truncate(s: &str, max_len: usize) -> String {
         format!("{}…", &s[..max_len - 1])
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_truncate_short_string() {
+        assert_eq!(truncate("hello", 10), "hello");
+    }
+
+    #[test]
+    fn test_truncate_long_string() {
+        let result = truncate("hello world", 8);
+        assert!(result.len() <= 8 || result.ends_with('…'));
+        assert!(result.starts_with("hello"));
+    }
+
+    #[test]
+    fn test_truncate_exact_length() {
+        assert_eq!(truncate("hello", 5), "hello");
+    }
+
+    #[test]
+    fn test_format_state_pending() {
+        let state = format_state(JobState::Pending);
+        // Contains the word Pending (possibly with ANSI colors)
+        assert!(state.to_lowercase().contains("pending") || state.contains("Pending"));
+    }
+
+    #[test]
+    fn test_format_state_running() {
+        let state = format_state(JobState::Running);
+        assert!(state.to_lowercase().contains("running") || state.contains("Running"));
+    }
+
+    #[test]
+    fn test_format_state_completed() {
+        let state = format_state(JobState::Completed);
+        assert!(state.to_lowercase().contains("completed") || state.contains("Completed"));
+    }
+
+    #[test]
+    fn test_format_state_failed() {
+        let state = format_state(JobState::Failed);
+        assert!(state.to_lowercase().contains("failed") || state.contains("Failed"));
+    }
+
+    #[test]
+    fn test_jobs_dir_returns_valid_path() {
+        let path = jobs_dir().unwrap();
+        assert!(path.to_string_lossy().contains(".spn"));
+        assert!(path.to_string_lossy().contains("jobs"));
+    }
+}
