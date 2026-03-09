@@ -607,6 +607,22 @@ async fn run_migrate(skip_confirm: bool) -> Result<()> {
     );
     println!();
 
+    // macOS-specific info about ACL pre-authorization
+    #[cfg(target_os = "macos")]
+    {
+        println!("{}", ds::highlight("macOS Note:"));
+        println!(
+            "  {} Keys will be pre-authorized for 'spn' - no repeated popups!",
+            ds::primary(ds::icon::INFO)
+        );
+        println!(
+            "  {} If you see a keychain prompt, click \"{}\" once.",
+            ds::primary(ds::icon::INFO),
+            ds::highlight("Always Allow")
+        );
+        println!();
+    }
+
     if !skip_confirm {
         let confirm = Confirm::new()
             .with_prompt("Proceed with migration?")

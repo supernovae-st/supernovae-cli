@@ -156,13 +156,27 @@ impl MigrationReport {
 
 /// Migrate API keys from environment variables to system keychain.
 ///
+/// On macOS, this uses `set_with_acl()` to pre-authorize the spn binary,
+/// preventing repeated keychain popup prompts.
+///
 /// # Feature: `os-keychain`
 ///
 /// When the `os-keychain` feature is disabled, this function returns an error
 /// indicating that keychain is unavailable (use env vars instead).
 #[cfg(feature = "os-keychain")]
 pub fn migrate_env_to_keyring() -> MigrationReport {
+    use std::path::PathBuf;
+
     let mut report = MigrationReport::default();
+
+    // Get the path to the spn binary for ACL pre-authorization
+    let spn_path: PathBuf = std::env::current_exe()
+        .unwrap_or_else(|_| {
+            // Fallback to ~/.cargo/bin/spn
+            dirs::home_dir()
+                .map(|h| h.join(".cargo/bin/spn"))
+                .unwrap_or_else(|| PathBuf::from("/usr/local/bin/spn"))
+        });
 
     for provider in MIGRATABLE_PROVIDERS {
         let env_var = provider_env_var(provider);
@@ -185,14 +199,14 @@ pub fn migrate_env_to_keyring() -> MigrationReport {
                     continue;
                 }
 
-                // Migrate to keyring
+                // Migrate to keyring with ACL pre-authorization
                 print!(
                     "  {} {}: Found {} Migrating... ",
                     ds::muted("├──"),
                     env_var,
                     ds::muted(ds::icon::ARROW)
                 );
-                match SpnKeyring::set(provider, &key) {
+                match SpnKeyring::set_with_acl(provider, &key, &spn_path) {
                     Ok(()) => {
                         println!("{}", ds::success(ds::icon::SUCCESS));
                         report.migrated += 1;

@@ -197,6 +197,80 @@ impl SpnKeyring {
         Self::set(provider, key.expose_secret())
     }
 
+    /// Store API key with pre-authorized ACL (macOS only).
+    ///
+    /// On macOS, this uses the `security` command to create keychain entries
+    /// with the specified application pre-authorized. This prevents repeated
+    /// "Allow Access" popups when accessing the key later.
+    ///
+    /// On other platforms, this falls back to [`SpnKeyring::set`].
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - The provider name (e.g., "anthropic")
+    /// * `key` - The API key to store
+    /// * `authorized_app` - Path to the application to pre-authorize (e.g., "/path/to/spn")
+    ///
+    /// # Errors
+    ///
+    /// Returns `KeyringError::ValidationError` if the key format is invalid.
+    /// Returns `KeyringError::StoreError` if the security command fails.
+    #[cfg(target_os = "macos")]
+    pub fn set_with_acl(
+        provider: &str,
+        key: &str,
+        authorized_app: &std::path::Path,
+    ) -> Result<(), KeyringError> {
+        // Validate key format using spn-core
+        let result = validate_key_format(provider, key);
+        if !result.is_valid() {
+            return Err(KeyringError::ValidationError(result.to_string()));
+        }
+
+        // Delete existing entry if present (security command doesn't update ACL on existing entries)
+        let _ = Self::delete(provider);
+
+        // Get the login keychain path
+        let home = std::env::var("HOME")
+            .map_err(|_| KeyringError::StoreError("HOME environment variable not set".to_string()))?;
+        let keychain_path = format!("{}/Library/Keychains/login.keychain-db", home);
+
+        // Use macOS security command to add with pre-authorized app
+        let output = std::process::Command::new("security")
+            .args([
+                "add-generic-password",
+                "-s", SERVICE_NAME,
+                "-a", provider,
+                "-w", key,
+                "-T", authorized_app.to_str().unwrap_or(""),
+                "-U", // Update if exists
+                &keychain_path,
+            ])
+            .output()
+            .map_err(|e| KeyringError::StoreError(format!("Failed to run security command: {}", e)))?;
+
+        if output.status.success() {
+            Ok(())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            Err(KeyringError::StoreError(format!(
+                "security command failed: {}",
+                stderr.trim()
+            )))
+        }
+    }
+
+    /// Store API key with pre-authorized ACL (non-macOS fallback).
+    #[cfg(not(target_os = "macos"))]
+    pub fn set_with_acl(
+        provider: &str,
+        key: &str,
+        _authorized_app: &std::path::Path,
+    ) -> Result<(), KeyringError> {
+        // On non-macOS, just use the regular set method
+        Self::set(provider, key)
+    }
+
     /// Delete API key for a provider.
     ///
     /// # Errors
@@ -271,6 +345,15 @@ impl SpnKeyring {
 
     /// Store API key from SecretString - always returns Locked.
     pub fn set_secret(_provider: &str, _key: &SecretString) -> Result<(), KeyringError> {
+        Err(KeyringError::Locked)
+    }
+
+    /// Store API key with ACL - always returns Locked (no keychain in Docker).
+    pub fn set_with_acl(
+        _provider: &str,
+        _key: &str,
+        _authorized_app: &std::path::Path,
+    ) -> Result<(), KeyringError> {
         Err(KeyringError::Locked)
     }
 
