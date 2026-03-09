@@ -4,7 +4,7 @@
 //! backends (Ollama, llama.cpp) and cloud providers (Anthropic, OpenAI, etc.).
 
 use crate::{BackendKind, BackendsError};
-use spn_core::{BackendError, ChatMessage, ChatOptions, ChatResponse, EmbeddingResponse};
+use spn_core::{ChatMessage, ChatOptions, ChatResponse, EmbeddingResponse};
 use std::future::Future;
 use std::pin::Pin;
 

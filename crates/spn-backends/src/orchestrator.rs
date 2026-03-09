@@ -174,7 +174,8 @@ impl ModelAlias {
 pub struct ModelOrchestrator {
     /// Registered model aliases.
     aliases: FxHashMap<String, ModelAlias>,
-    /// Backend registry.
+    /// Backend registry (used in Phase 2 for routing requests).
+    #[allow(dead_code)]
     registry: Arc<RwLock<BackendRegistry>>,
 }
 

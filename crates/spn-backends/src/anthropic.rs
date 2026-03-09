@@ -131,6 +131,7 @@ impl AnthropicBackend {
     }
 
     /// Build request body.
+    #[allow(clippy::unused_self)]
     fn build_request(
         &self,
         model: &str,
@@ -152,7 +153,7 @@ impl AnthropicBackend {
             stop_sequences: if options.stop.is_empty() {
                 None
             } else {
-                Some(options.stop.clone())
+                Some(options.stop)
             },
             stream,
         }
@@ -169,7 +170,7 @@ impl AnthropicBackend {
 
         let response = self
             .client
-            .post(&self.messages_url())
+            .post(self.messages_url())
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", ANTHROPIC_VERSION)
             .header("content-type", "application/json")
@@ -218,8 +219,7 @@ impl AnthropicBackend {
                     None
                 }
             })
-            .collect::<Vec<_>>()
-            .join("");
+            .collect::<String>();
 
         Ok(ChatResponse {
             message: ChatMessage::assistant(content),
@@ -242,7 +242,7 @@ impl AnthropicBackend {
 
         let response = self
             .client
-            .post(&self.messages_url())
+            .post(self.messages_url())
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", ANTHROPIC_VERSION)
             .header("content-type", "application/json")

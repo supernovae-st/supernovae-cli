@@ -5,7 +5,7 @@
 
 use crate::cloud::BoxedCloudBackend;
 use crate::traits::BoxedUnifiedBackend;
-use crate::{BackendKind, BackendsError, BoxedBackend};
+use crate::{BackendKind, BoxedBackend};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -39,6 +39,7 @@ use tokio::sync::RwLock;
 /// }
 /// ```
 #[derive(Default)]
+#[allow(clippy::struct_field_names)]
 pub struct BackendRegistry {
     /// Local model backends (Ollama, llama.cpp).
     local_backends: FxHashMap<BackendKind, BoxedBackend>,
@@ -155,11 +156,13 @@ impl BackendRegistry {
     }
 }
 
-/// Thread-safe shared registry using Arc<RwLock>.
+/// Thread-safe shared registry using `Arc<RwLock>`.
+#[allow(dead_code)] // Used in Phase 2
 pub type SharedRegistry = Arc<RwLock<BackendRegistry>>;
 
 /// Create a new shared registry.
 #[must_use]
+#[allow(dead_code)] // Used in Phase 2
 pub fn shared_registry() -> SharedRegistry {
     Arc::new(RwLock::new(BackendRegistry::new()))
 }

@@ -79,6 +79,14 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 #![warn(clippy::all)]
+// Allow certain lints during development
+#![allow(clippy::doc_markdown)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::manual_async_fn)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::redundant_closure_for_method_calls)]
 
 mod backend;
 mod cloud;
