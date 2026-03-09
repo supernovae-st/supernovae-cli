@@ -420,8 +420,12 @@ fn create_symlink(source: &Path, target: &Path) -> Result<(), std::io::Error> {
             std::fs::remove_dir_all(target)?;
         }
         // On some systems, EISDIR is reported as PermissionDenied for remove_file on dirs
-        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied && target.is_dir() => {
-            std::fs::remove_dir_all(target)?;
+        // Don't use is_dir() check here - it creates TOCTOU vulnerability
+        // Just attempt remove_dir_all; if it fails, return original error
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+            if std::fs::remove_dir_all(target).is_err() {
+                return Err(e); // Return original PermissionDenied
+            }
         }
         Err(e) => return Err(e),
     }
@@ -440,8 +444,11 @@ fn create_symlink(source: &Path, target: &Path) -> Result<(), std::io::Error> {
     match std::fs::remove_file(target) {
         Ok(()) => {}
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied && target.is_dir() => {
-            std::fs::remove_dir_all(target)?;
+        // Don't use is_dir() check here - it creates TOCTOU vulnerability
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+            if std::fs::remove_dir_all(target).is_err() {
+                return Err(e);
+            }
         }
         Err(e) => return Err(e),
     }
