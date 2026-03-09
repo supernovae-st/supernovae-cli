@@ -215,7 +215,7 @@ async fn run_sync(config: &SyncConfig, target_filter: Option<&str>, dry_run: boo
         println!("    Add with: {}", ds::primary("spn mcp add <name>"));
     }
 
-    // PHASE 2: Sync packages (skills, hooks)
+    // Sync packages (skills, hooks)
     let storage = LocalStorage::new()?;
     let packages = storage.list_packages()?;
 
