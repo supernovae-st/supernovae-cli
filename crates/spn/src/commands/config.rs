@@ -59,6 +59,42 @@ fn parse_editor(editor: &str) -> Result<ParsedEditor> {
     })
 }
 
+/// Validate an editor string before use (used for testing).
+///
+/// This performs explicit checks for dangerous patterns as a defense-in-depth
+/// measure. The actual `parse_editor` function uses shell_words for safe parsing,
+/// but this validation provides clear error messages for suspicious inputs.
+#[cfg(test)]
+fn validate_editor(editor: &str) -> Result<()> {
+    // Reject empty
+    if editor.trim().is_empty() {
+        return Err(SpnError::ConfigError("Editor command is empty".to_string()));
+    }
+
+    // Shell metacharacters that indicate command injection attempts
+    const DANGEROUS_CHARS: &[char] = &[';', '|', '&', '$', '`', '>', '<', '(', ')', '{', '}', '\n'];
+
+    for ch in DANGEROUS_CHARS {
+        if editor.contains(*ch) {
+            return Err(SpnError::ConfigError(format!(
+                "Editor contains dangerous character: '{}'",
+                ch
+            )));
+        }
+    }
+
+    // For absolute paths, check they exist
+    let program = editor.split_whitespace().next().unwrap_or("");
+    if program.starts_with('/') && !std::path::Path::new(program).exists() {
+        return Err(SpnError::ConfigError(format!(
+            "Editor not found: {}",
+            program
+        )));
+    }
+
+    Ok(())
+}
+
 pub async fn run(command: ConfigCommands) -> Result<()> {
     match command {
         ConfigCommands::Show { section } => show_config(section).await,
