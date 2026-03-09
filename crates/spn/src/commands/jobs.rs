@@ -272,13 +272,18 @@ async fn output(id: &str, follow: bool) -> Result<()> {
 
     match job_status {
         Some(status) => {
-            if let Some(output) = status.output {
+            if let Some(output) = &status.output {
                 println!("{}", output);
-            } else if status.state == JobState::Running {
-                println!("{} Job is still running...", ds::primary("→"));
+            } else if status.state == JobState::Running || status.state == JobState::Pending {
                 if follow {
-                    // TODO: Implement streaming output
-                    println!("(Streaming output not yet implemented)");
+                    // Follow mode: poll until job completes
+                    follow_job_output(&store, &status.job.id).await?;
+                } else {
+                    println!("{} Job is still running...", ds::primary("→"));
+                    println!(
+                        "Use {} to wait for completion",
+                        ds::highlight(format!("spn jobs output {} --follow", id))
+                    );
                 }
             } else {
                 println!("{} No output available", ds::warning("⚠"));
@@ -286,6 +291,86 @@ async fn output(id: &str, follow: bool) -> Result<()> {
         }
         None => {
             println!("{} Job not found: {}", ds::error("✗"), id);
+        }
+    }
+
+    Ok(())
+}
+
+/// Follow job output until completion.
+async fn follow_job_output(
+    store: &JobStore,
+    job_id: &crate::daemon::jobs::JobId,
+) -> Result<()> {
+    use std::io::Write;
+    use std::time::Duration;
+
+    println!(
+        "{} Following job {}... (Ctrl+C to stop)",
+        ds::primary("→"),
+        job_id
+    );
+
+    let poll_interval = Duration::from_millis(500);
+    let spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+    let mut spinner_idx = 0;
+
+    loop {
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {
+                // Clear spinner line and show stopped message
+                print!("\r{}\r", " ".repeat(60));
+                println!("{} Stopped following job", ds::info_line(""));
+                break;
+            }
+            _ = tokio::time::sleep(poll_interval) => {
+                // Check job status
+                if let Some(status) = store.get(job_id).await {
+                    match status.state {
+                        JobState::Running | JobState::Pending => {
+                            // Show spinner
+                            print!(
+                                "\r{} {} {}",
+                                spinner_chars[spinner_idx % spinner_chars.len()],
+                                ds::highlight(status.state.to_string()),
+                                status.job.name.as_deref().unwrap_or("unnamed")
+                            );
+                            std::io::stdout().flush().ok();
+                            spinner_idx += 1;
+                        }
+                        JobState::Completed | JobState::Failed | JobState::Cancelled => {
+                            // Clear spinner line
+                            print!("\r{}\r", " ".repeat(60));
+
+                            // Show final state
+                            match status.state {
+                                JobState::Completed => {
+                                    println!("{} Job completed", ds::success("✓"));
+                                }
+                                JobState::Failed => {
+                                    println!("{} Job failed", ds::error("✗"));
+                                }
+                                JobState::Cancelled => {
+                                    println!("{} Job cancelled", ds::warning("⚠"));
+                                }
+                                _ => {}
+                            }
+
+                            // Show output if available
+                            if let Some(output) = status.output {
+                                println!();
+                                println!("{}", output);
+                            }
+
+                            break;
+                        }
+                    }
+                } else {
+                    print!("\r{}\r", " ".repeat(60));
+                    println!("{} Job no longer exists", ds::error("✗"));
+                    break;
+                }
+            }
         }
     }
 
