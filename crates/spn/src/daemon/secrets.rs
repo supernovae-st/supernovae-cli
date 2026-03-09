@@ -26,6 +26,8 @@ use super::DaemonError;
 pub struct SecretManager {
     /// Cached secrets (provider -> value)
     cache: Arc<RwLock<FxHashMap<String, LockedString>>>,
+    /// Whether to load secrets lazily on first request
+    lazy_mode: std::sync::atomic::AtomicBool,
 }
 
 impl SecretManager {
@@ -33,7 +35,18 @@ impl SecretManager {
     pub fn new() -> Self {
         Self {
             cache: Arc::new(RwLock::new(FxHashMap::default())),
+            lazy_mode: std::sync::atomic::AtomicBool::new(false),
         }
+    }
+
+    /// Set lazy loading mode.
+    pub fn set_lazy_mode(&self, lazy: bool) {
+        self.lazy_mode.store(lazy, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// Check if lazy loading mode is enabled.
+    pub fn is_lazy_mode(&self) -> bool {
+        self.lazy_mode.load(std::sync::atomic::Ordering::SeqCst)
     }
 
     /// Preload all secrets from keychain into cache.
@@ -42,25 +55,48 @@ impl SecretManager {
     /// It triggers a single keychain auth prompt (if needed) rather than
     /// multiple prompts throughout the session.
     pub async fn preload_all(&self) -> Result<usize, DaemonError> {
-        info!("Preloading secrets from keychain...");
+        let total = KNOWN_PROVIDERS.len();
+        info!(
+            "Preloading secrets from keychain ({} providers)...",
+            total
+        );
         let mut loaded = 0;
+        let mut not_found = 0;
+        let mut errors = 0;
 
-        for provider in KNOWN_PROVIDERS {
+        for (idx, provider) in KNOWN_PROVIDERS.iter().enumerate() {
+            debug!(
+                "[{}/{}] Loading {}...",
+                idx + 1,
+                total,
+                provider.id
+            );
             match self.load_from_keyring(provider.id).await {
                 Ok(true) => {
                     loaded += 1;
-                    debug!("Loaded secret for {}", provider.id);
+                    info!("[{}/{}] Loaded: {}", idx + 1, total, provider.id);
                 }
                 Ok(false) => {
-                    debug!("No secret found for {}", provider.id);
+                    not_found += 1;
+                    debug!("[{}/{}] Not found: {}", idx + 1, total, provider.id);
                 }
                 Err(e) => {
-                    warn!("Failed to load secret for {}: {}", provider.id, e);
+                    errors += 1;
+                    warn!(
+                        "[{}/{}] Error loading {}: {}",
+                        idx + 1,
+                        total,
+                        provider.id,
+                        e
+                    );
                 }
             }
         }
 
-        info!("Preloaded {} secrets", loaded);
+        info!(
+            "Preload complete: {} loaded, {} not found, {} errors",
+            loaded, not_found, errors
+        );
         Ok(loaded)
     }
 
@@ -111,6 +147,45 @@ impl SecretManager {
         cache
             .get(provider)
             .map(|locked| SecretString::from(locked.as_str().to_string()))
+    }
+
+    /// Get a secret, loading from keychain if not cached (lazy mode).
+    ///
+    /// This is the primary method for getting secrets in lazy mode.
+    /// In eager mode (preloaded), this behaves like `get_cached()`.
+    pub async fn get_or_load(&self, provider: &str) -> Result<Option<SecretString>, DaemonError> {
+        // First, try to get from cache
+        if let Some(secret) = self.get_cached(provider).await {
+            return Ok(Some(secret));
+        }
+
+        // If not in cache, try to load from keychain (lazy loading)
+        debug!("Lazy loading secret for {}", provider);
+        match self.load_from_keyring(provider).await {
+            Ok(true) => {
+                // Now it's in cache, get it
+                Ok(self.get_cached(provider).await)
+            }
+            Ok(false) => Ok(None), // Not found in keychain
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Reload a specific secret from keychain into cache.
+    ///
+    /// Used for cache invalidation after `spn provider set`.
+    /// Returns Ok(true) if reloaded, Ok(false) if not found, Err on error.
+    pub async fn reload_secret(&self, provider: &str) -> Result<bool, DaemonError> {
+        info!("Reloading secret for {}", provider);
+
+        // Remove from cache first
+        {
+            let mut cache = self.cache.write().await;
+            cache.remove(provider);
+        }
+
+        // Load fresh from keyring
+        self.load_from_keyring(provider).await
     }
 
     /// Check if a secret is cached.
