@@ -1,9 +1,9 @@
 [package]
-name = "spn-backends"
+name = "spn-providers"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.75"
-description = "Backend abstraction layer for SuperNovae model management"
+description = "LLM provider abstraction layer for SuperNovae"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/supernovae-st/supernovae-cli"
 readme = "README.md"

@@ -3469,23 +3469,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "spn-backends"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "futures-util",
- "pretty_assertions",
- "reqwest",
- "rustc-hash",
- "serde",
- "serde_json",
- "spn-core",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "spn-cli"
 version = "0.15.5"
 dependencies = [
@@ -3613,6 +3596,23 @@ version = "0.1.6"
 dependencies = [
  "futures-util",
  "reqwest",
+ "serde",
+ "serde_json",
+ "spn-core",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "spn-providers"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "futures-util",
+ "pretty_assertions",
+ "reqwest",
+ "rustc-hash",
  "serde",
  "serde_json",
  "spn-core",
