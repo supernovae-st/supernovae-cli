@@ -1,8 +1,7 @@
 //! Sync configuration management.
 //!
-//! TODO(v0.16): Integrate sync configuration with `spn sync`
-
-#![allow(dead_code)]
+//! Provides persistent sync configuration stored in ~/.spn/sync.json.
+//! Used by `spn sync` command and daemon auto-sync.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -91,11 +90,13 @@ impl SyncConfig {
     }
 
     /// Check if an IDE target is enabled.
+    #[allow(dead_code)] // Phase 2: auto-sync uses this
     pub fn is_enabled(&self, target: IdeTarget) -> bool {
         self.enabled_targets.contains(&target)
     }
 
     /// Get or create project config.
+    #[allow(dead_code)] // Phase 2: project-specific sync
     pub fn project_config(&mut self, path: &Path) -> &mut ProjectSyncConfig {
         let path = path.to_path_buf();
 

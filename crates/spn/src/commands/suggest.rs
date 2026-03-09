@@ -41,7 +41,6 @@ impl Category {
 
 /// Suggestion with priority and action.
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct Suggestion {
     /// Emoji icon.
     pub icon: &'static str,
@@ -56,6 +55,7 @@ pub struct Suggestion {
     /// Category for grouping.
     pub category: Category,
     /// Whether this can be run in background.
+    #[allow(dead_code)] // Phase 2: background execution support
     pub background: bool,
 }
 

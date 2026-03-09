@@ -1,8 +1,9 @@
 //! Types for IDE synchronization.
 //!
-//! TODO(v0.16): Integrate IDE target detection and sync methods
-
-#![allow(dead_code)]
+//! Provides shared types for IDE sync operations including:
+//! - IDE target detection (Claude Code, Cursor, VS Code, Windsurf)
+//! - Package manifest parsing
+//! - Sync result tracking
 
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
@@ -29,6 +30,7 @@ impl IdeTarget {
     }
 
     /// Get the config directory name for this IDE.
+    #[allow(dead_code)] // Phase 2: IDE config detection
     pub fn config_dir(&self) -> &'static str {
         match self {
             Self::ClaudeCode => ".claude",
@@ -180,6 +182,7 @@ pub struct PackageManifest {
 
 impl PackageManifest {
     /// Check if this package has any IDE integrations.
+    #[allow(dead_code)] // Phase 2: package sync filtering
     pub fn has_integrations(&self) -> bool {
         self.mcp.is_some() || !self.skills.is_empty() || !self.hooks.is_empty()
     }
@@ -216,9 +219,11 @@ impl PackageManifest {
 #[derive(Debug, Clone)]
 pub struct SyncResult {
     /// Package name.
+    #[allow(dead_code)] // Phase 2: sync result reporting
     pub package: String,
 
     /// Target IDE.
+    #[allow(dead_code)] // Phase 2: sync result reporting
     pub target: IdeTarget,
 
     /// Whether the sync was successful.
@@ -241,6 +246,7 @@ pub enum SyncedItem {
     /// Hooks directory linked.
     Hooks(PathBuf),
     /// Command linked.
+    #[allow(dead_code)] // Phase 2: command sync
     Command(String),
 }
 

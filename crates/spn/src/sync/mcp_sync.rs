@@ -3,9 +3,7 @@
 //! Syncs MCP servers from ~/.spn/mcp.yaml to editor configurations.
 //! This is the single source of truth for MCP servers.
 //!
-//! TODO(v0.16): Integrate with `spn sync` command
-
-#![allow(dead_code)]
+//! Used by `spn sync`, `spn mcp sync`, and daemon auto-sync.
 
 use std::path::{Path, PathBuf};
 
@@ -295,6 +293,7 @@ fn write_json_file(path: &Path, value: &Value) -> Result<()> {
 }
 
 /// Get the config path for an IDE target.
+#[allow(dead_code)] // Phase 2: per-target config paths
 pub fn config_path_for_target(target: IdeTarget, project_root: Option<&Path>) -> PathBuf {
     let base = project_root
         .map(|p| p.to_path_buf())
