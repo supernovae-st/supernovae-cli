@@ -46,7 +46,9 @@ pub async fn run(package: Option<&str>) -> Result<()> {
     let mut updated_count = 0;
 
     for name in &packages_to_update {
-        let installed = state.packages.get(name).unwrap();
+        let installed = state.packages.get(name).ok_or_else(|| {
+            SpnError::PackageNotFound(format!("Package {} disappeared from state", name))
+        })?;
 
         match client.fetch_latest(name).await {
             Ok(latest) => {
