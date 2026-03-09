@@ -105,6 +105,51 @@ pub struct IpcSchedulerStats {
     pub has_nika: bool,
 }
 
+// ============================================================================
+// WATCHER TYPES (IPC-friendly versions)
+// ============================================================================
+
+/// Recent project info for watcher status.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecentProjectInfo {
+    /// Absolute path to project root
+    pub path: String,
+    /// Last used timestamp (ISO 8601)
+    pub last_used: String,
+}
+
+/// Foreign MCP info for watcher status.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ForeignMcpInfo {
+    /// Server name (e.g., "github-copilot")
+    pub name: String,
+    /// Source editor: "claude_code", "cursor", "windsurf"
+    pub source: String,
+    /// Scope: "global" or "project:/path/to/project"
+    pub scope: String,
+    /// Detection timestamp (ISO 8601)
+    pub detected: String,
+}
+
+/// Watcher status for IPC responses.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatcherStatusInfo {
+    /// Whether the watcher is running
+    pub is_running: bool,
+    /// Number of paths being watched
+    pub watched_count: usize,
+    /// Paths currently being watched
+    pub watched_paths: Vec<String>,
+    /// Debounce duration in milliseconds
+    pub debounce_ms: u64,
+    /// Recently used projects
+    pub recent_projects: Vec<RecentProjectInfo>,
+    /// Foreign MCPs pending adoption
+    pub foreign_pending: Vec<ForeignMcpInfo>,
+    /// Foreign MCPs explicitly ignored
+    pub foreign_ignored: Vec<String>,
+}
+
 /// Progress update for model operations (pull, load, delete).
 ///
 /// Used for streaming progress from daemon to CLI during long-running operations.
@@ -288,6 +333,11 @@ pub enum Request {
     /// Get scheduler statistics.
     #[serde(rename = "JOB_STATS")]
     JobStats,
+
+    // ==================== Watcher Commands ====================
+    /// Get watcher status (watched paths, foreign MCPs, recent projects).
+    #[serde(rename = "WATCHER_STATUS")]
+    WatcherStatus,
 }
 
 /// Response from the daemon.
@@ -356,6 +406,16 @@ pub enum Response {
         /// Error message if failed
         #[serde(default)]
         error: Option<String>,
+    },
+
+    // ==================== Watcher Responses ====================
+    // NOTE: WatcherStatusResult MUST come before JobStatusResult because
+    // JobStatusResult has Option<...> which matches any JSON with missing fields.
+    // With untagged enums, serde tries variants in order.
+    /// Watcher status response.
+    WatcherStatusResult {
+        /// Watcher status info
+        status: WatcherStatusInfo,
     },
 
     // ==================== Job Responses ====================
@@ -662,5 +722,67 @@ mod tests {
         let json = serde_json::to_string(&response).unwrap();
         assert!(json.contains("cancelled"));
         assert!(json.contains("def67890"));
+    }
+
+    // ==================== Watcher Protocol Tests ====================
+
+    #[test]
+    fn test_watcher_request_serialization() {
+        let request = Request::WatcherStatus;
+        let json = serde_json::to_string(&request).unwrap();
+        assert_eq!(json, r#"{"cmd":"WATCHER_STATUS"}"#);
+    }
+
+    #[test]
+    fn test_watcher_status_info_serialization() {
+        let status = WatcherStatusInfo {
+            is_running: true,
+            watched_count: 8,
+            watched_paths: vec![
+                "~/.spn/mcp.yaml".into(),
+                "~/.claude.json".into(),
+            ],
+            debounce_ms: 500,
+            recent_projects: vec![RecentProjectInfo {
+                path: "/Users/test/project".into(),
+                last_used: "2026-03-09T12:00:00Z".into(),
+            }],
+            foreign_pending: vec![ForeignMcpInfo {
+                name: "github-copilot".into(),
+                source: "cursor".into(),
+                scope: "global".into(),
+                detected: "2026-03-09T11:00:00Z".into(),
+            }],
+            foreign_ignored: vec!["some-mcp".into()],
+        };
+
+        let json = serde_json::to_string(&status).unwrap();
+        assert!(json.contains("is_running"));
+        assert!(json.contains("watched_count"));
+        assert!(json.contains("github-copilot"));
+
+        // Verify round-trip
+        let parsed: WatcherStatusInfo = serde_json::from_str(&json).unwrap();
+        assert!(parsed.is_running);
+        assert_eq!(parsed.watched_count, 8);
+        assert_eq!(parsed.recent_projects.len(), 1);
+        assert_eq!(parsed.foreign_pending.len(), 1);
+    }
+
+    #[test]
+    fn test_watcher_status_response_variant() {
+        let status = WatcherStatusInfo {
+            is_running: true,
+            watched_count: 5,
+            watched_paths: vec![],
+            debounce_ms: 500,
+            recent_projects: vec![],
+            foreign_pending: vec![],
+            foreign_ignored: vec![],
+        };
+        let response = Response::WatcherStatusResult { status };
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("is_running"));
+        assert!(json.contains("watched_count"));
     }
 }
