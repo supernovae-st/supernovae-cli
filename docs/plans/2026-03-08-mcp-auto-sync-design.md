@@ -662,7 +662,7 @@ Add to pending list
 
 **Log output:**
 - Daemon stderr: `[WATCH] Foreign MCP detected: {name} (source: cursor)`
-- Visible via `spn daemon logs`
+- Visible via `spn mcp logs` or daemon stderr
 
 ### New Files
 

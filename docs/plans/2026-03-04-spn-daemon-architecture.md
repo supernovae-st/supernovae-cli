@@ -727,7 +727,7 @@ src/
 spn daemon start [--foreground]   # Start daemon
 spn daemon stop                   # Stop daemon
 spn daemon status                 # Show status
-spn daemon logs                   # Tail daemon logs
+# spn daemon logs                 # (not implemented - use spn mcp logs)
 
 # Service management
 spn service start <name>          # Start service (ollama, mcp-server-*)

@@ -173,7 +173,7 @@ Security Summary:
 | `spn daemon start` | ✅ | **TESTED** - Starts background daemon |
 | `spn daemon stop` | ✅ | **TESTED** - Graceful shutdown |
 | `spn daemon status` | ✅ | **TESTED** - Shows running status |
-| `spn daemon logs` | ✅ | CLI help confirms existence |
+| `spn daemon logs` | ❌ | Not implemented - use `spn mcp logs` instead |
 
 ---
 
