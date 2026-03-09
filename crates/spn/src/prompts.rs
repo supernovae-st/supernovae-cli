@@ -322,7 +322,6 @@ pub fn select_model() -> PromptResult<String> {
 // ============================================================================
 
 /// Confirm a destructive operation
-#[allow(dead_code)]
 pub fn confirm_delete(name: &str, details: Option<&str>) -> PromptResult<bool> {
     let prompt = match details {
         Some(d) => format!("Delete {} ({})? This cannot be undone", name, d),

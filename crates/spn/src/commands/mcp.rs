@@ -38,12 +38,13 @@ pub async fn run(command: McpCommands) -> Result<()> {
             name,
             global,
             project,
+            yes,
         } => {
             let name = match name {
                 Some(n) => n,
                 None => prompts::select_mcp_server()?,
             };
-            run_remove(&mcp, &name, global, project).await
+            run_remove(&mcp, &name, global, project, yes).await
         }
         McpCommands::List {
             global,
@@ -149,7 +150,13 @@ async fn run_add(
 }
 
 /// Remove an MCP server.
-async fn run_remove(mcp: &McpConfigManager, name: &str, global: bool, project: bool) -> Result<()> {
+async fn run_remove(
+    mcp: &McpConfigManager,
+    name: &str,
+    global: bool,
+    project: bool,
+    skip_confirm: bool,
+) -> Result<()> {
     let scope = determine_scope(global, project);
 
     println!(
@@ -159,6 +166,12 @@ async fn run_remove(mcp: &McpConfigManager, name: &str, global: bool, project: b
         ds::muted("from"),
         ds::muted(scope.to_string())
     );
+
+    // Confirm deletion (unless --yes)
+    if !skip_confirm && !prompts::confirm_delete(name, Some(&scope.to_string()))? {
+        println!("{}", ds::info_line("Cancelled"));
+        return Ok(());
+    }
 
     match mcp.remove_server(name, scope) {
         Ok(true) => {
