@@ -160,3 +160,146 @@ impl ToolResult {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_list_tools_returns_all_tools() {
+        let tools = list_tools();
+
+        assert_eq!(tools.len(), 6, "Expected 6 tools");
+
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert!(names.contains(&"spn_secrets_get"));
+        assert!(names.contains(&"spn_secrets_list"));
+        assert!(names.contains(&"spn_secrets_check"));
+        assert!(names.contains(&"spn_model_list"));
+        assert!(names.contains(&"spn_model_run"));
+        assert!(names.contains(&"spn_status"));
+    }
+
+    #[test]
+    fn test_tool_names_constant_matches_list_tools() {
+        let tools = list_tools();
+        let tool_names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+
+        for name in TOOL_NAMES {
+            assert!(
+                tool_names.contains(name),
+                "TOOL_NAMES contains '{}' but list_tools() doesn't return it",
+                name
+            );
+        }
+
+        for name in &tool_names {
+            assert!(
+                TOOL_NAMES.contains(name),
+                "list_tools() returns '{}' but TOOL_NAMES doesn't contain it",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn test_tool_schemas_are_valid_json_schema() {
+        let tools = list_tools();
+
+        for tool in &tools {
+            // Every schema must be an object
+            assert!(
+                tool.input_schema.is_object(),
+                "Tool '{}' schema is not an object",
+                tool.name
+            );
+
+            // Every schema must have "type": "object"
+            assert_eq!(
+                tool.input_schema["type"], "object",
+                "Tool '{}' schema type is not 'object'",
+                tool.name
+            );
+
+            // Every schema must have "properties"
+            assert!(
+                tool.input_schema.get("properties").is_some(),
+                "Tool '{}' schema has no 'properties' field",
+                tool.name
+            );
+        }
+    }
+
+    #[test]
+    fn test_secrets_get_requires_provider() {
+        let tools = list_tools();
+        let tool = tools.iter().find(|t| t.name == "spn_secrets_get").unwrap();
+
+        let required = tool.input_schema["required"].as_array().unwrap();
+        assert!(required.contains(&serde_json::json!("provider")));
+    }
+
+    #[test]
+    fn test_model_run_requires_model_and_prompt() {
+        let tools = list_tools();
+        let tool = tools.iter().find(|t| t.name == "spn_model_run").unwrap();
+
+        let required = tool.input_schema["required"].as_array().unwrap();
+        assert!(required.contains(&serde_json::json!("model")));
+        assert!(required.contains(&serde_json::json!("prompt")));
+    }
+
+    #[test]
+    fn test_tool_result_text_serialize() {
+        let result = ToolResult::text("Hello, world!");
+        let json = serde_json::to_string(&result).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed["content"][0]["type"], "text");
+        assert_eq!(parsed["content"][0]["text"], "Hello, world!");
+        assert!(parsed.get("isError").is_none());
+    }
+
+    #[test]
+    fn test_tool_result_error_serialize() {
+        let result = ToolResult::error("Something went wrong");
+        let json = serde_json::to_string(&result).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed["content"][0]["type"], "text");
+        assert_eq!(parsed["content"][0]["text"], "Something went wrong");
+        assert_eq!(parsed["isError"], true);
+    }
+
+    #[test]
+    fn test_secrets_get_params_deserialize() {
+        let json = r#"{"provider": "anthropic"}"#;
+        let params: SecretsGetParams = serde_json::from_str(json).unwrap();
+        assert_eq!(params.provider, "anthropic");
+    }
+
+    #[test]
+    fn test_model_run_params_deserialize() {
+        let json = r#"{
+            "model": "llama3.2:3b",
+            "prompt": "Hello",
+            "system": "Be helpful",
+            "temperature": 0.7
+        }"#;
+        let params: ModelRunParams = serde_json::from_str(json).unwrap();
+
+        assert_eq!(params.model, "llama3.2:3b");
+        assert_eq!(params.prompt, "Hello");
+        assert_eq!(params.system, Some("Be helpful".to_string()));
+        assert_eq!(params.temperature, Some(0.7));
+    }
+
+    #[test]
+    fn test_model_run_params_optional_fields() {
+        let json = r#"{"model": "llama3.2:3b", "prompt": "Hello"}"#;
+        let params: ModelRunParams = serde_json::from_str(json).unwrap();
+
+        assert!(params.system.is_none());
+        assert!(params.temperature.is_none());
+    }
+}
