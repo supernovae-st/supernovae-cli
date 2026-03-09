@@ -402,20 +402,28 @@ fn build_mcp_config(package_path: &Path, mcp: &McpConfig) -> Value {
 /// Create a symlink from source to target.
 ///
 /// On Unix, creates a symbolic link. On Windows, creates a junction.
+/// This function handles TOCTOU by attempting removal without existence checks.
 #[cfg(unix)]
 fn create_symlink(source: &Path, target: &Path) -> Result<(), std::io::Error> {
-    // Remove existing symlink/file if present
-    if target.exists() || target.is_symlink() {
-        if target.is_dir() && !target.is_symlink() {
-            std::fs::remove_dir_all(target)?;
-        } else {
-            std::fs::remove_file(target)?;
-        }
-    }
-
-    // Ensure parent directory exists
+    // Ensure parent directory exists first
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent)?;
+    }
+
+    // Remove existing target without checking existence (avoids TOCTOU)
+    // Try remove_file first (handles files and symlinks)
+    match std::fs::remove_file(target) {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) if e.kind() == std::io::ErrorKind::IsADirectory => {
+            // Target is a real directory, remove it
+            std::fs::remove_dir_all(target)?;
+        }
+        // On some systems, EISDIR is reported as PermissionDenied for remove_file on dirs
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied && target.is_dir() => {
+            std::fs::remove_dir_all(target)?;
+        }
+        Err(e) => return Err(e),
     }
 
     std::os::unix::fs::symlink(source, target)
@@ -423,18 +431,19 @@ fn create_symlink(source: &Path, target: &Path) -> Result<(), std::io::Error> {
 
 #[cfg(windows)]
 fn create_symlink(source: &Path, target: &Path) -> Result<(), std::io::Error> {
-    // Remove existing symlink/file if present
-    if target.exists() {
-        if target.is_dir() {
-            std::fs::remove_dir_all(target)?;
-        } else {
-            std::fs::remove_file(target)?;
-        }
-    }
-
-    // Ensure parent directory exists
+    // Ensure parent directory exists first
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent)?;
+    }
+
+    // Remove existing target without checking existence (avoids TOCTOU)
+    match std::fs::remove_file(target) {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied && target.is_dir() => {
+            std::fs::remove_dir_all(target)?;
+        }
+        Err(e) => return Err(e),
     }
 
     // On Windows, use junction for directories (doesn't require admin privileges)
