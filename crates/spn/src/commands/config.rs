@@ -59,12 +59,11 @@ fn parse_editor(editor: &str) -> Result<ParsedEditor> {
     })
 }
 
-/// Validate an editor string before use (used for testing).
+/// Validate an editor string before use.
 ///
 /// This performs explicit checks for dangerous patterns as a defense-in-depth
 /// measure. The actual `parse_editor` function uses shell_words for safe parsing,
 /// but this validation provides clear error messages for suspicious inputs.
-#[cfg(test)]
 fn validate_editor(editor: &str) -> Result<()> {
     // Reject empty
     if editor.trim().is_empty() {
@@ -456,6 +455,7 @@ async fn edit_config(local_flag: bool, user: bool, mcp: bool) -> Result<()> {
     let editor_str = env::var("EDITOR")
         .or_else(|_| env::var("VISUAL"))
         .unwrap_or_else(|_| "vi".to_string());
+    validate_editor(&editor_str)?;
     let editor = parse_editor(&editor_str)?;
 
     if !path.exists() {
