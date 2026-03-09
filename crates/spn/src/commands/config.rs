@@ -3,48 +3,60 @@
 //! Manages configuration across three scopes: Global, Team, Local.
 
 use std::env;
-use std::path::Path;
 
 use crate::config::{global, local, resolver::format_value, scope::ScopeType, team, ConfigResolver};
 use crate::error::{Result, SpnError};
 use crate::ux::design_system as ds;
 use crate::ConfigCommands;
 
-/// Validate that an editor command is safe to execute.
+/// Parsed editor command with program and arguments.
+struct ParsedEditor {
+    program: String,
+    args: Vec<String>,
+}
+
+/// Parse and validate an editor command safely.
 ///
-/// Returns the validated editor command, or an error if the command is invalid.
-/// This prevents command injection attacks via malicious EDITOR env vars.
-fn validate_editor(editor: &str) -> Result<&str> {
+/// Uses shell_words to properly parse editor commands like "code --wait"
+/// or "/usr/bin/vim -u NONE". This prevents command injection attacks
+/// while supporting editor commands with arguments.
+fn parse_editor(editor: &str) -> Result<ParsedEditor> {
     // Check for empty editor
-    if editor.is_empty() {
+    if editor.trim().is_empty() {
         return Err(SpnError::ConfigError("EDITOR is empty".to_string()));
     }
 
-    // Shell metacharacters that could enable command injection
-    const SHELL_METACHARACTERS: &[char] = &[
-        ';', '|', '&', '$', '`', '(', ')', '{', '}', '[', ']', '<', '>', '\n', '\r', '\0',
-    ];
+    // Parse using shell_words for proper quoting/escaping handling
+    let parts = shell_words::split(editor).map_err(|e| {
+        SpnError::ConfigError(format!("Invalid EDITOR syntax: {}", e))
+    })?;
 
-    // Check for shell metacharacters
-    if editor.chars().any(|c| SHELL_METACHARACTERS.contains(&c)) {
+    if parts.is_empty() {
+        return Err(SpnError::ConfigError("EDITOR is empty".to_string()));
+    }
+
+    let (program, args) = parts.split_first().unwrap();
+
+    // Validate the program exists
+    if which::which(program).is_err() {
+        // Check if it's an absolute path that doesn't exist
+        if program.starts_with('/') {
+            return Err(SpnError::ConfigError(format!(
+                "Editor not found: {}",
+                program
+            )));
+        }
+        // For relative/bare commands, which::which failure is the indicator
         return Err(SpnError::ConfigError(format!(
-            "EDITOR contains invalid characters: {}",
-            editor
+            "Editor not found in PATH: {}",
+            program
         )));
     }
 
-    // Split editor command (may have args like "code --wait")
-    let editor_cmd = editor.split_whitespace().next().unwrap_or(editor);
-
-    // If absolute path, verify it exists
-    if editor_cmd.starts_with('/') && !Path::new(editor_cmd).exists() {
-        return Err(SpnError::ConfigError(format!(
-            "Editor not found: {}",
-            editor_cmd
-        )));
-    }
-
-    Ok(editor)
+    Ok(ParsedEditor {
+        program: program.to_string(),
+        args: args.to_vec(),
+    })
 }
 
 pub async fn run(command: ConfigCommands) -> Result<()> {
@@ -404,11 +416,11 @@ async fn edit_config(local_flag: bool, user: bool, mcp: bool) -> Result<()> {
         team::package_config_path(&cwd)
     };
 
-    // Determine and validate editor
-    let editor = env::var("EDITOR")
+    // Determine and parse editor command
+    let editor_str = env::var("EDITOR")
         .or_else(|_| env::var("VISUAL"))
         .unwrap_or_else(|_| "vi".to_string());
-    let editor = validate_editor(&editor)?;
+    let editor = parse_editor(&editor_str)?;
 
     if !path.exists() {
         println!("⚠️  File does not exist: {}", path.display());
@@ -428,10 +440,13 @@ async fn edit_config(local_flag: bool, user: bool, mcp: bool) -> Result<()> {
         }
     }
 
-    println!("✏️  Opening {} with {}...", path.display(), editor);
+    println!("✏️  Opening {} with {}...", path.display(), editor.program);
 
-    // Open editor
-    std::process::Command::new(editor).arg(&path).status()?;
+    // Open editor with proper argument handling (prevents command injection)
+    std::process::Command::new(&editor.program)
+        .args(&editor.args)
+        .arg(&path)
+        .status()?;
 
     println!("   Config saved.");
 
