@@ -119,7 +119,10 @@ impl McpServer {
             },
         };
 
-        McpResponse::success(id, serde_json::to_value(result).unwrap())
+        match serde_json::to_value(result) {
+            Ok(value) => McpResponse::success(id, value),
+            Err(e) => McpResponse::error(id, -32603, format!("Internal error: {}", e)),
+        }
     }
 
     fn handle_tools_list(&self, id: Option<Value>) -> McpResponse {
@@ -142,7 +145,10 @@ impl McpServer {
             _ => ToolResult::error(format!("Unknown tool: {}", name)),
         };
 
-        McpResponse::success(id, serde_json::to_value(result).unwrap())
+        match serde_json::to_value(result) {
+            Ok(value) => McpResponse::success(id, value),
+            Err(e) => McpResponse::error(id, -32603, format!("Internal error: {}", e)),
+        }
     }
 
     async fn tool_secrets_get(&self, arguments: Value) -> ToolResult {
