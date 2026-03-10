@@ -1,6 +1,6 @@
 [package]
 name = "spn-mcp"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["Thibaut MÉLEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
 description = "Dynamic REST-to-MCP wrapper - expose REST APIs as MCP tools"

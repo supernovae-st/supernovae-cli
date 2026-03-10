@@ -50,7 +50,7 @@ docker = []
 spn-client = { version = "0.3.4", path = "../spn-client" }
 spn-core = { version = "0.2.0", path = "../spn-core" }
 spn-keyring = { version = "0.1.5", path = "../spn-keyring", default-features = false }
-spn-mcp = { version = "0.1.4", path = "../spn-mcp" }
+spn-mcp = { version = "0.1.5", path = "../spn-mcp" }
 # Native model inference (mistral.rs)
 spn-native = { version = "0.1.0", path = "../spn-native", optional = true }
 
