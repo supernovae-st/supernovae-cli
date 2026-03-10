@@ -252,6 +252,17 @@ impl fmt::Display for BackendError {
     }
 }
 
+impl BackendError {
+    /// Returns `true` if this error is transient and the operation should be retried.
+    ///
+    /// Retryable errors include network failures and temporary backend unavailability.
+    /// Non-retryable errors include model not found, insufficient memory, etc.
+    #[must_use]
+    pub const fn is_retryable(&self) -> bool {
+        matches!(self, Self::NetworkError(_) | Self::NotRunning)
+    }
+}
+
 /// Configuration for loading a model.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -785,5 +796,19 @@ mod tests {
 
         // Different dimensions should return 0.0
         assert_eq!(a.cosine_similarity(&b), 0.0);
+    }
+
+    #[test]
+    fn test_backend_error_is_retryable() {
+        // Retryable errors (transient failures)
+        assert!(BackendError::NetworkError("timeout".to_string()).is_retryable());
+        assert!(BackendError::NotRunning.is_retryable());
+
+        // Non-retryable errors (permanent failures)
+        assert!(!BackendError::ModelNotFound("model".to_string()).is_retryable());
+        assert!(!BackendError::AlreadyLoaded("model".to_string()).is_retryable());
+        assert!(!BackendError::InsufficientMemory.is_retryable());
+        assert!(!BackendError::ProcessError("error".to_string()).is_retryable());
+        assert!(!BackendError::BackendSpecific("error".to_string()).is_retryable());
     }
 }
