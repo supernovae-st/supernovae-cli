@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **docs**: Align all version references to v0.15.5 across CLAUDE.md and README.md
+- **docs**: Update crate versions table (spn-core 0.1.2, spn-keyring 0.1.4, spn-ollama 0.1.6, spn-client 0.3.3, spn-mcp 0.1.4, spn-cli 0.15.5)
+- **docs**: Fix broken protocol documentation reference in spn-client/README.md
+- **deps**: Fix spn-client version mismatch in spn-mcp/Cargo.toml (0.3.2 → 0.3.3)
+
 ### Fixed
 
 - **ollama**: Extend retry logic to all network operations (d3eda95)

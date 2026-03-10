@@ -146,7 +146,7 @@ Download from [GitHub Releases](https://github.com/supernovae-st/supernovae-cli/
 ### Verify Installation
 
 ```bash
-spn --version  # spn-cli 0.15.4
+spn --version  # spn-cli 0.15.5
 spn doctor     # Health check
 ```
 
@@ -432,7 +432,7 @@ spn mcp add ./server.yaml
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Current:** v0.15.4 (Phase A in progress)
+**Current:** v0.15.5 (Phase A in progress)
 
 ---
 
@@ -451,7 +451,7 @@ spn mcp add ./server.yaml
 │       ↓                                                                         │
 │  ┌────┴────────────────────────────────────┐                                   │
 │  ↓                                         ↓                                   │
-│  spn-cli (0.15.4)                    spn-mcp (0.1.4)                            │
+│  spn-cli (0.15.5)                    spn-mcp (0.1.4)                            │
 │  • Main CLI binary                   • REST-to-MCP wrapper                     │
 │  • Daemon process                    • OpenAPI parser                          │
 │  • Job scheduler                     • Rate limiting                           │
@@ -507,7 +507,7 @@ flowchart TB
 
 | Project | Description | Version |
 |---------|-------------|---------|
-| **spn** 🌟 | The Agentic AI Toolkit | v0.15.4 |
+| **spn** 🌟 | The Agentic AI Toolkit | v0.15.5 |
 | **Nika** 🦋 | YAML workflow engine (5 semantic verbs) | v0.21.1 |
 | **NovaNet** 🧠 | Knowledge graph (Neo4j + MCP) | v0.17.2 |
 

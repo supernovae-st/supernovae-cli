@@ -1,12 +1,12 @@
 # supernovae-cli
 
-**SuperNovae CLI (`spn`)** v0.15.3 — The Agentic AI Toolkit for the SuperNovae ecosystem.
+**SuperNovae CLI (`spn`)** v0.15.5 — The Agentic AI Toolkit for the SuperNovae ecosystem.
 
 ## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  spn — The Agentic AI Toolkit v0.15.3                                           │
+│  spn — The Agentic AI Toolkit v0.15.5                                           │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │  Package Commands:                                                              │
@@ -38,7 +38,7 @@
 │  ├── spn skill add/remove/list  Manage skills (via skills.sh)                   │
 │  └── spn mcp add/remove/list    Manage MCP servers (via npm)                    │
 │                                                                                 │
-│  Setup Commands (v0.15.3):                                                      │
+│  Setup Commands (v0.15.5):                                                      │
 │  ├── spn setup                  Interactive onboarding wizard                   │
 │  ├── spn setup nika             Install and configure Nika workflow engine      │
 │  └── spn setup novanet          Install and configure NovaNet knowledge graph   │
@@ -63,7 +63,7 @@
 - **Security:** keyring (OS keychain), secrecy, zeroize, libc (mlock)
 - **Performance:** rustc-hash (FxHashMap)
 
-## Workspace Architecture (v0.15.3)
+## Workspace Architecture (v0.15.5)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -99,7 +99,7 @@
 │              │                                               │                  │
 │              ▼                                               ▼                  │
 │  ┌────────────────────────┐                   ┌────────────────────────┐        │
-│  │  spn-cli (v0.15.3)     │                   │  Nika (v0.21.1)        │        │
+│  │  spn-cli (v0.15.5)     │                   │  Nika (v0.21.1)        │        │
 │  │  • provider set/get    │                   │  • spn-daemon feature  │        │
 │  │  • model pull/load     │                   │  • KNOWN_PROVIDERS     │        │
 │  │  • setup wizard        │                   │  • Unified secrets     │        │
@@ -265,7 +265,7 @@ supernovae-cli/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Release Automation (v0.15.3)
+## Release Automation (v0.15.5)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -296,7 +296,7 @@ supernovae-cli/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Feature Flags (v0.15.3)
+## Feature Flags (v0.15.5)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -344,7 +344,7 @@ cargo run -p spn-cli -- provider test all
 cargo run -p spn-cli -- model list
 cargo run -p spn-cli -- model pull llama3.2:7b
 
-# Setup (v0.15.3)
+# Setup (v0.15.5)
 cargo run -p spn-cli -- setup              # Interactive wizard
 cargo run -p spn-cli -- setup nika         # Install Nika
 cargo run -p spn-cli -- setup novanet      # Install NovaNet
@@ -369,12 +369,12 @@ cargo install --path crates/spn
 
 | Crate | Version | crates.io |
 |-------|---------|-----------|
-| spn-core | 0.1.1 | [Published](https://crates.io/crates/spn-core) |
-| spn-keyring | 0.1.3 | [Published](https://crates.io/crates/spn-keyring) |
-| spn-ollama | 0.1.4 | [Published](https://crates.io/crates/spn-ollama) |
-| spn-client | 0.3.1 | [Published](https://crates.io/crates/spn-client) |
-| spn-mcp | 0.1.2 | [Published](https://crates.io/crates/spn-mcp) |
-| spn-cli | 0.15.3 | [Published](https://crates.io/crates/spn-cli) |
+| spn-core | 0.1.2 | [Published](https://crates.io/crates/spn-core) |
+| spn-keyring | 0.1.4 | [Published](https://crates.io/crates/spn-keyring) |
+| spn-ollama | 0.1.6 | [Published](https://crates.io/crates/spn-ollama) |
+| spn-client | 0.3.3 | [Published](https://crates.io/crates/spn-client) |
+| spn-mcp | 0.1.4 | [Published](https://crates.io/crates/spn-mcp) |
+| spn-cli | 0.15.5 | [Published](https://crates.io/crates/spn-cli) |
 
 ## Storage Layout
 

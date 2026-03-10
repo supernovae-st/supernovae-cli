@@ -109,7 +109,7 @@ Socket: ~/.spn/daemon.sock
 Format: [4-byte big-endian length][JSON payload]
 ```
 
-See the [protocol documentation](../spn/src/daemon/README.md) for details.
+Protocol: Length-prefixed JSON messages (4-byte big-endian length + JSON payload).
 
 ## Security
 
