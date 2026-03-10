@@ -361,7 +361,7 @@ cargo install --path crates/spn
 
 ## Test Stats
 
-- **1288 tests passing** across workspace
+- **1563 tests passing** across workspace
 - **Zero clippy errors** with `-D warnings`
 - **MSRV:** Rust 1.85+
 
@@ -374,6 +374,7 @@ cargo install --path crates/spn
 | spn-ollama | 0.1.6 | [Published](https://crates.io/crates/spn-ollama) |
 | spn-client | 0.3.3 | [Published](https://crates.io/crates/spn-client) |
 | spn-mcp | 0.1.4 | [Published](https://crates.io/crates/spn-mcp) |
+| spn-providers | 0.1.0 | [Published](https://crates.io/crates/spn-providers) |
 | spn-cli | 0.15.5 | [Published](https://crates.io/crates/spn-cli) |
 
 ## Storage Layout

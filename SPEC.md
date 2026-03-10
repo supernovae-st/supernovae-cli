@@ -4,7 +4,7 @@
 **Version:** v0.15.5
 **License:** AGPL-3.0-or-later
 **Language:** Rust (MSRV 1.85+)
-**Status:** Production-ready with 1288+ tests
+**Status:** Production-ready with 1563+ tests
 
 ---
 
@@ -36,10 +36,11 @@ Problem:                          Solution:
 ### 2.1 Workspace Structure
 
 ```
-supernovae-cli/ (6 crates, strictly layered)
+supernovae-cli/ (7 crates, strictly layered)
 ├── spn-core/        ← Layer 0: Definitions (zero deps)
 ├── spn-keyring/     ← Layer 1: OS keychain wrapper
 ├── spn-ollama/      ← Layer 1: Model backend (Ollama client)
+├── spn-providers/   ← Layer 1: Backend abstraction (cloud + local)
 ├── spn-client/      ← Layer 2: Daemon SDK (IPC types)
 ├── spn-mcp/         ← Layer 2: REST-to-MCP wrapper
 └── spn/             ← Layer 3: Main CLI + daemon
@@ -141,6 +142,22 @@ Manages Ollama API for model download, loading, and inference.
 - Download models from Ollama registry (100+ available)
 - Query VRAM usage and model info
 - Infer hardware recommendations (future)
+
+#### **spn-providers (0.1.0)** — Backend abstraction layer
+
+Provides unified traits and orchestration for cloud and local LLM backends.
+
+**Exports:**
+- `ModelBackend` trait — Interface for local backends (Ollama, llama.cpp)
+- `CloudBackend` trait — Interface for cloud providers (Anthropic, OpenAI, etc.)
+- `BackendRegistry` — Manages registered backends
+- `ModelOrchestrator` — Routes `@models/` aliases to correct backends
+- `ModelRef`, `ModelAlias` — Model resolution types
+
+**Features:**
+- Conditional compilation via feature flags (anthropic, openai, mistral, etc.)
+- Unified error handling via `BackendsError`
+- Async trait support via `async-trait`
 
 #### **spn-mcp (0.1.4)** — REST-to-MCP wrapper
 
@@ -704,7 +721,7 @@ cargo build --release --no-default-features --features docker
 
 ## 9. Testing Strategy
 
-**Test Coverage:** 1288+ tests passing
+**Test Coverage:** 1563+ tests passing
 
 | Category | Count | Examples |
 |----------|-------|----------|

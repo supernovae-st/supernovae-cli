@@ -529,7 +529,7 @@ cd supernovae-cli
 # Build all crates
 cargo build --workspace
 
-# Run tests (1288+ passing)
+# Run tests (1563+ passing)
 cargo test --workspace
 
 # Run linter (zero warnings)
@@ -631,6 +631,6 @@ cargo test --test integration
 ---
 
 <sub>MIT Licensed • Made with 💜 and 🦀 by the SuperNovae team</sub><br>
-<sup>Zero Clippy Warnings • 1288+ Tests • Automated Releases • Open Source First</sup>
+<sup>Zero Clippy Warnings • 1563+ Tests • Automated Releases • Open Source First</sup>
 
 </div>
