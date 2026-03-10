@@ -783,11 +783,14 @@ mod tests {
     #[test]
     fn test_check_memory_protection() {
         let result = check_memory_protection();
-        // Should always return either Pass or Warning
+        // Should always return either Pass or Warning (never Fail or Skip)
         match result {
             CheckResult::Pass(msg) => assert!(msg.contains("mlock")),
             CheckResult::Warning(msg) => assert!(msg.contains("mlock")),
-            _ => panic!("Unexpected result type"),
+            other => unreachable!(
+                "check_memory_protection should only return Pass or Warning, got: {:?}",
+                other
+            ),
         }
     }
 }
