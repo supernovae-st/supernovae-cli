@@ -9,8 +9,10 @@ use spn_core::{
     BackendError, ChatMessage, ChatOptions, ChatResponse, ChatRole, EmbeddingResponse, ModelInfo,
     PullProgress,
 };
-use tracing::{debug, trace};
+use tokio::time::sleep;
+use tracing::{debug, trace, warn};
 
+use std::future::Future;
 use std::time::Duration;
 
 /// Default Ollama API endpoint.
@@ -153,6 +155,38 @@ impl OllamaClient {
         &self.endpoint
     }
 
+    /// Execute an async operation with retry logic and exponential backoff.
+    ///
+    /// Retries up to `max_retries` times on transient failures, with exponential
+    /// backoff starting at `retry_delay`.
+    async fn with_retry<F, Fut, T>(&self, operation: F) -> Result<T, BackendError>
+    where
+        F: Fn() -> Fut,
+        Fut: Future<Output = Result<T, BackendError>>,
+    {
+        let mut attempts = 0;
+        let mut delay = self.config.retry_delay;
+
+        loop {
+            match operation().await {
+                Ok(result) => return Ok(result),
+                Err(e) if attempts < self.config.max_retries && e.is_retryable() => {
+                    attempts += 1;
+                    warn!(
+                        attempt = attempts,
+                        max = self.config.max_retries,
+                        delay_ms = delay.as_millis(),
+                        error = %e,
+                        "Retrying after transient error"
+                    );
+                    sleep(delay).await;
+                    delay *= 2; // Exponential backoff
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
+
     /// Check if Ollama is running by pinging the API.
     pub async fn is_running(&self) -> bool {
         let url = format!("{}/api/tags", self.endpoint);
@@ -174,27 +208,30 @@ impl OllamaClient {
         let url = format!("{}/api/tags", self.endpoint);
         debug!(url = %url, "Listing models");
 
-        let response = self
-            .client
-            .get(&url)
-            .timeout(self.config.request_timeout)
-            .send()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+        self.with_retry(|| async {
+            let response = self
+                .client
+                .get(&url)
+                .timeout(self.config.request_timeout)
+                .send()
+                .await
+                .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        if !response.status().is_success() {
-            return Err(BackendError::NetworkError(format!(
-                "API returned status {}",
-                response.status()
-            )));
-        }
+            if !response.status().is_success() {
+                return Err(BackendError::NetworkError(format!(
+                    "API returned status {}",
+                    response.status()
+                )));
+            }
 
-        let body: ListModelsResponse = response
-            .json()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+            let body: ListModelsResponse = response
+                .json()
+                .await
+                .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        Ok(body.models.into_iter().map(Into::into).collect())
+            Ok(body.models.into_iter().map(Into::into).collect())
+        })
+        .await
     }
 
     /// Get information about a specific model.
@@ -205,45 +242,51 @@ impl OllamaClient {
     /// Returns `BackendError::NetworkError` if the API request fails.
     pub async fn model_info(&self, name: &str) -> Result<ModelInfo, BackendError> {
         let url = format!("{}/api/show", self.endpoint);
+        let name = name.to_string();
         debug!(url = %url, model = %name, "Getting model info");
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&ShowRequest {
-                name: name.to_string(),
-            })
-            .timeout(self.config.request_timeout)
-            .send()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+        self.with_retry(|| {
+            let name = name.clone();
+            let url = url.clone();
+            async move {
+                let response = self
+                    .client
+                    .post(&url)
+                    .json(&ShowRequest { name: name.clone() })
+                    .timeout(self.config.request_timeout)
+                    .send()
+                    .await
+                    .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        if response.status().as_u16() == 404 {
-            return Err(BackendError::ModelNotFound(name.to_string()));
-        }
+                if response.status().as_u16() == 404 {
+                    return Err(BackendError::ModelNotFound(name));
+                }
 
-        if !response.status().is_success() {
-            return Err(BackendError::NetworkError(format!(
-                "API returned status {}",
-                response.status()
-            )));
-        }
+                if !response.status().is_success() {
+                    return Err(BackendError::NetworkError(format!(
+                        "API returned status {}",
+                        response.status()
+                    )));
+                }
 
-        let body: ShowResponse = response
-            .json()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+                let body: ShowResponse = response
+                    .json()
+                    .await
+                    .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        Ok(ModelInfo {
-            name: name.to_string(),
-            size: body.size.unwrap_or(0),
-            quantization: body
-                .details
-                .as_ref()
-                .and_then(|d| d.quantization_level.clone()),
-            parameters: body.details.as_ref().and_then(|d| d.parameter_size.clone()),
-            digest: body.digest,
+                Ok(ModelInfo {
+                    name,
+                    size: body.size.unwrap_or(0),
+                    quantization: body
+                        .details
+                        .as_ref()
+                        .and_then(|d| d.quantization_level.clone()),
+                    parameters: body.details.as_ref().and_then(|d| d.parameter_size.clone()),
+                    digest: body.digest,
+                })
+            }
         })
+        .await
     }
 
     /// Pull a model, streaming progress updates.
@@ -949,5 +992,61 @@ mod tests {
         assert_eq!(info.size, 4_000_000_000);
         assert_eq!(info.parameters, Some("7B".to_string()));
         assert_eq!(info.quantization, Some("Q4_K_M".to_string()));
+    }
+
+    #[test]
+    fn test_config_with_retries() {
+        let config = ClientConfig::new()
+            .with_max_retries(5)
+            .with_retry_delay(Duration::from_millis(100));
+        assert_eq!(config.max_retries, 5);
+        assert_eq!(config.retry_delay, Duration::from_millis(100));
+    }
+
+    #[test]
+    fn test_config_no_retries() {
+        let config = ClientConfig::new().no_retries();
+        assert_eq!(config.max_retries, 0);
+    }
+
+    #[test]
+    fn test_backend_error_is_retryable() {
+        // Network errors are retryable
+        assert!(BackendError::NetworkError("timeout".to_string()).is_retryable());
+        assert!(BackendError::NotRunning.is_retryable());
+
+        // Other errors are not retryable
+        assert!(!BackendError::ModelNotFound("model".to_string()).is_retryable());
+        assert!(!BackendError::AlreadyLoaded("model".to_string()).is_retryable());
+        assert!(!BackendError::InsufficientMemory.is_retryable());
+        assert!(!BackendError::ProcessError("error".to_string()).is_retryable());
+        assert!(!BackendError::BackendSpecific("error".to_string()).is_retryable());
+    }
+
+    #[tokio::test]
+    async fn test_with_retry_succeeds_first_attempt() {
+        let client = OllamaClient::new();
+        let result: Result<i32, BackendError> = client
+            .with_retry(|| async { Ok(42) })
+            .await;
+        assert_eq!(result.unwrap(), 42);
+    }
+
+    #[tokio::test]
+    async fn test_with_retry_non_retryable_error() {
+        let config = ClientConfig::new().with_max_retries(3);
+        let client = OllamaClient::with_config("http://localhost:11434", config);
+
+        let attempts = std::sync::atomic::AtomicU32::new(0);
+        let result: Result<i32, BackendError> = client
+            .with_retry(|| {
+                attempts.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                async { Err(BackendError::ModelNotFound("test".to_string())) }
+            })
+            .await;
+
+        // Should fail immediately, no retries for ModelNotFound
+        assert!(matches!(result, Err(BackendError::ModelNotFound(_))));
+        assert_eq!(attempts.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 }
