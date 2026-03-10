@@ -49,7 +49,7 @@ git_release_enable = true
 # Root changelog
 changelog_path = "CHANGELOG.md"
 # Include all changes from workspace crates in release notes
-changelog_include = ["spn-core", "spn-keyring", "spn-ollama", "spn-client", "spn-mcp"]
+changelog_include = ["spn-core", "spn-keyring", "spn-ollama", "spn-client", "spn-mcp", "spn-providers"]
 
 [[package]]
 name = "spn-core"
@@ -86,4 +86,11 @@ name = "spn-mcp"
 git_release_enable = false
 git_tag_enable = false
 changelog_path = "crates/spn-mcp/CHANGELOG.md"
+changelog_update = false
+
+[[package]]
+name = "spn-providers"
+git_release_enable = false
+git_tag_enable = false
+changelog_path = "crates/spn-providers/CHANGELOG.md"
 changelog_update = false
