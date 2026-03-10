@@ -27,8 +27,8 @@
 │  ├── spn provider migrate       Move env vars to keychain                       │
 │  └── spn provider test <name>   Validate key format                             │
 │                                                                                 │
-│  Model Commands (transitioning to native):                                      │
-│  ├── spn model list             List local models (native backend coming)       │
+│  Model Commands (native inference via mistral.rs):                              │
+│  ├── spn model list             List local models                               │
 │  ├── spn model pull <name>      Download model from HuggingFace                 │
 │  ├── spn model load <name>      Load model into memory                          │
 │  ├── spn model unload <name>    Unload model from memory                        │
@@ -106,7 +106,7 @@
 │  └────────────────────────┘                   └────────────────────────┘        │
 │                                                                                 │
 │  Also in workspace:                                                             │
-│  • spn-native (HuggingFace model storage, native inference coming)              │
+│  • spn-native (HuggingFace model storage + native inference via mistral.rs)     │
 │  • spn-mcp (Dynamic REST-to-MCP wrapper, MCP server binary)                     │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -147,12 +147,16 @@ supernovae-cli/
 │   │       ├── keyring.rs  # Platform-specific keychain
 │   │       └── memory.rs   # mlock/LockedBuffer/Zeroizing
 │   │
-│   ├── spn-native/         # Native model storage
+│   ├── spn-native/         # Native model storage + inference
 │   │   └── src/
-│   │       ├── lib.rs
+│   │       ├── lib.rs      # Crate root + extract_quantization utility
 │   │       ├── storage.rs  # HuggingFaceStorage implementation
 │   │       ├── platform.rs # RAM detection, default paths
-│   │       └── error.rs    # NativeError types
+│   │       ├── error.rs    # NativeError types
+│   │       └── inference/  # mistral.rs runtime (feature: inference)
+│   │           ├── mod.rs
+│   │           ├── runtime.rs  # NativeRuntime implementation
+│   │           └── traits.rs   # InferenceBackend trait
 │   │
 │   ├── spn-client/         # SDK for external tools
 │   │   └── src/lib.rs      # Re-exports spn-core types
@@ -230,7 +234,8 @@ supernovae-cli/
 │  └── Object-safe version for runtime polymorphism (Box<dyn DynModelBackend>)   │
 │                                                                                 │
 │  Backends:                                                                      │
-│  └── Ollama (implemented) — more backends planned                              │
+│  ├── Native (mistral.rs) — CPU/GPU inference via GGUF models                   │
+│  └── Ollama — via REST API (legacy, for compatibility)                         │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
