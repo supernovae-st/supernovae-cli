@@ -1473,7 +1473,9 @@ fn check_neo4j_connection() -> bool {
     use std::time::Duration;
 
     TcpStream::connect_timeout(
-        &"127.0.0.1:7687".parse().unwrap(),
+        &"127.0.0.1:7687"
+            .parse()
+            .expect("static address 127.0.0.1:7687 should always parse"),
         Duration::from_millis(500),
     )
     .is_ok()
