@@ -45,7 +45,8 @@ spn-client = { version = "0.3.3", path = "../spn-client" }
 spn-core = { version = "0.2.0", path = "../spn-core" }
 spn-keyring = { version = "0.1.4", path = "../spn-keyring", default-features = false }
 spn-mcp = { version = "0.1.4", path = "../spn-mcp" }
-spn-ollama = { version = "0.1.6", path = "../spn-ollama" }
+# spn-ollama removed - native inference via spn-native (Phase 5)
+# spn-native = { version = "0.1.0", path = "../spn-native" }
 
 # CLI framework
 clap = { version = "4.5", features = ["derive", "env"] }

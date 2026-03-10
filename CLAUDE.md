@@ -27,9 +27,9 @@
 │  ├── spn provider migrate       Move env vars to keychain                       │
 │  └── spn provider test <name>   Validate key format                             │
 │                                                                                 │
-│  Model Commands (v0.10.0):                                                      │
-│  ├── spn model list             List local models (via Ollama)                  │
-│  ├── spn model pull <name>      Download model                                  │
+│  Model Commands (transitioning to native):                                      │
+│  ├── spn model list             List local models (native backend coming)       │
+│  ├── spn model pull <name>      Download model from HuggingFace                 │
 │  ├── spn model load <name>      Load model into memory                          │
 │  ├── spn model unload <name>    Unload model from memory                        │
 │  └── spn model delete <name>    Delete local model                              │
@@ -106,7 +106,7 @@
 │  └────────────────────────┘                   └────────────────────────┘        │
 │                                                                                 │
 │  Also in workspace:                                                             │
-│  • spn-ollama (ModelBackend trait, Ollama API client)                           │
+│  • spn-native (HuggingFace model storage, native inference coming)              │
 │  • spn-mcp (Dynamic REST-to-MCP wrapper, MCP server binary)                     │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -147,12 +147,12 @@ supernovae-cli/
 │   │       ├── keyring.rs  # Platform-specific keychain
 │   │       └── memory.rs   # mlock/LockedBuffer/Zeroizing
 │   │
-│   ├── spn-ollama/         # Ollama backend
+│   ├── spn-native/         # Native model storage
 │   │   └── src/
 │   │       ├── lib.rs
-│   │       ├── client.rs   # HTTP client for Ollama API
-│   │       ├── backend.rs  # ModelBackend trait
-│   │       └── ollama.rs   # OllamaBackend implementation
+│   │       ├── storage.rs  # HuggingFaceStorage implementation
+│   │       ├── platform.rs # RAM detection, default paths
+│   │       └── error.rs    # NativeError types
 │   │
 │   ├── spn-client/         # SDK for external tools
 │   │   └── src/lib.rs      # Re-exports spn-core types
@@ -371,7 +371,7 @@ cargo install --path crates/spn
 |-------|---------|-----------|
 | spn-core | 0.1.2 | [Published](https://crates.io/crates/spn-core) |
 | spn-keyring | 0.1.4 | [Published](https://crates.io/crates/spn-keyring) |
-| spn-ollama | 0.1.6 | [Published](https://crates.io/crates/spn-ollama) |
+| spn-native | 0.1.0 | (Local, HuggingFace storage) |
 | spn-client | 0.3.3 | [Published](https://crates.io/crates/spn-client) |
 | spn-mcp | 0.1.4 | [Published](https://crates.io/crates/spn-mcp) |
 | spn-providers | 0.1.0 | [Published](https://crates.io/crates/spn-providers) |

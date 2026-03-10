@@ -3532,7 +3532,6 @@ dependencies = [
  "spn-core",
  "spn-keyring",
  "spn-mcp",
- "spn-ollama",
  "tar",
  "tempfile",
  "thiserror 2.0.18",
@@ -3626,20 +3625,6 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tokio-test",
-]
-
-[[package]]
-name = "spn-ollama"
-version = "0.1.6"
-dependencies = [
- "futures-util",
- "reqwest",
- "serde",
- "serde_json",
- "spn-core",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
 ]
 
 [[package]]

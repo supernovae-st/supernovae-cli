@@ -8,7 +8,6 @@ members = [
     "crates/spn-keyring",
     "crates/spn-mcp",
     "crates/spn-native",
-    "crates/spn-ollama",
 ]
 
 [workspace.package]

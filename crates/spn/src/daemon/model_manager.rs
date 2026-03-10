@@ -1,8 +1,11 @@
 //! Model manager for the spn daemon.
 //!
-//! Manages model lifecycle (pull, load, unload) using the ModelBackend trait.
+//! Manages model lifecycle (pull, load, unload).
 //!
-//! TODO(v0.16): Integrate with `spn model` commands and daemon IPC
+//! Currently returns "not available" errors as the Ollama backend has been
+//! removed. Native inference via mistral.rs will be added in Phase 5.
+//!
+//! See: spn-native crate for model storage (HuggingFaceStorage)
 
 #![allow(dead_code)]
 
@@ -10,140 +13,153 @@ use spn_client::{
     BackendError, ChatMessage, ChatOptions, ChatResponse, LoadConfig, ModelInfo, PullProgress,
     RunningModel,
 };
-use spn_ollama::{BoxedProgressCallback, DynModelBackend, OllamaBackend};
-use std::sync::Arc;
-use tracing::{debug, info};
+use tracing::warn;
 
-/// Manages model operations via a backend.
+/// Progress callback type for pull operations.
+pub type BoxedProgressCallback = Box<dyn Fn(PullProgress) + Send + Sync>;
+
+/// Manages model operations.
+///
+/// Currently returns "backend not available" errors.
+/// Native inference will be implemented in Phase 5 (spn-native + mistral.rs).
 pub struct ModelManager {
-    /// The model backend (currently Ollama).
-    backend: Arc<dyn DynModelBackend>,
+    _phantom: (),
 }
 
 impl ModelManager {
-    /// Create a new model manager with the default Ollama backend.
+    /// Create a new model manager.
+    ///
+    /// Note: Currently creates a stub manager as the native backend
+    /// is not yet implemented.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            backend: Arc::new(OllamaBackend::new()),
-        }
-    }
-
-    /// Create a model manager with a custom backend.
-    #[must_use]
-    pub fn with_backend(backend: Arc<dyn DynModelBackend>) -> Self {
-        Self { backend }
+        warn!("ModelManager created without backend - model commands unavailable");
+        Self { _phantom: () }
     }
 
     /// Check if the backend is running.
+    ///
+    /// Always returns false until native backend is implemented.
     pub async fn is_backend_running(&self) -> bool {
-        self.backend.is_running().await
+        false
     }
 
     /// Start the backend if not running.
+    ///
+    /// Returns error until native backend is implemented.
     pub async fn ensure_backend_running(&self) -> Result<(), BackendError> {
-        if !self.backend.is_running().await {
-            info!("Starting {} backend...", self.backend.name());
-            self.backend.start().await?;
-        }
-        Ok(())
+        Err(BackendError::BackendSpecific(
+            "Native model backend not yet implemented. Coming in Phase 5.".to_string(),
+        ))
     }
 
     /// List all installed models.
+    ///
+    /// Returns error until native backend is implemented.
     pub async fn list_models(&self) -> Result<Vec<ModelInfo>, BackendError> {
-        debug!("Listing models");
-        self.backend.list_models().await
+        Err(BackendError::BackendSpecific(
+            "Native model backend not yet implemented. Coming in Phase 5.".to_string(),
+        ))
     }
 
     /// Pull a model.
-    pub async fn pull(&self, name: &str) -> Result<(), BackendError> {
-        info!(model = %name, "Pulling model");
-        self.backend.pull(name, None).await
+    ///
+    /// Returns error until native backend is implemented.
+    pub async fn pull(&self, _name: &str) -> Result<(), BackendError> {
+        Err(BackendError::BackendSpecific(
+            "Native model backend not yet implemented. Coming in Phase 5.".to_string(),
+        ))
     }
 
     /// Pull a model with progress callback.
     ///
-    /// The callback is invoked for each progress update during the download.
+    /// Returns error until native backend is implemented.
     pub async fn pull_with_progress<F>(
         &self,
-        name: &str,
-        on_progress: F,
+        _name: &str,
+        _on_progress: F,
     ) -> Result<(), BackendError>
     where
         F: Fn(PullProgress) + Send + Sync + 'static,
     {
-        info!(model = %name, "Pulling model with progress");
-        let callback: BoxedProgressCallback = Box::new(on_progress);
-        self.backend.pull(name, Some(callback)).await
+        Err(BackendError::BackendSpecific(
+            "Native model backend not yet implemented. Coming in Phase 5.".to_string(),
+        ))
     }
 
     /// Load a model into memory.
-    pub async fn load(&self, name: &str, config: Option<LoadConfig>) -> Result<(), BackendError> {
-        let config = config.unwrap_or_default();
-        info!(model = %name, "Loading model");
-        self.backend.load(name, &config).await
+    ///
+    /// Returns error until native backend is implemented.
+    pub async fn load(
+        &self,
+        _name: &str,
+        _config: Option<LoadConfig>,
+    ) -> Result<(), BackendError> {
+        Err(BackendError::BackendSpecific(
+            "Native model backend not yet implemented. Coming in Phase 5.".to_string(),
+        ))
     }
 
     /// Unload a model from memory.
-    pub async fn unload(&self, name: &str) -> Result<(), BackendError> {
-        info!(model = %name, "Unloading model");
-        self.backend.unload(name).await
+    ///
+    /// Returns error until native backend is implemented.
+    pub async fn unload(&self, _name: &str) -> Result<(), BackendError> {
+        Err(BackendError::BackendSpecific(
+            "Native model backend not yet implemented. Coming in Phase 5.".to_string(),
+        ))
     }
 
     /// Get running models.
+    ///
+    /// Returns error until native backend is implemented.
     pub async fn running_models(&self) -> Result<Vec<RunningModel>, BackendError> {
-        debug!("Getting running models");
-        self.backend.running_models().await
+        Err(BackendError::BackendSpecific(
+            "Native model backend not yet implemented. Coming in Phase 5.".to_string(),
+        ))
     }
 
     /// Delete a model.
-    pub async fn delete(&self, name: &str) -> Result<(), BackendError> {
-        info!(model = %name, "Deleting model");
-        self.backend.delete(name).await
+    ///
+    /// Returns error until native backend is implemented.
+    pub async fn delete(&self, _name: &str) -> Result<(), BackendError> {
+        Err(BackendError::BackendSpecific(
+            "Native model backend not yet implemented. Coming in Phase 5.".to_string(),
+        ))
     }
 
     /// Run chat inference on a model.
+    ///
+    /// Returns error until native backend is implemented.
     pub async fn chat(
         &self,
-        model: &str,
-        messages: Vec<ChatMessage>,
-        options: Option<ChatOptions>,
+        _model: &str,
+        _messages: Vec<ChatMessage>,
+        _options: Option<ChatOptions>,
     ) -> Result<ChatResponse, BackendError> {
-        info!(model = %model, "Running chat inference");
-        self.backend.chat(model, messages, options).await
+        Err(BackendError::BackendSpecific(
+            "Native model backend not yet implemented. Coming in Phase 5.".to_string(),
+        ))
     }
 
     /// Get backend identifier.
     #[must_use]
     pub fn backend_id(&self) -> &'static str {
-        self.backend.id()
+        "none"
     }
 
     /// Run simple inference with a prompt.
     ///
-    /// Convenience wrapper around `chat` for single-turn inference.
+    /// Returns error until native backend is implemented.
     pub async fn run_inference(
         &self,
-        model: &str,
-        prompt: &str,
-        system: Option<String>,
-        temperature: Option<f32>,
+        _model: &str,
+        _prompt: &str,
+        _system: Option<String>,
+        _temperature: Option<f32>,
     ) -> Result<String, BackendError> {
-        let mut messages = Vec::new();
-
-        if let Some(sys) = system {
-            messages.push(ChatMessage::system(sys));
-        }
-
-        messages.push(ChatMessage::user(prompt));
-
-        let options = temperature.map(|t| ChatOptions {
-            temperature: Some(t),
-            ..Default::default()
-        });
-
-        let response = self.chat(model, messages, options).await?;
-        Ok(response.message.content)
+        Err(BackendError::BackendSpecific(
+            "Native model backend not yet implemented. Coming in Phase 5.".to_string(),
+        ))
     }
 }
 
@@ -156,35 +172,36 @@ impl Default for ModelManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicU32, Ordering};
 
     #[test]
     fn test_model_manager_creation() {
         let manager = ModelManager::new();
-        assert_eq!(manager.backend_id(), "ollama");
+        assert_eq!(manager.backend_id(), "none");
     }
 
     #[test]
     fn test_model_manager_default() {
         let manager = ModelManager::default();
-        assert_eq!(manager.backend_id(), "ollama");
+        assert_eq!(manager.backend_id(), "none");
     }
 
-    #[test]
-    fn test_pull_with_progress_callback_signature() {
-        // Test that the callback signature compiles correctly
-        let call_count = Arc::new(AtomicU32::new(0));
-        let call_count_clone = call_count.clone();
+    #[tokio::test]
+    async fn test_backend_not_running() {
+        let manager = ModelManager::new();
+        assert!(!manager.is_backend_running().await);
+    }
 
-        // Create a callback that increments a counter
-        let callback = move |_progress: PullProgress| {
-            call_count_clone.fetch_add(1, Ordering::SeqCst);
-        };
+    #[tokio::test]
+    async fn test_operations_return_error() {
+        let manager = ModelManager::new();
 
-        // Verify the callback type is correct by checking it can be boxed
-        let _boxed: BoxedProgressCallback = Box::new(callback);
-
-        // If this compiles, the signature is correct
-        assert_eq!(call_count.load(Ordering::SeqCst), 0);
+        // All operations should return NotRunning error
+        assert!(manager.ensure_backend_running().await.is_err());
+        assert!(manager.list_models().await.is_err());
+        assert!(manager.pull("test").await.is_err());
+        assert!(manager.load("test", None).await.is_err());
+        assert!(manager.unload("test").await.is_err());
+        assert!(manager.running_models().await.is_err());
+        assert!(manager.delete("test").await.is_err());
     }
 }
