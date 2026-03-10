@@ -7,17 +7,22 @@ use crate::inference::traits::InferenceBackend;
 use crate::NativeError;
 use futures_util::stream::Stream;
 use spn_core::{ChatOptions, ChatResponse, LoadConfig, ModelInfo};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[cfg(feature = "inference")]
 use spn_core::ChatRole;
+#[cfg(feature = "inference")]
+use std::path::Path;
 #[cfg(feature = "inference")]
 use std::sync::Arc;
 #[cfg(feature = "inference")]
 use tracing::{debug, info};
 
 #[cfg(feature = "inference")]
-use mistralrs::{GgufModelBuilder, Model, RequestBuilder, TextMessageRole, TextMessages};
+use mistralrs::{
+    GgufModelBuilder, MemoryGpuConfig, Model, PagedAttentionMetaBuilder, RequestBuilder,
+    TextMessageRole, TextMessages,
+};
 #[cfg(feature = "inference")]
 use tokio::sync::RwLock;
 
@@ -117,13 +122,33 @@ impl InferenceBackend for NativeRuntime {
         }
 
         // Build the model using GgufModelBuilder
-        let model_path_str = model_path.to_string_lossy().to_string();
+        // API: GgufModelBuilder::new(directory, vec![filename])
+        let parent = model_path
+            .parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| ".".to_string());
+        let filename = model_path
+            .file_name()
+            .map(|f| f.to_string_lossy().to_string())
+            .ok_or_else(|| {
+                NativeError::InvalidConfig("Invalid model path: no filename".to_string())
+            })?;
 
-        debug!(gpu_layers = config.gpu_layers, "Building model");
+        debug!(gpu_layers = config.gpu_layers, %parent, %filename, "Building model");
 
-        // Build model - simplified configuration
-        let model = GgufModelBuilder::new(model_path_str.clone(), vec![model_path_str.clone()])
+        // Build model with PagedAttention for better memory management.
+        // PagedAttention enables efficient KV cache handling for longer contexts.
+        // Use context_size from LoadConfig, defaulting to 2048 if not specified.
+        let context_size = config.context_size.unwrap_or(2048);
+        let model = GgufModelBuilder::new(parent, vec![filename])
             .with_logging()
+            .with_paged_attn(|| {
+                PagedAttentionMetaBuilder::default()
+                    .with_block_size(32)
+                    .with_gpu_memory(MemoryGpuConfig::ContextSize(context_size as usize))
+                    .build()
+            })
+            .map_err(|e| NativeError::InvalidConfig(format!("PagedAttention config error: {e}")))?
             .build()
             .await
             .map_err(|e| NativeError::InvalidConfig(format!("Failed to build model: {e}")))?;
@@ -172,10 +197,7 @@ impl InferenceBackend for NativeRuntime {
     }
 
     async fn infer(&self, prompt: &str, options: ChatOptions) -> Result<ChatResponse, NativeError> {
-        let model = self
-            .model
-            .as_ref()
-            .ok_or_else(|| NativeError::InvalidConfig("No model loaded".to_string()))?;
+        let model = self.model.as_ref().ok_or(NativeError::ModelNotLoaded)?;
 
         let model = model.read().await;
 
@@ -217,6 +239,15 @@ impl InferenceBackend for NativeRuntime {
                 NativeError::InvalidConfig("Model returned empty response (no choices)".to_string())
             })?;
 
+        // Log performance metrics for debugging and optimization
+        debug!(
+            prompt_tokens = response.usage.prompt_tokens,
+            completion_tokens = response.usage.completion_tokens,
+            avg_prompt_tok_per_sec = ?response.usage.avg_prompt_tok_per_sec,
+            avg_compl_tok_per_sec = ?response.usage.avg_compl_tok_per_sec,
+            "Inference completed"
+        );
+
         Ok(ChatResponse {
             message: spn_core::ChatMessage {
                 role: ChatRole::Assistant,
@@ -246,15 +277,12 @@ impl InferenceBackend for NativeRuntime {
 }
 
 /// Extract quantization from file path.
+///
+/// Delegates to [`crate::extract_quantization`] for the actual parsing.
 #[cfg(feature = "inference")]
 fn extract_quantization_from_path(path: &Path) -> Option<String> {
-    let filename = path.file_name()?.to_string_lossy().to_lowercase();
-    for quant in ["q4_k_s", "q4_k_m", "q5_k_s", "q5_k_m", "q6_k", "q8_0", "f16", "f32"] {
-        if filename.contains(quant) {
-            return Some(quant.to_uppercase());
-        }
-    }
-    None
+    let filename = path.file_name()?.to_string_lossy();
+    crate::extract_quantization(&filename)
 }
 
 // Stub implementation when inference feature is not enabled

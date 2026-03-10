@@ -33,7 +33,7 @@
 //!
 //! #[tokio::main]
 //! async fn main() -> anyhow::Result<()> {
-//!     let mut runtime = NativeRuntime::new()?;
+//!     let mut runtime = NativeRuntime::new();
 //!
 //!     // Load a GGUF model
 //!     let model_path = PathBuf::from("~/.spn/models/qwen3-8b-q4_k_m.gguf");
