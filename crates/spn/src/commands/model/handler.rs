@@ -1,7 +1,10 @@
 //! Model CLI commands.
 //!
-//! Manage local LLM models via the spn daemon + native inference (mistral.rs).
+//! Manage local LLM models via HuggingFace storage.
 //! Search and discover models from the SuperNovae registry.
+//!
+//! NOTE: Inference commands (load, unload, run, status) were removed in v0.17.0.
+//! Use Nika for model inference with native mistral.rs runtime.
 
 use crate::error::{Result, SpnError};
 use crate::interop::model_registry::ModelRegistry;
@@ -10,31 +13,17 @@ use crate::ux::design_system as ds;
 use crate::ux::progress::transforming_spinner;
 use crate::ModelCommands;
 use dialoguer::Confirm;
-use spn_client::{LoadConfig, Request, Response, SpnClient};
+use spn_client::{Request, Response, SpnClient};
 
 pub async fn run(command: ModelCommands) -> Result<()> {
     match command {
-        ModelCommands::List { json, running } => list(json, running).await,
+        ModelCommands::List { json } => list(json).await,
         ModelCommands::Pull { name } => {
             let name = match name {
                 Some(n) => n,
                 None => prompts::select_model()?,
             };
             pull(&name).await
-        }
-        ModelCommands::Load { name, keep_alive } => {
-            let name = match name {
-                Some(n) => n,
-                None => prompts::select_model()?,
-            };
-            load(&name, keep_alive).await
-        }
-        ModelCommands::Unload { name } => {
-            let name = match name {
-                Some(n) => n,
-                None => prompts::select_model()?,
-            };
-            unload(&name).await
         }
         ModelCommands::Remove { name, yes } => {
             let name = match name {
@@ -43,28 +32,9 @@ pub async fn run(command: ModelCommands) -> Result<()> {
             };
             delete(&name, yes).await
         }
-        ModelCommands::Status { json } => status(json).await,
         ModelCommands::Search { query, category } => search(&query, category.as_deref()).await,
         ModelCommands::Info { name, json } => info(&name, json).await,
         ModelCommands::Recommend { use_case } => recommend(use_case.as_deref()).await,
-        ModelCommands::Run {
-            model,
-            prompt,
-            stream,
-            temperature,
-            system,
-            json,
-        } => {
-            super::run::run(super::run::RunArgs {
-                model,
-                prompt,
-                stream,
-                temperature,
-                system,
-                json,
-            })
-            .await
-        }
     }
 }
 
@@ -72,17 +42,11 @@ pub async fn run(command: ModelCommands) -> Result<()> {
 // List Models
 // ============================================================================
 
-async fn list(json: bool, running_only: bool) -> Result<()> {
+async fn list(json: bool) -> Result<()> {
     let mut client = connect_to_daemon().await?;
 
-    let request = if running_only {
-        Request::ModelStatus
-    } else {
-        Request::ModelList
-    };
-
     let response = client
-        .send_request(request)
+        .send_request(Request::ModelList)
         .await
         .map_err(|e| anyhow::anyhow!("Daemon request failed: {}", e))?;
 
@@ -123,30 +87,6 @@ async fn list(json: bool, running_only: bool) -> Result<()> {
 
             println!();
             println!("  {} model(s) installed", models.len());
-        }
-
-        Response::RunningModels { running } => {
-            if json {
-                println!("{}", serde_json::to_string_pretty(&running)?);
-                return Ok(());
-            }
-
-            if running.is_empty() {
-                println!("{}", ds::warning("No models currently loaded."));
-                return Ok(());
-            }
-
-            println!("{}", ds::highlight("Running Models"));
-            println!();
-
-            for model in &running {
-                let vram = model
-                    .vram_used
-                    .map(|v| format!("{:.1} GB VRAM", v as f64 / 1_073_741_824.0))
-                    .unwrap_or_else(|| "-".to_string());
-
-                println!("  {} {} ({})", ds::success("*"), model.name, vram);
-            }
         }
 
         Response::Error { message } => {
@@ -208,107 +148,8 @@ async fn pull(name: &str) -> Result<()> {
     Ok(())
 }
 
-// ============================================================================
-// Load Model
-// ============================================================================
-
-async fn load(name: &str, keep_alive: bool) -> Result<()> {
-    let mut client = connect_to_daemon().await?;
-
-    let spinner = transforming_spinner(&format!("Loading model: {}", name));
-
-    let config = if keep_alive {
-        Some(LoadConfig {
-            gpu_ids: vec![],
-            gpu_layers: -1,
-            context_size: None,
-            keep_alive: true,
-        })
-    } else {
-        None
-    };
-
-    let response = client
-        .send_request(Request::ModelLoad {
-            name: name.to_string(),
-            config,
-        })
-        .await;
-
-    match response {
-        Ok(Response::Success { success: true }) => {
-            let msg = if keep_alive {
-                format!(
-                    "Model '{}' loaded (will stay loaded until manually unloaded)",
-                    name
-                )
-            } else {
-                format!("Model '{}' loaded", name)
-            };
-            spinner.finish_success(&msg);
-        }
-        Ok(Response::Error { message }) => {
-            spinner.finish_error(&format!("Load failed: {}", message));
-            return Err(SpnError::CommandFailed(message));
-        }
-        Ok(_) => {
-            spinner.finish_error("Unexpected response from daemon");
-            return Err(SpnError::CommandFailed(
-                "Unexpected response from daemon".to_string(),
-            ));
-        }
-        Err(e) => {
-            spinner.finish_error(&format!("Daemon request failed: {}", e));
-            return Err(SpnError::CommandFailed(format!(
-                "Daemon request failed: {}",
-                e
-            )));
-        }
-    }
-
-    Ok(())
-}
-
-// ============================================================================
-// Unload Model
-// ============================================================================
-
-async fn unload(name: &str) -> Result<()> {
-    let mut client = connect_to_daemon().await?;
-
-    let spinner = transforming_spinner(&format!("Unloading model: {}", name));
-
-    let response = client
-        .send_request(Request::ModelUnload {
-            name: name.to_string(),
-        })
-        .await;
-
-    match response {
-        Ok(Response::Success { success: true }) => {
-            spinner.finish_success(&format!("Model '{}' unloaded", name));
-        }
-        Ok(Response::Error { message }) => {
-            spinner.finish_error(&format!("Unload failed: {}", message));
-            return Err(SpnError::CommandFailed(message));
-        }
-        Ok(_) => {
-            spinner.finish_error("Unexpected response from daemon");
-            return Err(SpnError::CommandFailed(
-                "Unexpected response from daemon".to_string(),
-            ));
-        }
-        Err(e) => {
-            spinner.finish_error(&format!("Daemon request failed: {}", e));
-            return Err(SpnError::CommandFailed(format!(
-                "Daemon request failed: {}",
-                e
-            )));
-        }
-    }
-
-    Ok(())
-}
+// NOTE: Load/Unload commands removed in v0.17.0 (inference moved to Nika)
+// See: ADR-008 - Inference Architecture Refactor
 
 // ============================================================================
 // Delete Model
@@ -364,78 +205,8 @@ async fn delete(name: &str, skip_confirm: bool) -> Result<()> {
     Ok(())
 }
 
-// ============================================================================
-// Status
-// ============================================================================
-
-async fn status(json: bool) -> Result<()> {
-    let mut client = connect_to_daemon().await?;
-
-    let response = client
-        .send_request(Request::ModelStatus)
-        .await
-        .map_err(|e| anyhow::anyhow!("Daemon request failed: {}", e))?;
-
-    match response {
-        Response::RunningModels { running } => {
-            if json {
-                println!("{}", serde_json::to_string_pretty(&running)?);
-                return Ok(());
-            }
-
-            println!("{}", ds::highlight("Model Status"));
-            println!();
-
-            if running.is_empty() {
-                println!("  {} No models loaded", ds::muted("o"));
-                println!();
-                println!(
-                    "  Load a model with: {} spn model load llama3.2",
-                    ds::primary("->")
-                );
-            } else {
-                println!("  {:<30} {:>12}", ds::muted("MODEL"), ds::muted("VRAM"));
-                println!("  {}", "-".repeat(44));
-
-                let mut total_vram: u64 = 0;
-
-                for model in &running {
-                    let vram = model.vram_used.unwrap_or(0);
-                    total_vram += vram;
-
-                    let vram_str = if vram > 0 {
-                        format!("{:.1} GB", vram as f64 / 1_073_741_824.0)
-                    } else {
-                        "-".to_string()
-                    };
-
-                    println!("  {} {:<28} {:>12}", ds::success("*"), model.name, vram_str);
-                }
-
-                if total_vram > 0 {
-                    println!("  {}", "-".repeat(44));
-                    println!(
-                        "  {:<30} {:>12}",
-                        "Total VRAM",
-                        format!("{:.1} GB", total_vram as f64 / 1_073_741_824.0)
-                    );
-                }
-            }
-        }
-
-        Response::Error { message } => {
-            return Err(SpnError::CommandFailed(message));
-        }
-
-        _ => {
-            return Err(SpnError::CommandFailed(
-                "Unexpected response from daemon".to_string(),
-            ));
-        }
-    }
-
-    Ok(())
-}
+// NOTE: Status command removed in v0.17.0 (inference moved to Nika)
+// Model memory management is now handled by Nika's native runtime
 
 // ============================================================================
 // Helpers

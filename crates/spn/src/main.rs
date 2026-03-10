@@ -1100,34 +1100,17 @@ pub enum ModelCommands {
         /// Output as JSON
         #[arg(long)]
         json: bool,
-
-        /// Only show loaded models
-        #[arg(long)]
-        running: bool,
     },
 
-    /// Pull/download a model from Ollama registry
+    /// Pull/download a model from HuggingFace or Ollama registry
     #[command(visible_alias = "get", visible_alias = "download")]
     Pull {
         /// Model name (e.g., llama3.2:7b, mistral:latest) - prompts if omitted
         name: Option<String>,
     },
 
-    /// Load a model into memory
-    Load {
-        /// Model name - prompts if omitted
-        name: Option<String>,
-
-        /// Keep model loaded indefinitely
-        #[arg(long)]
-        keep_alive: bool,
-    },
-
-    /// Unload a model from memory
-    Unload {
-        /// Model name - prompts if omitted
-        name: Option<String>,
-    },
+    // NOTE: Load/Unload commands removed in v0.17.0 (inference moved to Nika)
+    // Use `nika` directly for model inference with native mistral.rs runtime
 
     /// Remove a model from local storage
     #[command(visible_alias = "rm", visible_alias = "delete")]
@@ -1140,13 +1123,8 @@ pub enum ModelCommands {
         yes: bool,
     },
 
-    /// Show running models and resource usage
-    #[command(visible_alias = "ps")]
-    Status {
-        /// Output as JSON
-        #[arg(long)]
-        json: bool,
-    },
+    // NOTE: Status command removed in v0.17.0 (inference moved to Nika)
+    // Model memory management is now handled by Nika's native runtime
 
     /// Search available models in registry
     Search {
@@ -1175,31 +1153,8 @@ pub enum ModelCommands {
         use_case: Option<String>,
     },
 
-    /// Run inference on a model
-    #[command(visible_alias = "r")]
-    Run {
-        /// Model name (e.g., llama3.2, mistral:7b)
-        model: String,
-
-        /// Prompt text (use - for stdin, @file for file input)
-        prompt: String,
-
-        /// Stream output tokens as they arrive
-        #[arg(long)]
-        stream: bool,
-
-        /// Temperature (0.0 - 2.0)
-        #[arg(long, short = 't', default_value = "0.7")]
-        temperature: f32,
-
-        /// System prompt
-        #[arg(long, short = 's')]
-        system: Option<String>,
-
-        /// Output as JSON
-        #[arg(long)]
-        json: bool,
-    },
+    // NOTE: Run command removed in v0.17.0 (inference moved to Nika)
+    // Use `nika` for inference with full workflow support and native mistral.rs runtime
 }
 
 #[derive(Subcommand)]

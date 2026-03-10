@@ -57,6 +57,31 @@ pub struct NativeRuntime {
     config: Option<LoadConfig>,
 }
 
+// Manual Debug implementation (Model doesn't implement Debug)
+impl std::fmt::Debug for NativeRuntime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NativeRuntime")
+            .field("model_info", &self.model_info)
+            .field("model_path", &self.model_path)
+            .field("config", &self.config)
+            .field("is_loaded", &self.is_loaded())
+            .finish()
+    }
+}
+
+// Manual Clone implementation (clones the Arc, not the model itself)
+impl Clone for NativeRuntime {
+    fn clone(&self) -> Self {
+        Self {
+            #[cfg(feature = "inference")]
+            model: self.model.clone(),
+            model_info: self.model_info.clone(),
+            model_path: self.model_path.clone(),
+            config: self.config.clone(),
+        }
+    }
+}
+
 impl NativeRuntime {
     /// Create a new native runtime.
     ///
@@ -262,17 +287,107 @@ impl InferenceBackend for NativeRuntime {
 
     async fn infer_stream(
         &self,
-        _prompt: &str,
-        _options: ChatOptions,
+        prompt: &str,
+        options: ChatOptions,
     ) -> Result<impl Stream<Item = Result<String, NativeError>> + Send, NativeError> {
-        // Streaming requires complex lifetime management with the model lock.
-        // For now, use the non-streaming `infer` method instead.
-        // TODO: Implement streaming by cloning the Arc and managing lifetimes properly.
-        Err::<futures_util::stream::Empty<Result<String, NativeError>>, _>(
-            NativeError::InvalidConfig(
-                "Streaming not yet implemented for native runtime. Use infer() instead.".to_string(),
-            ),
-        )
+        use async_stream::stream;
+        use mistralrs::Response;
+        use tokio::sync::mpsc;
+
+        let model = self.model.as_ref().ok_or(NativeError::ModelNotLoaded)?;
+        let model_arc = Arc::clone(model);
+        let prompt_owned = prompt.to_string();
+
+        // Create channel for streaming chunks
+        let (tx, mut rx) = mpsc::channel::<Result<String, NativeError>>(32);
+
+        // Spawn streaming task that holds the model lock
+        tokio::spawn(async move {
+            let model = model_arc.read().await;
+
+            // Build messages
+            let messages = TextMessages::new().add_message(TextMessageRole::User, &prompt_owned);
+
+            // Build request with sampling parameters
+            let mut request = RequestBuilder::from(messages);
+
+            if let Some(temp) = options.temperature {
+                request = request.set_sampler_temperature(f64::from(temp));
+            }
+
+            if let Some(max_tokens) = options.max_tokens {
+                request = request.set_sampler_max_len(max_tokens as usize);
+            }
+
+            // Stream chat request
+            match model.stream_chat_request(request).await {
+                Ok(mut stream) => {
+                    while let Some(chunk) = stream.next().await {
+                        match chunk {
+                            Response::Chunk(chunk_response) => {
+                                if let Some(choice) = chunk_response.choices.first() {
+                                    if let Some(text) = &choice.delta.content {
+                                        if tx.send(Ok(text.clone())).await.is_err() {
+                                            // Receiver dropped, stop streaming
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            Response::Done(_) => {
+                                debug!("Streaming completed");
+                                break;
+                            }
+                            Response::ModelError(msg, _) => {
+                                let _ = tx
+                                    .send(Err(NativeError::InvalidConfig(format!(
+                                        "Model error: {}",
+                                        msg
+                                    ))))
+                                    .await;
+                                break;
+                            }
+                            Response::ValidationError(err) => {
+                                let _ = tx
+                                    .send(Err(NativeError::InvalidConfig(format!(
+                                        "Validation error: {:?}",
+                                        err
+                                    ))))
+                                    .await;
+                                break;
+                            }
+                            Response::InternalError(err) => {
+                                let _ = tx
+                                    .send(Err(NativeError::InvalidConfig(format!(
+                                        "Internal error: {:?}",
+                                        err
+                                    ))))
+                                    .await;
+                                break;
+                            }
+                            _ => {
+                                // Other response types, continue
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    let _ = tx
+                        .send(Err(NativeError::InvalidConfig(format!(
+                            "Failed to start streaming: {}",
+                            e
+                        ))))
+                        .await;
+                }
+            }
+        });
+
+        // Convert mpsc receiver to Stream
+        Ok(stream! {
+            while let Some(result) = rx.recv().await {
+                yield result;
+            }
+        })
     }
 }
 
