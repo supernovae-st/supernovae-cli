@@ -1,0 +1,52 @@
+[package]
+name = "spn-native"
+version = "0.1.0"
+edition = "2021"
+authors = ["Thibaut MELEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
+description = "Native model inference and storage for SuperNovae ecosystem"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/supernovae-st/supernovae-cli"
+homepage = "https://supernovae.studio"
+documentation = "https://docs.rs/spn-native"
+keywords = ["supernovae", "llm", "inference", "gguf", "huggingface"]
+categories = ["machine-learning", "filesystem"]
+readme = "README.md"
+rust-version = "1.75"
+
+[dependencies]
+# Core types
+spn-core = { version = "0.2.0", path = "../spn-core" }
+
+# Directory detection
+dirs = "6.0"
+
+# HTTP client for HuggingFace downloads
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json"] }
+
+# Async runtime
+tokio = { version = "1.48", features = ["rt-multi-thread", "fs", "io-util", "sync", "macros"] }
+
+# Error handling
+thiserror = "1.0"
+
+# Checksums
+sha2 = "0.10"
+
+# Progress indication
+indicatif = { version = "0.17", optional = true }
+
+# Serialization for API responses
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async streams
+futures-util = "0.3"
+
+[dev-dependencies]
+tempfile = "3.20"
+tokio-test = "0.4"
+
+[features]
+default = []
+# Enable terminal progress bars
+progress = ["dep:indicatif"]
