@@ -158,7 +158,7 @@ crates/spn-core/
 │   ├── lib.rs          # Re-exports
 │   ├── provider.rs     # Provider, KNOWN_PROVIDERS, ProviderCategory
 │   ├── validate.rs     # validate_key_format(), mask_key()
-│   ├── backend.rs      # BackendError, ModelInfo (for spn-ollama)
+│   ├── backend.rs      # BackendError, ModelInfo (for spn-providers, spn-native)
 │   └── mcp.rs          # McpServer, McpConfig (generic types)
 └── Cargo.toml          # [dependencies] (none)
 ```

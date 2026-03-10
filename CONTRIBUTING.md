@@ -37,8 +37,10 @@ supernovae-cli/
 ├── crates/
 │   ├── spn-core/      # Shared types, provider definitions
 │   ├── spn-keyring/   # OS keychain integration
-│   ├── spn-ollama/    # Ollama backend
 │   ├── spn-client/    # SDK for external tools
+│   ├── spn-providers/ # Cloud backends (Anthropic, OpenAI, etc.)
+│   ├── spn-native/    # HuggingFace + mistral.rs inference
+│   ├── spn-mcp/       # REST-to-MCP wrapper
 │   └── spn/           # Main CLI binary (spn-cli)
 ```
 

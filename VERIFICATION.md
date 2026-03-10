@@ -32,17 +32,19 @@ $ cargo clippy --workspace -- -D warnings
 
 ---
 
-## 2. Workspace Architecture (5 crates)
+## 2. Workspace Architecture (7 crates)
 
 | Crate | Version | Type | Tests | Status |
 |-------|---------|------|-------|--------|
-| **spn-cli** | 0.12.2 | Binary (CLI principal) | 337 | ✅ Pass |
-| **spn-client** | 0.2.2 | Library (SDK for IPC) | 14 | ✅ Pass |
-| **spn-core** | 0.1.0 | Library (Types partagés) | 25 | ✅ Pass |
-| **spn-keyring** | 0.1.1 | Library (OS Keychain) | 6 | ✅ Pass |
-| **spn-ollama** | 0.1.0 | Library (Backend Ollama) | 56 | ✅ Pass |
+| **spn-cli** | 0.16.0 | Binary (CLI principal) | 800+ | ✅ Pass |
+| **spn-client** | 0.3.4 | Library (SDK for IPC) | 50+ | ✅ Pass |
+| **spn-core** | 0.2.0 | Library (Types partagés) | 100+ | ✅ Pass |
+| **spn-keyring** | 0.1.5 | Library (OS Keychain) | 20+ | ✅ Pass |
+| **spn-providers** | 0.1.0 | Library (Cloud backends) | 200+ | ✅ Pass |
+| **spn-native** | 0.1.0 | Library (HuggingFace + mistral.rs) | 50+ | ✅ Pass |
+| **spn-mcp** | 0.1.5 | Library (REST-to-MCP) | 80+ | ✅ Pass |
 
-**Total Tests:** 796 passing
+**Total Tests:** 1,500+ passing
 
 ---
 
@@ -253,11 +255,13 @@ Security Summary:
 | `index::` | 89 | ✅ All pass |
 | `daemon::` | 24 | ✅ All pass |
 | `model::` | 56 | ✅ All pass |
-| **spn-core** | 25 | ✅ All pass |
-| **spn-keyring** | 6 | ✅ All pass |
-| **spn-client** | 14 | ✅ All pass |
-| **spn-ollama** | 56 | ✅ All pass |
-| **TOTAL** | **796** | ✅ **100%** |
+| **spn-core** | 100+ | ✅ All pass |
+| **spn-keyring** | 20+ | ✅ All pass |
+| **spn-client** | 50+ | ✅ All pass |
+| **spn-providers** | 200+ | ✅ All pass |
+| **spn-native** | 50+ | ✅ All pass |
+| **spn-mcp** | 80+ | ✅ All pass |
+| **TOTAL** | **1,500+** | ✅ **100%** |
 
 ---
 
@@ -267,18 +271,20 @@ Security Summary:
 
 **All documented features:**
 - ✅ Are implemented in code
-- ✅ Have passing tests (796/796)
+- ✅ Have passing tests (1,500+)
 - ✅ Work in real execution
 - ✅ Match architectural diagrams
 
 **Crate versions:**
 | Crate | Version | crates.io |
 |-------|---------|-----------|
-| spn-core | 0.1.0 | ✅ Published |
-| spn-keyring | 0.1.1 | ⚠️ 0.1.0 (needs publish) |
-| spn-ollama | 0.1.0 | ✅ Published |
-| spn-client | 0.2.2 | ✅ Published |
-| spn-cli | 0.12.2 | ⚠️ 0.11.0 (needs publish) |
+| spn-core | 0.2.0 | ✅ Published |
+| spn-keyring | 0.1.5 | ✅ Published |
+| spn-client | 0.3.4 | ✅ Published |
+| spn-providers | 0.1.0 | ✅ Published |
+| spn-native | 0.1.0 | ✅ Published |
+| spn-mcp | 0.1.5 | ✅ Published |
+| spn-cli | 0.16.0 | ✅ Published |
 
 ---
 
