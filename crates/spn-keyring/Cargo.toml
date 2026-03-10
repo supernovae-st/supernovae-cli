@@ -1,6 +1,6 @@
 [package]
 name = "spn-keyring"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 rust-version = "1.75"
 description = "OS keychain wrapper for SuperNovae CLI"
