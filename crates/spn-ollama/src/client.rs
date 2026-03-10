@@ -362,31 +362,37 @@ impl OllamaClient {
     /// Returns `BackendError::NetworkError` if the API request fails.
     pub async fn delete(&self, name: &str) -> Result<(), BackendError> {
         let url = format!("{}/api/delete", self.endpoint);
+        let name = name.to_string();
         debug!(url = %url, model = %name, "Deleting model");
 
-        let response = self
-            .client
-            .delete(&url)
-            .json(&DeleteRequest {
-                name: name.to_string(),
-            })
-            .timeout(self.config.request_timeout)
-            .send()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+        self.with_retry(|| {
+            let name = name.clone();
+            let url = url.clone();
+            async move {
+                let response = self
+                    .client
+                    .delete(&url)
+                    .json(&DeleteRequest { name: name.clone() })
+                    .timeout(self.config.request_timeout)
+                    .send()
+                    .await
+                    .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        if response.status().as_u16() == 404 {
-            return Err(BackendError::ModelNotFound(name.to_string()));
-        }
+                if response.status().as_u16() == 404 {
+                    return Err(BackendError::ModelNotFound(name));
+                }
 
-        if !response.status().is_success() {
-            return Err(BackendError::NetworkError(format!(
-                "API returned status {}",
-                response.status()
-            )));
-        }
+                if !response.status().is_success() {
+                    return Err(BackendError::NetworkError(format!(
+                        "API returned status {}",
+                        response.status()
+                    )));
+                }
 
-        Ok(())
+                Ok(())
+            }
+        })
+        .await
     }
 
     /// List running models (via /api/ps).
@@ -398,27 +404,30 @@ impl OllamaClient {
         let url = format!("{}/api/ps", self.endpoint);
         debug!(url = %url, "Listing running models");
 
-        let response = self
-            .client
-            .get(&url)
-            .timeout(self.config.request_timeout)
-            .send()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+        self.with_retry(|| async {
+            let response = self
+                .client
+                .get(&url)
+                .timeout(self.config.request_timeout)
+                .send()
+                .await
+                .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        if !response.status().is_success() {
-            return Err(BackendError::NetworkError(format!(
-                "API returned status {}",
-                response.status()
-            )));
-        }
+            if !response.status().is_success() {
+                return Err(BackendError::NetworkError(format!(
+                    "API returned status {}",
+                    response.status()
+                )));
+            }
 
-        let body: PsResponse = response
-            .json()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+            let body: PsResponse = response
+                .json()
+                .await
+                .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        Ok(body.models)
+            Ok(body.models)
+        })
+        .await
     }
 
     /// Generate a completion to warm up/load a model.
@@ -435,41 +444,47 @@ impl OllamaClient {
         keep_alive: Option<&str>,
     ) -> Result<(), BackendError> {
         let url = format!("{}/api/generate", self.endpoint);
+        let name = name.to_string();
+        let keep_alive = keep_alive.map(ToString::to_string);
         debug!(url = %url, model = %name, "Warming up model");
 
-        let mut request = GenerateRequest {
-            model: name.to_string(),
-            prompt: String::new(),
-            stream: false,
-            keep_alive: None,
-        };
+        self.with_retry(|| {
+            let name = name.clone();
+            let url = url.clone();
+            let keep_alive = keep_alive.clone();
+            async move {
+                let request = GenerateRequest {
+                    model: name.clone(),
+                    prompt: String::new(),
+                    stream: false,
+                    keep_alive,
+                };
 
-        if let Some(ka) = keep_alive {
-            request.keep_alive = Some(ka.to_string());
-        }
+                let response = self
+                    .client
+                    .post(&url)
+                    .json(&request)
+                    .timeout(self.config.model_timeout)
+                    .send()
+                    .await
+                    .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&request)
-            .timeout(self.config.model_timeout)
-            .send()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+                if response.status().as_u16() == 404 {
+                    return Err(BackendError::ModelNotFound(name));
+                }
 
-        if response.status().as_u16() == 404 {
-            return Err(BackendError::ModelNotFound(name.to_string()));
-        }
+                if !response.status().is_success() {
+                    let status = response.status();
+                    let text = response.text().await.unwrap_or_default();
+                    return Err(BackendError::NetworkError(format!(
+                        "API returned status {status}: {text}"
+                    )));
+                }
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let text = response.text().await.unwrap_or_default();
-            return Err(BackendError::NetworkError(format!(
-                "API returned status {status}: {text}"
-            )));
-        }
-
-        Ok(())
+                Ok(())
+            }
+        })
+        .await
     }
 
     /// Send a chat completion request.
@@ -485,10 +500,11 @@ impl OllamaClient {
         options: Option<&ChatOptions>,
     ) -> Result<ChatResponse, BackendError> {
         let url = format!("{}/api/chat", self.endpoint);
+        let model = model.to_string();
         debug!(url = %url, model = %model, messages = messages.len(), "Sending chat request");
 
         let request = ChatRequest {
-            model: model.to_string(),
+            model: model.clone(),
             messages: messages
                 .iter()
                 .map(|m| ChatMessageRequest::from(m.clone()))
@@ -497,42 +513,50 @@ impl OllamaClient {
             options: options.map(ChatOptionsRequest::from),
         };
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&request)
-            .timeout(self.config.model_timeout)
-            .send()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+        self.with_retry(|| {
+            let model = model.clone();
+            let url = url.clone();
+            let request = request.clone();
+            async move {
+                let response = self
+                    .client
+                    .post(&url)
+                    .json(&request)
+                    .timeout(self.config.model_timeout)
+                    .send()
+                    .await
+                    .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        if response.status().as_u16() == 404 {
-            return Err(BackendError::ModelNotFound(model.to_string()));
-        }
+                if response.status().as_u16() == 404 {
+                    return Err(BackendError::ModelNotFound(model));
+                }
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let text = response.text().await.unwrap_or_default();
-            return Err(BackendError::NetworkError(format!(
-                "API returned status {status}: {text}"
-            )));
-        }
+                if !response.status().is_success() {
+                    let status = response.status();
+                    let text = response.text().await.unwrap_or_default();
+                    return Err(BackendError::NetworkError(format!(
+                        "API returned status {status}: {text}"
+                    )));
+                }
 
-        let body: ChatResponseBody = response
-            .json()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+                let body: ChatResponseBody = response
+                    .json()
+                    .await
+                    .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        Ok(ChatResponse {
-            message: ChatMessage {
-                role: body.message.role.into(),
-                content: body.message.content,
-            },
-            done: body.done,
-            total_duration: body.total_duration,
-            eval_count: body.eval_count,
-            prompt_eval_count: body.prompt_eval_count,
+                Ok(ChatResponse {
+                    message: ChatMessage {
+                        role: body.message.role.into(),
+                        content: body.message.content,
+                    },
+                    done: body.done,
+                    total_duration: body.total_duration,
+                    eval_count: body.eval_count,
+                    prompt_eval_count: body.prompt_eval_count,
+                })
+            }
         })
+        .await
     }
 
     /// Stream a chat completion request.
@@ -639,47 +663,57 @@ impl OllamaClient {
     /// Returns `BackendError::NetworkError` if the API request fails.
     pub async fn embed(&self, model: &str, input: &str) -> Result<EmbeddingResponse, BackendError> {
         let url = format!("{}/api/embed", self.endpoint);
+        let model = model.to_string();
+        let input = input.to_string();
         debug!(url = %url, model = %model, "Generating embedding");
 
-        let request = EmbedRequest {
-            model: model.to_string(),
-            input: input.to_string(),
-        };
+        self.with_retry(|| {
+            let model = model.clone();
+            let url = url.clone();
+            let input = input.clone();
+            async move {
+                let request = EmbedRequest {
+                    model: model.clone(),
+                    input,
+                };
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&request)
-            .timeout(self.config.model_timeout)
-            .send()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+                let response = self
+                    .client
+                    .post(&url)
+                    .json(&request)
+                    .timeout(self.config.model_timeout)
+                    .send()
+                    .await
+                    .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        if response.status().as_u16() == 404 {
-            return Err(BackendError::ModelNotFound(model.to_string()));
-        }
+                if response.status().as_u16() == 404 {
+                    return Err(BackendError::ModelNotFound(model));
+                }
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let text = response.text().await.unwrap_or_default();
-            return Err(BackendError::NetworkError(format!(
-                "API returned status {status}: {text}"
-            )));
-        }
+                if !response.status().is_success() {
+                    let status = response.status();
+                    let text = response.text().await.unwrap_or_default();
+                    return Err(BackendError::NetworkError(format!(
+                        "API returned status {status}: {text}"
+                    )));
+                }
 
-        let body: EmbedResponseBody = response
-            .json()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+                let body: EmbedResponseBody = response
+                    .json()
+                    .await
+                    .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        // Ollama returns embeddings as array of arrays, we take the first one
-        let embedding = body.embeddings.into_iter().next().unwrap_or_default();
+                // Ollama returns embeddings as array of arrays, we take the first one
+                let embedding = body.embeddings.into_iter().next().unwrap_or_default();
 
-        Ok(EmbeddingResponse {
-            embedding,
-            total_duration: body.total_duration,
-            prompt_eval_count: body.prompt_eval_count,
+                Ok(EmbeddingResponse {
+                    embedding,
+                    total_duration: body.total_duration,
+                    prompt_eval_count: body.prompt_eval_count,
+                })
+            }
         })
+        .await
     }
 
     /// Generate embeddings for multiple texts (batch).
@@ -694,48 +728,58 @@ impl OllamaClient {
         inputs: &[&str],
     ) -> Result<Vec<EmbeddingResponse>, BackendError> {
         let url = format!("{}/api/embed", self.endpoint);
+        let model = model.to_string();
+        let inputs: Vec<String> = inputs.iter().map(|s| (*s).to_string()).collect();
         debug!(url = %url, model = %model, count = inputs.len(), "Generating batch embeddings");
 
-        let request = EmbedBatchRequest {
-            model: model.to_string(),
-            input: inputs.iter().map(|s| (*s).to_string()).collect(),
-        };
+        self.with_retry(|| {
+            let model = model.clone();
+            let url = url.clone();
+            let inputs = inputs.clone();
+            async move {
+                let request = EmbedBatchRequest {
+                    model: model.clone(),
+                    input: inputs,
+                };
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&request)
-            .timeout(self.config.model_timeout)
-            .send()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+                let response = self
+                    .client
+                    .post(&url)
+                    .json(&request)
+                    .timeout(self.config.model_timeout)
+                    .send()
+                    .await
+                    .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        if response.status().as_u16() == 404 {
-            return Err(BackendError::ModelNotFound(model.to_string()));
-        }
+                if response.status().as_u16() == 404 {
+                    return Err(BackendError::ModelNotFound(model));
+                }
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let text = response.text().await.unwrap_or_default();
-            return Err(BackendError::NetworkError(format!(
-                "API returned status {status}: {text}"
-            )));
-        }
+                if !response.status().is_success() {
+                    let status = response.status();
+                    let text = response.text().await.unwrap_or_default();
+                    return Err(BackendError::NetworkError(format!(
+                        "API returned status {status}: {text}"
+                    )));
+                }
 
-        let body: EmbedResponseBody = response
-            .json()
-            .await
-            .map_err(|e| BackendError::NetworkError(e.to_string()))?;
+                let body: EmbedResponseBody = response
+                    .json()
+                    .await
+                    .map_err(|e| BackendError::NetworkError(e.to_string()))?;
 
-        Ok(body
-            .embeddings
-            .into_iter()
-            .map(|embedding| EmbeddingResponse {
-                embedding,
-                total_duration: body.total_duration,
-                prompt_eval_count: body.prompt_eval_count,
-            })
-            .collect())
+                Ok(body
+                    .embeddings
+                    .into_iter()
+                    .map(|embedding| EmbeddingResponse {
+                        embedding,
+                        total_duration: body.total_duration,
+                        prompt_eval_count: body.prompt_eval_count,
+                    })
+                    .collect())
+            }
+        })
+        .await
     }
 }
 
@@ -843,7 +887,7 @@ struct GenerateRequest {
 // Chat API Types
 // ============================================================================
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 struct ChatRequest {
     model: String,
     messages: Vec<ChatMessageRequest>,
@@ -852,7 +896,7 @@ struct ChatRequest {
     options: Option<ChatOptionsRequest>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 struct ChatMessageRequest {
     role: String,
     content: String,
@@ -867,7 +911,7 @@ impl From<ChatMessage> for ChatMessageRequest {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 struct ChatOptionsRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f32>,
