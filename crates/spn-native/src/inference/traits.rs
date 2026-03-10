@@ -36,6 +36,7 @@ pub trait InferenceBackend: Send + Sync {
     fn unload(&mut self) -> impl Future<Output = Result<(), NativeError>> + Send;
 
     /// Check if a model is currently loaded.
+    #[must_use]
     fn is_loaded(&self) -> bool;
 
     /// Get metadata about the loaded model.

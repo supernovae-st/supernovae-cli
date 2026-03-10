@@ -56,24 +56,41 @@ pub enum NativeError {
 
     // ========================================================================
     // Inference errors (feature = "inference")
+    // These variants are reserved for future inference features like:
+    // - Detailed error recovery (InferenceFailed)
+    // - Architecture validation (UnsupportedArchitecture)
+    // - GPU/CPU device selection (DeviceError)
+    // - Custom tokenizer support (TokenizerError)
     // ========================================================================
     /// Model not loaded.
     #[error("No model loaded")]
     ModelNotLoaded,
 
     /// Inference failed.
+    ///
+    /// Reserved for detailed inference error reporting (e.g., OOM, timeout).
+    #[allow(dead_code)] // Reserved for future inference error handling
     #[error("Inference failed: {0}")]
     InferenceFailed(String),
 
     /// Unsupported model architecture.
+    ///
+    /// Reserved for architecture validation when loading models.
+    #[allow(dead_code)] // Reserved for architecture validation
     #[error("Unsupported architecture: {0}")]
     UnsupportedArchitecture(String),
 
     /// Device error (GPU/CPU).
+    ///
+    /// Reserved for GPU/CPU device selection and error handling.
+    #[allow(dead_code)] // Reserved for device management
     #[error("Device error: {0}")]
     DeviceError(String),
 
     /// Tokenizer error.
+    ///
+    /// Reserved for custom tokenizer support.
+    #[allow(dead_code)] // Reserved for custom tokenizer support
     #[error("Tokenizer error: {0}")]
     TokenizerError(String),
 }
