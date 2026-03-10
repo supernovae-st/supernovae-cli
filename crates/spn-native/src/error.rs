@@ -53,6 +53,29 @@ pub enum NativeError {
     /// JSON parsing error.
     #[error("JSON parse error: {0}")]
     Json(#[from] serde_json::Error),
+
+    // ========================================================================
+    // Inference errors (feature = "inference")
+    // ========================================================================
+    /// Model not loaded.
+    #[error("No model loaded")]
+    ModelNotLoaded,
+
+    /// Inference failed.
+    #[error("Inference failed: {0}")]
+    InferenceFailed(String),
+
+    /// Unsupported model architecture.
+    #[error("Unsupported architecture: {0}")]
+    UnsupportedArchitecture(String),
+
+    /// Device error (GPU/CPU).
+    #[error("Device error: {0}")]
+    DeviceError(String),
+
+    /// Tokenizer error.
+    #[error("Tokenizer error: {0}")]
+    TokenizerError(String),
 }
 
 impl From<NativeError> for BackendError {
@@ -70,6 +93,16 @@ impl From<NativeError> for BackendError {
             NativeError::Interrupted(msg) => BackendError::DownloadError(msg),
             NativeError::StorageDir(msg) => BackendError::StorageError(msg),
             NativeError::Json(e) => BackendError::ParseError(e.to_string()),
+            // Inference errors
+            NativeError::ModelNotLoaded => {
+                BackendError::BackendSpecific("No model loaded".to_string())
+            }
+            NativeError::InferenceFailed(msg) => BackendError::BackendSpecific(msg),
+            NativeError::UnsupportedArchitecture(arch) => {
+                BackendError::InvalidConfig(format!("Unsupported architecture: {arch}"))
+            }
+            NativeError::DeviceError(msg) => BackendError::BackendSpecific(msg),
+            NativeError::TokenizerError(msg) => BackendError::BackendSpecific(msg),
         }
     }
 }

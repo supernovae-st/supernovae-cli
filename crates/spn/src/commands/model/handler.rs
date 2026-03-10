@@ -1,6 +1,6 @@
 //! Model CLI commands.
 //!
-//! Manage local LLM models via the spn daemon + Ollama.
+//! Manage local LLM models via the spn daemon + native inference (mistral.rs).
 //! Search and discover models from the SuperNovae registry.
 
 use crate::error::{Result, SpnError};

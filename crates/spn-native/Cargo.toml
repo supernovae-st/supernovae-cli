@@ -28,6 +28,7 @@ tokio = { version = "1.48", features = ["rt-multi-thread", "fs", "io-util", "syn
 
 # Error handling
 thiserror = "1.0"
+anyhow = "1.0"
 
 # Checksums
 sha2 = "0.10"
@@ -41,6 +42,25 @@ serde_json = "1.0"
 
 # Async streams
 futures-util = "0.3"
+async-stream = "0.3"
+
+# Logging
+tracing = "0.1"
+
+# ============================================================================
+# Optional: Native LLM Inference (mistral.rs)
+# ============================================================================
+# These dependencies are only compiled when the "inference" feature is enabled.
+# This keeps the base crate lightweight for download-only use cases.
+
+# Native LLM inference via mistral.rs
+# Note: Metal feature requires full Xcode (not just Command Line Tools)
+# The default "inference" feature uses CPU only; "inference-metal" adds GPU
+[dependencies.mistralrs]
+version = "0.7"
+optional = true
+default-features = false
+features = []  # CPU-only by default; add "metal" for GPU
 
 [dev-dependencies]
 tempfile = "3.20"
@@ -50,3 +70,13 @@ tokio-test = "0.4"
 default = []
 # Enable terminal progress bars
 progress = ["dep:indicatif"]
+# Enable native LLM inference via mistral.rs (CPU-only)
+inference = ["dep:mistralrs"]
+# Enable Metal GPU acceleration (requires full Xcode on macOS)
+inference-metal = ["inference", "mistralrs/metal"]
+# Alias for convenience
+native = ["inference"]
+# All features (CPU-only inference)
+full = ["progress", "inference"]
+# All features with GPU acceleration
+full-metal = ["progress", "inference-metal"]
