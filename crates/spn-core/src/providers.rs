@@ -101,8 +101,57 @@ pub static KNOWN_PROVIDERS: &[Provider] = &[
         key_prefix: None,
         category: ProviderCategory::Local,
         requires_key: false,
-        description: "Local model runner (llama, mistral, etc.)",
+        description: "Local model runner (llama, mistral, etc.) [DEPRECATED: use native]",
     },
+    Provider {
+        id: "native",
+        name: "Native (mistral.rs)",
+        env_var: "NATIVE_MODEL_PATH",
+        key_prefix: None,
+        category: ProviderCategory::Local,
+        requires_key: false,
+        description: "Local inference via mistral.rs (in-process)",
+    },
+    // ==================== Cloud LLM Providers (rig-core unsupported) ====================
+    Provider {
+        id: "cohere",
+        name: "Cohere",
+        env_var: "COHERE_API_KEY",
+        key_prefix: None,
+        category: ProviderCategory::Llm,
+        requires_key: true,
+        description: "Cohere Command and Embed models",
+    },
+    Provider {
+        id: "together",
+        name: "Together AI",
+        env_var: "TOGETHER_API_KEY",
+        key_prefix: None,
+        category: ProviderCategory::Llm,
+        requires_key: true,
+        description: "Together AI inference platform",
+    },
+    Provider {
+        id: "fireworks",
+        name: "Fireworks AI",
+        env_var: "FIREWORKS_API_KEY",
+        key_prefix: None,
+        category: ProviderCategory::Llm,
+        requires_key: true,
+        description: "Fireworks AI fast inference",
+    },
+    Provider {
+        id: "cerebras",
+        name: "Cerebras",
+        env_var: "CEREBRAS_API_KEY",
+        key_prefix: None,
+        category: ProviderCategory::Llm,
+        requires_key: true,
+        description: "Cerebras ultra-fast inference",
+    },
+    // NOTE: Replicate and Anyscale NOT included:
+    // - Replicate: NOT a chat API (async prediction polling)
+    // - Anyscale: SERVICE SUNSET June 2024
     // ==================== MCP Service Providers ====================
     Provider {
         id: "neo4j",
@@ -251,12 +300,27 @@ mod tests {
     #[test]
     fn test_providers_by_category() {
         let llm: Vec<_> = providers_by_category(ProviderCategory::Llm).collect();
-        assert!(llm.len() >= 6);
+        // 10 LLM providers: anthropic, openai, mistral, groq, deepseek, gemini,
+        //                   cohere, together, fireworks, cerebras
+        assert!(
+            llm.len() >= 10,
+            "Expected at least 10 LLM providers, got {}",
+            llm.len()
+        );
         assert!(llm.iter().all(|p| p.category == ProviderCategory::Llm));
 
         let mcp: Vec<_> = providers_by_category(ProviderCategory::Mcp).collect();
         assert!(mcp.len() >= 5);
         assert!(mcp.iter().all(|p| p.category == ProviderCategory::Mcp));
+
+        let local: Vec<_> = providers_by_category(ProviderCategory::Local).collect();
+        // 2 Local providers: ollama, native
+        assert!(
+            local.len() >= 2,
+            "Expected at least 2 Local providers, got {}",
+            local.len()
+        );
+        assert!(local.iter().all(|p| p.category == ProviderCategory::Local));
     }
 
     #[test]
@@ -272,7 +336,24 @@ mod tests {
 
     #[test]
     fn test_provider_count() {
-        // Ensure we have at least 15 providers (7 LLM + 8 MCP)
-        assert!(KNOWN_PROVIDERS.len() >= 15);
+        // Ensure we have at least 20 providers (12 LLM + 8 MCP)
+        // LLM: anthropic, openai, mistral, groq, deepseek, gemini, ollama, native,
+        //      cohere, together, fireworks, cerebras
+        // MCP: neo4j, github, slack, perplexity, firecrawl, supadata, dataforseo, ahrefs
+        assert!(
+            KNOWN_PROVIDERS.len() >= 20,
+            "Expected at least 20 providers, got {}",
+            KNOWN_PROVIDERS.len()
+        );
+    }
+
+    #[test]
+    fn test_new_cloud_providers() {
+        // Verify the new cloud providers exist
+        assert!(find_provider("cohere").is_some());
+        assert!(find_provider("together").is_some());
+        assert!(find_provider("fireworks").is_some());
+        assert!(find_provider("cerebras").is_some());
+        assert!(find_provider("native").is_some());
     }
 }

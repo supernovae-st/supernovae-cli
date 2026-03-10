@@ -25,7 +25,7 @@ cloud = ["anthropic", "openai", "mistral", "groq", "deepseek", "gemini"]
 full = ["cloud"]
 
 [dependencies]
-spn-core = { version = "0.1.2", path = "../spn-core" }
+spn-core = { version = "0.2.0", path = "../spn-core" }
 thiserror = "2"
 tracing = "0.1"
 tokio = { version = "1.36", features = ["sync"] }

@@ -1,14 +1,14 @@
 [package]
 name = "spn-core"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
 authors = ["Thibaut MELEN <thibaut@supernovae.studio>", "SuperNovae Studio <contact@supernovae.studio>"]
-description = "Core types, provider definitions, and validation for SuperNovae ecosystem"
+description = "Core types, provider definitions, model registry, and validation for SuperNovae ecosystem"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/supernovae-st/supernovae-cli"
 homepage = "https://supernovae.studio"
 documentation = "https://docs.rs/spn-core"
-keywords = ["supernovae", "providers", "validation", "mcp", "llm"]
+keywords = ["supernovae", "providers", "validation", "models", "llm"]
 categories = ["data-structures", "config"]
 readme = "README.md"
 rust-version = "1.75"
@@ -16,11 +16,15 @@ rust-version = "1.75"
 [dependencies]
 # Optional serde support for IPC serialization
 serde = { version = "1.0", features = ["derive"], optional = true }
+# Optional dirs support for home directory detection
+dirs = { version = "6.0", optional = true }
 
 [dev-dependencies]
 # None needed - pure unit tests
 
 [features]
-default = []
+default = ["dirs"]
 # Enable serde Serialize/Deserialize derives
 serde = ["dep:serde"]
+# Enable home directory detection for model storage
+dirs = ["dep:dirs"]

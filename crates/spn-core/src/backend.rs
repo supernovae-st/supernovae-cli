@@ -44,6 +44,108 @@ use std::fmt;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+// ============================================================================
+// Quantization Types
+// ============================================================================
+
+/// Quantization levels for GGUF models.
+///
+/// Quantization reduces model size and memory usage at the cost of some quality.
+/// Lower quantization (Q4) = smaller, faster, less accurate.
+/// Higher quantization (F16) = larger, slower, more accurate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[allow(non_camel_case_types)]
+pub enum Quantization {
+    /// 4-bit quantization, small variant (smallest, fastest).
+    Q4_K_S,
+    /// 4-bit quantization, medium variant (recommended for most use cases).
+    Q4_K_M,
+    /// 5-bit quantization, small variant.
+    Q5_K_S,
+    /// 5-bit quantization, medium variant (balanced quality/size).
+    Q5_K_M,
+    /// 6-bit quantization.
+    Q6_K,
+    /// 8-bit quantization (high quality).
+    Q8_0,
+    /// 16-bit floating point (full precision).
+    F16,
+    /// 32-bit floating point (maximum precision, rarely used).
+    F32,
+}
+
+impl Quantization {
+    /// Human-readable name for this quantization level.
+    #[must_use]
+    pub const fn name(&self) -> &'static str {
+        match self {
+            Self::Q4_K_S => "Q4_K_S (smallest)",
+            Self::Q4_K_M => "Q4_K_M (recommended)",
+            Self::Q5_K_S => "Q5_K_S",
+            Self::Q5_K_M => "Q5_K_M (balanced)",
+            Self::Q6_K => "Q6_K",
+            Self::Q8_0 => "Q8_0 (high quality)",
+            Self::F16 => "F16 (full precision)",
+            Self::F32 => "F32 (maximum)",
+        }
+    }
+
+    /// Short name without description.
+    #[must_use]
+    pub const fn short_name(&self) -> &'static str {
+        match self {
+            Self::Q4_K_S => "Q4_K_S",
+            Self::Q4_K_M => "Q4_K_M",
+            Self::Q5_K_S => "Q5_K_S",
+            Self::Q5_K_M => "Q5_K_M",
+            Self::Q6_K => "Q6_K",
+            Self::Q8_0 => "Q8_0",
+            Self::F16 => "F16",
+            Self::F32 => "F32",
+        }
+    }
+
+    /// Approximate memory multiplier (bytes per parameter).
+    ///
+    /// Use this to estimate model memory requirements:
+    /// `memory_gb = param_billions * multiplier`
+    #[must_use]
+    pub const fn memory_multiplier(&self) -> f32 {
+        match self {
+            Self::Q4_K_S => 0.45,
+            Self::Q4_K_M => 0.50,
+            Self::Q5_K_S => 0.55,
+            Self::Q5_K_M => 0.60,
+            Self::Q6_K => 0.70,
+            Self::Q8_0 => 1.00,
+            Self::F16 => 2.00,
+            Self::F32 => 4.00,
+        }
+    }
+
+    /// Returns all quantization levels in order from smallest to largest.
+    #[must_use]
+    pub const fn all() -> &'static [Quantization] {
+        &[
+            Self::Q4_K_S,
+            Self::Q4_K_M,
+            Self::Q5_K_S,
+            Self::Q5_K_M,
+            Self::Q6_K,
+            Self::Q8_0,
+            Self::F16,
+            Self::F32,
+        ]
+    }
+}
+
+impl fmt::Display for Quantization {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.short_name())
+    }
+}
+
 /// Progress information during model pull/download.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -234,6 +336,34 @@ pub enum BackendError {
     ProcessError(String),
     /// Backend-specific error.
     BackendSpecific(String),
+    /// Missing API key for cloud provider.
+    MissingApiKey(String),
+    /// API returned an error response.
+    ApiError {
+        /// HTTP status code.
+        status: u16,
+        /// Error message from API.
+        message: String,
+    },
+    /// Failed to parse API response.
+    ParseError(String),
+    /// Model loading failed.
+    LoadError(String),
+    /// Inference failed.
+    InferenceError(String),
+    /// Invalid model configuration.
+    InvalidConfig(String),
+    /// Storage/filesystem error.
+    StorageError(String),
+    /// Download failed.
+    DownloadError(String),
+    /// Checksum verification failed.
+    ChecksumError {
+        /// Expected checksum.
+        expected: String,
+        /// Actual checksum.
+        actual: String,
+    },
 }
 
 impl std::error::Error for BackendError {}
@@ -248,6 +378,24 @@ impl fmt::Display for BackendError {
             Self::NetworkError(msg) => write!(f, "Network error: {msg}"),
             Self::ProcessError(msg) => write!(f, "Process error: {msg}"),
             Self::BackendSpecific(msg) => write!(f, "Backend error: {msg}"),
+            Self::MissingApiKey(provider) => {
+                write!(f, "Missing API key for provider: {provider}")
+            }
+            Self::ApiError { status, message } => {
+                write!(f, "API error (HTTP {status}): {message}")
+            }
+            Self::ParseError(msg) => write!(f, "Parse error: {msg}"),
+            Self::LoadError(msg) => write!(f, "Model load error: {msg}"),
+            Self::InferenceError(msg) => write!(f, "Inference error: {msg}"),
+            Self::InvalidConfig(msg) => write!(f, "Invalid configuration: {msg}"),
+            Self::StorageError(msg) => write!(f, "Storage error: {msg}"),
+            Self::DownloadError(msg) => write!(f, "Download error: {msg}"),
+            Self::ChecksumError { expected, actual } => {
+                write!(
+                    f,
+                    "Checksum mismatch: expected {expected}, got {actual}"
+                )
+            }
         }
     }
 }
@@ -259,7 +407,20 @@ impl BackendError {
     /// Non-retryable errors include model not found, insufficient memory, etc.
     #[must_use]
     pub const fn is_retryable(&self) -> bool {
-        matches!(self, Self::NetworkError(_) | Self::NotRunning)
+        matches!(
+            self,
+            Self::NetworkError(_) | Self::NotRunning | Self::DownloadError(_)
+        )
+    }
+
+    /// Returns `true` if this is an authentication/authorization error.
+    #[must_use]
+    pub fn is_auth_error(&self) -> bool {
+        match self {
+            Self::MissingApiKey(_) => true,
+            Self::ApiError { status, .. } => *status == 401 || *status == 403,
+            _ => false,
+        }
     }
 }
 

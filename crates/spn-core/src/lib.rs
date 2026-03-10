@@ -1,7 +1,9 @@
 //! spn-core: Core types and validation for the SuperNovae ecosystem.
 //!
 //! This crate provides:
-//! - Provider definitions (13+ LLM and MCP service providers)
+//! - Provider definitions (20+ LLM and MCP service providers)
+//! - Model definitions (curated models for native inference)
+//! - Model storage trait (download-only, no inference)
 //! - Key format validation with detailed error messages
 //! - MCP server configuration types
 //! - Package registry types
@@ -9,8 +11,8 @@
 //! # Design Principles
 //!
 //! - **Zero dependencies**: Pure Rust, fast compilation, WASM-compatible
-//! - **Single source of truth**: All provider definitions in one place
-//! - **Shared types**: Used by spn-cli, spn-client, spn-keyring, and nika
+//! - **Single source of truth**: All provider and model definitions in one place
+//! - **Shared types**: Used by spn-cli, spn-client, spn-keyring, spn-native, and nika
 //!
 //! # Example
 //!
@@ -38,6 +40,33 @@
 //! let masked = mask_key("sk-ant-secret-key-12345");
 //! assert_eq!(masked, "sk-ant-••••••••");
 //! ```
+//!
+//! # Model Resolution
+//!
+//! ```
+//! use spn_core::{find_model, resolve_model, ResolvedModel, Quantization};
+//!
+//! // Find a curated model
+//! let model = find_model("qwen3:8b").unwrap();
+//! assert_eq!(model.model_type.name(), "Text");
+//!
+//! // Resolve model (curated or HuggingFace passthrough)
+//! match resolve_model("hf:bartowski/Qwen3-8B-GGUF") {
+//!     Some(ResolvedModel::HuggingFace { repo }) => {
+//!         println!("HF repo: {}", repo);
+//!     }
+//!     Some(ResolvedModel::Curated(model)) => {
+//!         println!("Curated: {}", model.name);
+//!     }
+//!     None => {}
+//! }
+//!
+//! // Auto-select quantization based on RAM
+//! use spn_core::auto_select_quantization;
+//! let model = find_model("qwen3:8b").unwrap();
+//! let quant = auto_select_quantization(model, 16); // 16GB RAM
+//! assert_eq!(quant, Quantization::Q8_0);
+//! ```
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -46,8 +75,10 @@
 mod backend;
 mod backup;
 mod mcp;
+mod model;
 mod providers;
 mod registry;
+mod storage;
 mod validation;
 
 // Re-export everything at crate root for ergonomic imports
@@ -64,7 +95,16 @@ pub use registry::{PackageManifest, PackageRef, PackageType, Source};
 
 pub use backend::{
     BackendError, ChatMessage, ChatOptions, ChatResponse, ChatRole, EmbeddingResponse, GpuInfo,
-    LoadConfig, ModelInfo, PullProgress, RunningModel,
+    LoadConfig, ModelInfo, PullProgress, Quantization, RunningModel,
+};
+
+pub use model::{
+    auto_select_quantization, detect_available_ram_gb, find_model, models_by_type, resolve_model,
+    KnownModel, ModelArchitecture, ModelType, ResolvedModel, KNOWN_MODELS,
+};
+
+pub use storage::{
+    default_model_dir, DownloadRequest, DownloadResult, ModelStorage, ProgressCallback,
 };
 
 pub use backup::{
