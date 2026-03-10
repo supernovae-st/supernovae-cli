@@ -374,12 +374,12 @@ cargo install --path crates/spn
 
 | Crate | Version | crates.io |
 |-------|---------|-----------|
-| spn-core | 0.1.2 | [Published](https://crates.io/crates/spn-core) |
-| spn-keyring | 0.1.4 | [Published](https://crates.io/crates/spn-keyring) |
-| spn-native | 0.1.0 | (Local, HuggingFace storage) |
-| spn-client | 0.3.3 | [Published](https://crates.io/crates/spn-client) |
-| spn-mcp | 0.1.4 | [Published](https://crates.io/crates/spn-mcp) |
+| spn-core | 0.2.0 | [Published](https://crates.io/crates/spn-core) |
+| spn-keyring | 0.1.5 | [Published](https://crates.io/crates/spn-keyring) |
+| spn-native | 0.1.0 | [Published](https://crates.io/crates/spn-native) |
 | spn-providers | 0.1.0 | [Published](https://crates.io/crates/spn-providers) |
+| spn-client | 0.3.4 | [Published](https://crates.io/crates/spn-client) |
+| spn-mcp | 0.1.5 | [Published](https://crates.io/crates/spn-mcp) |
 | spn-cli | 0.15.5 | [Published](https://crates.io/crates/spn-cli) |
 
 ## Storage Layout
