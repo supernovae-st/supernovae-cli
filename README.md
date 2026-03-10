@@ -432,7 +432,7 @@ spn mcp add ./server.yaml
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Current:** v0.15.5 (Phase A in progress)
+**Current:** v0.16.0 (Phase A in progress)
 
 ---
 
@@ -440,24 +440,25 @@ spn mcp add ./server.yaml
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  6-CRATE WORKSPACE                                                              │
+│  7-CRATE WORKSPACE                                                              │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
-│  spn-core (0.1.2)     Zero-dependency types, provider registry, validation     │
+│  spn-core (0.2.0)     Zero-dependency types, provider registry, validation     │
 │       ↓                                                                         │
-│  spn-keyring (0.1.4)  OS keychain wrapper, memory protection                   │
+│  spn-keyring (0.1.5)  OS keychain wrapper, memory protection                   │
 │       ↓                                                                         │
-│  spn-client (0.3.3)   Daemon SDK for external tools (Nika, IDE plugins)        │
+│  spn-client (0.3.4)   Daemon SDK for external tools (Nika, IDE plugins)        │
 │       ↓                                                                         │
 │  ┌────┴────────────────────────────────────┐                                   │
 │  ↓                                         ↓                                   │
-│  spn-cli (0.15.5)                    spn-mcp (0.1.4)                            │
+│  spn-cli (0.16.0)                    spn-mcp (0.1.5)                            │
 │  • Main CLI binary                   • REST-to-MCP wrapper                     │
 │  • Daemon process                    • OpenAPI parser                          │
 │  • Job scheduler                     • Rate limiting                           │
 │  • Agent orchestration               • MCP Resources                           │
 │                                                                                 │
-│  spn-ollama (0.1.6)   ModelBackend trait, Ollama API client                    │
+│  spn-providers (0.1.0)  Cloud/local backend traits + implementations           │
+│  spn-native (0.1.0)     HuggingFace downloads + native inference (mistral.rs)  │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```

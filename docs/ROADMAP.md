@@ -52,15 +52,15 @@
 ### Crate Architecture
 
 ```
-spn-core (0.1.2)      → Zero-dep types, 15 providers
-spn-keyring (0.1.3)   → OS keychain, mlock, Zeroizing<T>
-spn-ollama (0.1.6)    → ModelBackend trait, Ollama API + retry logic
-spn-client (0.3.3)    → Unix socket IPC, daemon protocol
-spn-mcp (0.1.2)       → REST-to-MCP wrapper
-spn-cli (0.15.5)      → Main CLI binary
+spn-core (0.2.0)      → Zero-dep types, 15 providers
+spn-keyring (0.1.5)   → OS keychain, mlock, Zeroizing<T>
+spn-client (0.3.4)    → Unix socket IPC, daemon protocol
+spn-mcp (0.1.5)       → REST-to-MCP wrapper
+spn-cli (0.16.0)      → Main CLI binary
 spn-providers (0.1.0) → 6 cloud backends (Anthropic, OpenAI, Mistral, Groq, DeepSeek, Gemini)
+spn-native (0.1.0)    → HuggingFace downloads + native inference (mistral.rs)
 ────────────────────────────────────────────────────
-Total: 7 crates, ~18,000 LOC, 1,300+ tests
+Total: 7 crates, ~18,000 LOC, 1,500+ tests
 ```
 
 ---
@@ -662,8 +662,8 @@ spn deploy k8s rollback               # Rollback to previous version
 │                                    ▼                                            │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
 │  │  LAYER 2: Inference Backends                                            │   │
-│  │  ├── spn-ollama (0.2.0)      Ollama backend                            │   │
-│  │  └── spn-inference (0.1.0)   Candle + mistral.rs backends              │   │
+│  │  ├── spn-providers (0.1.0)   Cloud backends (Anthropic, OpenAI, etc.)  │   │
+│  │  └── spn-native (0.1.0)      HuggingFace + mistral.rs inference        │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                    │                                            │
 │                                    ▼                                            │

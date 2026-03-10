@@ -63,7 +63,7 @@ graph TB
 
     subgraph "Layer 1: Platform Integration"
         KEYRING[spn-keyring<br/>OS Keychain]
-        OLLAMA[spn-ollama<br/>Model Backend]
+        NATIVE[spn-native<br/>Model Storage + Inference]
     end
 
     subgraph "Layer 2: IPC + Re-exports"
@@ -289,47 +289,26 @@ This makes `spn-client` a **batteries-included SDK** for external tools.
 
 ---
 
-#### spn-ollama (v0.1.4)
+#### spn-native (v0.1.0)
 
-**Purpose:** Ollama backend implementation for local model management.
+**Purpose:** Native model storage and inference via HuggingFace + mistral.rs.
 
-**ModelBackend Trait:**
+**Features:**
+- HuggingFace model downloads with progress tracking
+- Local model storage in `~/.spn/models/`
+- Native inference via mistral.rs (optional feature)
+- GGUF model support
+
+**Model Storage:**
 ```rust
-#[async_trait]
-pub trait ModelBackend: Send + Sync {
-    // Lifecycle
-    async fn is_running(&self) -> Result<bool>;
-    async fn start(&self) -> Result<()>;
-    async fn stop(&self) -> Result<()>;
-
-    // Model management
-    async fn list_models(&self) -> Result<Vec<ModelInfo>>;
-    async fn model_info(&self, name: &str) -> Result<ModelInfo>;
-    async fn pull(&self, name: &str, progress: ProgressCallback) -> Result<()>;
-    async fn delete(&self, name: &str) -> Result<()>;
-
-    // Runtime
-    async fn load(&self, name: &str, config: LoadConfig) -> Result<()>;
-    async fn unload(&self, name: &str) -> Result<()>;
-    async fn running_models(&self) -> Result<Vec<RunningModel>>;
-}
-```
-
-**Ollama Implementation:**
-```rust
-pub struct OllamaBackend {
-    client: reqwest::Client,
-    base_url: String, // Default: http://localhost:11434
+pub struct ModelStore {
+    root: PathBuf,  // ~/.spn/models/
 }
 
-impl OllamaBackend {
-    pub fn new() -> Self;
-    pub fn with_url(url: String) -> Self;
-
-    // Internal HTTP client for Ollama API
-    async fn get<T>(&self, path: &str) -> Result<T>;
-    async fn post<T>(&self, path: &str, body: impl Serialize) -> Result<T>;
-    async fn delete(&self, path: &str) -> Result<()>;
+impl ModelStore {
+    pub async fn download(&self, model_id: &str, progress: ProgressCallback) -> Result<PathBuf>;
+    pub async fn list(&self) -> Result<Vec<LocalModel>>;
+    pub async fn delete(&self, model_id: &str) -> Result<()>;
 }
 ```
 
@@ -346,9 +325,9 @@ pub enum PullProgress {
 ```
 
 **Why Separate Crate?**
-- **Future-proof:** More backends coming (llama.cpp, MLX, etc.)
-- **Optional:** Not everyone needs local models
-- **Clean boundary:** Backend trait ensures API stability
+- **Optional inference:** Download-only or full inference via features
+- **HuggingFace integration:** Direct model downloads from HF Hub
+- **Clean boundary:** Storage separate from inference
 
 ---
 
@@ -2381,9 +2360,9 @@ jobs:
         run: |
           cargo publish -p spn-core
           cargo publish -p spn-keyring
-          cargo publish -p spn-ollama
           cargo publish -p spn-client
           cargo publish -p spn-providers
+          cargo publish -p spn-native
           cargo publish -p spn-mcp
           cargo publish -p spn-cli
         env:

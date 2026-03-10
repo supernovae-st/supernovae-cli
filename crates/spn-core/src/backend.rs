@@ -1,7 +1,7 @@
 //! Backend types for model management.
 //!
-//! These types are used by spn-ollama (and future backends like llama.cpp)
-//! to provide a unified interface for local model management.
+//! These types are used by spn-providers and spn-native to provide a
+//! unified interface for local and cloud model management.
 //!
 //! # Architecture
 //!

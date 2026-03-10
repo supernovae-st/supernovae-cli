@@ -16,7 +16,7 @@
 //! │                                                                             │
 //! │  ┌─────────────────────────────────────────────────────────────────────┐   │
 //! │  │ ModelBackend Trait (local models)                                   │   │
-//! │  │ ├── OllamaBackend (via spn-ollama)                                  │   │
+//! │  │ ├── OllamaBackend (planned, via spn status integration)             │   │
 //! │  │ └── LlamaCppBackend (planned)                                       │   │
 //! │  └─────────────────────────────────────────────────────────────────────┘   │
 //! │                                                                             │

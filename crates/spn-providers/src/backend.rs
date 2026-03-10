@@ -56,7 +56,7 @@ pub type ProgressCallback = Box<dyn Fn(PullProgress) + Send + Sync>;
 ///
 /// # Example Implementation
 ///
-/// See the Ollama backend in `spn-ollama` for a complete reference implementation.
+/// See the cloud backends in this crate (anthropic.rs, openai.rs, etc.) for examples.
 /// The trait requires implementing async methods for model lifecycle management.
 pub trait ModelBackend: Send + Sync {
     /// Unique identifier for this backend (e.g., "ollama", "llama-cpp").

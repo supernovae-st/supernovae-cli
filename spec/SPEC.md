@@ -39,7 +39,7 @@ Problem:                          Solution:
 supernovae-cli/ (7 crates, strictly layered)
 ├── spn-core/        ← Layer 0: Definitions (zero deps)
 ├── spn-keyring/     ← Layer 1: OS keychain wrapper
-├── spn-ollama/      ← Layer 1: Model backend (Ollama client)
+├── spn-native/      ← Layer 1: Model storage + inference (HuggingFace + mistral.rs)
 ├── spn-providers/   ← Layer 1: Backend abstraction (cloud + local)
 ├── spn-client/      ← Layer 2: Daemon SDK (IPC types)
 ├── spn-mcp/         ← Layer 2: REST-to-MCP wrapper
@@ -128,20 +128,19 @@ let neo4j_key = client.get_secret("neo4j").await?;
 - All `spn_core` types for convenience (Provider, validate_key_format, etc.)
 - Secrecy types (SecretString, ExposeSecret)
 
-#### **spn-ollama (0.1.6)** — Local model backend
+#### **spn-native (0.1.0)** — Native model storage + inference
 
-Manages Ollama API for model download, loading, and inference.
+Downloads models from HuggingFace and provides native inference via mistral.rs.
 
 **Exports:**
-- `ModelBackend` trait — Pluggable backend interface
-- `OllamaBackend` struct — Ollama implementation
-- `pull()`, `delete()`, `load()`, `unload()`, `list_models()`, `running_models()`
-- Retry logic with exponential backoff (network resilience)
+- `ModelStore` struct — Local model storage management
+- `download()`, `delete()`, `list()` — Model lifecycle
+- Optional inference via mistral.rs (feature-gated)
 
 **Capabilities:**
-- Download models from Ollama registry (100+ available)
-- Query VRAM usage and model info
-- Infer hardware recommendations (future)
+- Download GGUF models from HuggingFace Hub
+- Local model storage in `~/.spn/models/`
+- Native inference via mistral.rs (no external server needed)
 
 #### **spn-providers (0.1.0)** — Backend abstraction layer
 
@@ -772,7 +771,7 @@ cargo build --release --no-default-features --features docker
 | spn-core | None |
 | spn-keyring | secrecy, zeroize, keyring, libc |
 | spn-client | secrecy, tokio, serde |
-| spn-ollama | reqwest, serde, tokio |
+| spn-native | reqwest, serde, tokio, sha2, mistralrs (optional) |
 | spn-cli | clap, reqwest, tokio, serde_yaml, toml, notify |
 
 **Version Policy:**
@@ -791,7 +790,7 @@ cargo build --release --no-default-features --features docker
 | `ValidationError` | spn-core | Format check fails (caught at input) |
 | `KeyringError` | spn-keyring | OS keychain operation fails (retry/fallback) |
 | `IpcError` | spn-client | Daemon socket unavailable (fallback to env) |
-| `BackendError` | spn-ollama | Ollama API fails (retry with exponential backoff) |
+| `BackendError` | spn-providers | Backend operation fails (retry with exponential backoff) |
 | `CliError` | spn-cli | User input, file I/O (graceful messages) |
 
 **Example:**
