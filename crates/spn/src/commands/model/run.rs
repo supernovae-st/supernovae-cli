@@ -279,7 +279,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires running daemon"]
     async fn test_run_empty_prompt_fails() {
         let args = RunArgs {
             model: "llama3.2".to_string(),
