@@ -168,11 +168,14 @@ impl IndexClient {
     pub async fn fetch_latest(&self, name: &str) -> Result<IndexEntry, IndexError> {
         let entries = self.fetch_package(name).await?;
 
+        // Filter to entries with valid semver, then find max
+        // This avoids silent failures when semver parsing fails
         entries
             .iter()
             .filter(|e| e.is_available())
-            .max_by(|a, b| a.semver().ok().cmp(&b.semver().ok()))
-            .cloned()
+            .filter_map(|e| e.semver().ok().map(|v| (e, v)))
+            .max_by(|(_, a), (_, b)| a.cmp(b))
+            .map(|(e, _)| e.clone())
             .ok_or_else(|| IndexError::NoVersions(name.to_string()))
     }
 

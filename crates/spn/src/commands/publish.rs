@@ -561,12 +561,14 @@ async fn git_publish_workflow(
         .trim()
         .to_string();
 
-    // Return to main branch
-    Command::new("git")
+    // Return to main branch (non-fatal if it fails, PR was already created)
+    if let Err(e) = Command::new("git")
         .args(["checkout", "main"])
         .current_dir(registry_path)
         .output()
-        .ok(); // Ignore errors
+    {
+        tracing::warn!("Failed to checkout main branch after PR creation: {}", e);
+    }
 
     Ok(pr_url)
 }

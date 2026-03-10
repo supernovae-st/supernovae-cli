@@ -171,13 +171,17 @@ async fn stop() -> Result<()> {
             "{} Daemon was not running, cleaning up stale PID file",
             ds::warning("⚠")
         );
-        fs::remove_file(&pid_file).ok();
+        if let Err(e) = fs::remove_file(&pid_file) {
+            tracing::debug!("Failed to remove stale PID file: {}", e);
+        }
     }
 
     // Clean up socket if it exists
     if let Ok(socket) = paths::socket() {
         if socket.exists() {
-            fs::remove_file(&socket).ok();
+            if let Err(e) = fs::remove_file(&socket) {
+                tracing::debug!("Failed to remove stale socket: {}", e);
+            }
         }
     }
 

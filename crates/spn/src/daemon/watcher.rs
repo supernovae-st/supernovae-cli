@@ -226,7 +226,9 @@ impl WatcherService {
         // Add watches for any new projects
         self.start_project_watches()?;
 
-        let _ = self.event_tx.send(WatchEvent::WatchListUpdated);
+        if self.event_tx.send(WatchEvent::WatchListUpdated).is_err() {
+            debug!("Event channel closed, watch list update not delivered");
+        }
 
         Ok(())
     }
@@ -381,7 +383,9 @@ impl WatcherService {
         // Check if this is spn's config (triggers sync to clients)
         if path.to_string_lossy().contains(".spn") && path.to_string_lossy().contains("mcp") {
             info!("spn MCP config changed, sync needed");
-            let _ = self.event_tx.send(WatchEvent::SyncNeeded);
+            if self.event_tx.send(WatchEvent::SyncNeeded).is_err() {
+                debug!("Event channel closed, sync event not delivered");
+            }
             return;
         }
 
@@ -454,7 +458,9 @@ impl WatcherService {
             self.foreign.add_pending(foreign.clone());
             self.notifier.notify_foreign_mcp(&name, source);
 
-            let _ = self.event_tx.send(WatchEvent::ForeignMcpDetected(foreign));
+            if self.event_tx.send(WatchEvent::ForeignMcpDetected(foreign)).is_err() {
+                debug!("Event channel closed, foreign MCP event not delivered");
+            }
         }
 
         // Save foreign tracker (async)

@@ -274,7 +274,13 @@ pub fn find_best_match(requirement: &str, available: &[IndexEntry]) -> Option<In
     }
 
     // Parse as version requirement
-    let req = VersionReq::parse(requirement).ok()?;
+    let req = match VersionReq::parse(requirement) {
+        Ok(req) => req,
+        Err(e) => {
+            tracing::debug!("Invalid version requirement '{}': {}", requirement, e);
+            return None;
+        }
+    };
 
     available
         .iter()

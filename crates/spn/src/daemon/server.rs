@@ -194,7 +194,9 @@ impl DaemonServer {
                 }
             }
             // Stale PID file, remove it
-            fs::remove_file(path).ok();
+            if let Err(e) = fs::remove_file(path) {
+                tracing::warn!("Failed to remove stale PID file {:?}: {}", path, e);
+            }
         }
 
         // Create new PID file
