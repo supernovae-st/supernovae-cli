@@ -14,7 +14,6 @@ use crate::config::RateLimitConfig;
 use crate::error::{Error, Result};
 
 /// Type alias for the governor rate limiter with our configuration.
-#[allow(dead_code)] // Will be used when rate limiting is integrated into handler
 pub type ApiRateLimiter = GovRateLimiter<NotKeyed, InMemoryState, DefaultClock>;
 
 /// Create a rate limiter from configuration.
@@ -22,7 +21,6 @@ pub type ApiRateLimiter = GovRateLimiter<NotKeyed, InMemoryState, DefaultClock>;
 /// The limiter uses a token-bucket algorithm with:
 /// - `requests_per_minute`: Sustainable rate (tokens refilled per minute)
 /// - `burst`: Maximum burst size (bucket capacity)
-#[allow(dead_code)] // Will be used when rate limiting is integrated into handler
 pub fn create_limiter(config: &RateLimitConfig) -> Arc<ApiRateLimiter> {
     // Use NonZeroU32::MIN (1) as fallback for invalid values
     let rpm = NonZeroU32::new(config.requests_per_minute).unwrap_or(NonZeroU32::MIN);
@@ -35,7 +33,6 @@ pub fn create_limiter(config: &RateLimitConfig) -> Arc<ApiRateLimiter> {
 /// Check if a request is allowed by the rate limiter.
 ///
 /// Returns `Ok(())` if the request is allowed, or an error if rate limited.
-#[allow(dead_code)] // Will be used when rate limiting is integrated into handler
 pub fn check_limit(limiter: &ApiRateLimiter, api_name: &str) -> Result<()> {
     limiter.check().map_err(|_| {
         Error::Mcp(format!(
