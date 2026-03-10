@@ -2,7 +2,7 @@
 
 > **The ULTIMATE AI Toolkit** - From package manager to full-stack AI development platform
 
-**Current Version:** v0.15.4
+**Current Version:** v0.15.5
 **Target:** v1.0.0
 **Timeline:** Q2 2026 - Q4 2026
 **Philosophy:** 0.x.x forever for rapid iteration, 1.0.0 = production-ready full-stack AI platform
@@ -40,7 +40,8 @@
 | Feature | Status | Details |
 |---------|--------|---------|
 | **Package Management** | :white_check_mark: Complete | add, remove, install, search, update, outdated |
-| **Provider Management** | :white_check_mark: Complete | 7 LLM + 6 MCP providers, OS keychain, migration |
+| **Provider Management** | :white_check_mark: Complete | 7 LLM + 8 MCP providers, OS keychain, migration |
+| **Cloud Backends** | :white_check_mark: Complete | spn-providers with Anthropic, OpenAI, Mistral, Groq, DeepSeek, Gemini |
 | **MCP Server Management** | :white_check_mark: Complete | 48 aliases, auto-sync, foreign adoption |
 | **Editor Sync** | :white_check_mark: Complete | Claude Code, Cursor, VS Code, Windsurf |
 | **Daemon Architecture** | :white_check_mark: Complete | Unix IPC, peer verification, job scheduler |
@@ -51,14 +52,15 @@
 ### Crate Architecture
 
 ```
-spn-core (0.1.1)      → Zero-dep types, 13 providers
+spn-core (0.1.2)      → Zero-dep types, 15 providers
 spn-keyring (0.1.3)   → OS keychain, mlock, Zeroizing<T>
-spn-ollama (0.1.4)    → ModelBackend trait, Ollama API
-spn-client (0.3.1)    → Unix socket IPC, daemon protocol
+spn-ollama (0.1.6)    → ModelBackend trait, Ollama API + retry logic
+spn-client (0.3.3)    → Unix socket IPC, daemon protocol
 spn-mcp (0.1.2)       → REST-to-MCP wrapper
-spn-cli (0.15.0)      → Main CLI binary
+spn-cli (0.15.5)      → Main CLI binary
+spn-providers (0.1.0) → 6 cloud backends (Anthropic, OpenAI, Mistral, Groq, DeepSeek, Gemini)
 ────────────────────────────────────────────────────
-Total: 6 crates, ~15,000 LOC, 1,288 tests
+Total: 7 crates, ~18,000 LOC, 1,300+ tests
 ```
 
 ---

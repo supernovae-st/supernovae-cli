@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **ollama**: Extend retry logic to all network operations (d3eda95)
+  - Previously only `list_models()` and `model_info()` used `with_retry()`
+  - Now retry is applied to: `delete`, `running_models`, `generate_warmup`, `chat`, `embed`, `embed_batch`
+  - Streaming operations (`pull`, `chat_stream`) remain without retry as they handle connection errors differently
+
+### Changed
+
+- **ollama**: Add `Clone` derive to `ChatRequest`, `ChatMessageRequest`, `ChatOptionsRequest` for retry support
+
 ## [0.15.4](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.15.4) - 2026-03-09
 
 ### Fixed
