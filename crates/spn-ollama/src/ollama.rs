@@ -16,10 +16,11 @@ use tracing::{debug, info, warn};
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use spn_ollama::OllamaBackend;
 /// use spn_ollama::ModelBackend;
 ///
+/// # async fn example() -> Result<(), spn_ollama::BackendError> {
 /// let backend = OllamaBackend::new();
 ///
 /// if backend.is_running().await {
@@ -28,6 +29,8 @@ use tracing::{debug, info, warn};
 ///         println!("{}", model.name);
 ///     }
 /// }
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct OllamaBackend {
@@ -57,7 +60,7 @@ impl OllamaBackend {
     ///
     /// # Example
     ///
-    /// ```rust,ignore
+    /// ```rust,no_run
     /// use spn_ollama::{OllamaBackend, ClientConfig};
     /// use std::time::Duration;
     ///

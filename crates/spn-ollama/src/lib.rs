@@ -48,7 +48,7 @@
 //!
 //! # Example: Model Management
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use spn_ollama::{OllamaBackend, ModelBackend, LoadConfig};
 //!
 //! #[tokio::main]
@@ -79,7 +79,7 @@
 //!
 //! # Example: Chat Completions
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use spn_ollama::{OllamaBackend, ModelBackend, ChatMessage, ChatOptions};
 //!
 //! #[tokio::main]
@@ -108,7 +108,7 @@
 //!
 //! # Example: Embeddings
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use spn_ollama::{OllamaBackend, ModelBackend};
 //!
 //! #[tokio::main]

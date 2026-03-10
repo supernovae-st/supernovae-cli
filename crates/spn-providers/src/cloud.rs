@@ -25,31 +25,8 @@ pub type CloudTokenCallback = Box<dyn FnMut(&str) + Send + 'static>;
 ///
 /// # Example Implementation
 ///
-/// ```rust,ignore
-/// use spn_backends::{CloudBackend, BackendKind};
-/// use spn_core::{ChatMessage, ChatOptions, ChatResponse, BackendError};
-///
-/// struct MyCloudBackend {
-///     api_key: String,
-///     endpoint: String,
-/// }
-///
-/// impl CloudBackend for MyCloudBackend {
-///     fn kind(&self) -> BackendKind { BackendKind::OpenAI }
-///
-///     async fn chat(
-///         &self,
-///         model: &str,
-///         messages: &[ChatMessage],
-///         options: Option<&ChatOptions>,
-///     ) -> Result<ChatResponse, BackendError> {
-///         // Make API request...
-///         todo!()
-///     }
-///
-///     // ... implement other methods
-/// }
-/// ```
+/// See the `AnthropicBackend` for a complete reference implementation.
+/// The trait requires implementing async methods for chat and embedding operations.
 pub trait CloudBackend: Send + Sync {
     /// Get the backend kind.
     fn kind(&self) -> BackendKind;

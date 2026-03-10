@@ -49,31 +49,23 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
-//! use spn_backends::{BackendRegistry, BackendKind, ModelOrchestrator};
-//! use spn_backends::cloud::AnthropicBackend;
+//! ```rust,no_run
+//! use spn_providers::{BackendRegistry, BackendKind, ModelOrchestrator, ModelRef};
+//! use std::sync::Arc;
+//! use tokio::sync::RwLock;
 //!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     // Create registry
-//!     let mut registry = BackendRegistry::new();
+//! # async fn example() {
+//! // Create registry
+//! let registry = Arc::new(RwLock::new(BackendRegistry::new()));
 //!
-//!     // Register cloud backends
-//!     registry.register(AnthropicBackend::new("sk-ant-...")?);
+//! // Create orchestrator with aliases
+//! let orchestrator = ModelOrchestrator::new(registry);
 //!
-//!     // Create orchestrator with aliases
-//!     let orchestrator = ModelOrchestrator::new(registry);
-//!
-//!     // Use @models/ alias
-//!     let response = orchestrator.chat(
-//!         "@models/claude-sonnet",
-//!         &[ChatMessage::user("Hello!")],
-//!         None,
-//!     ).await?;
-//!
-//!     println!("{}", response.content());
-//!     Ok(())
+//! // Resolve @models/ alias to a model reference
+//! if let Ok(model_ref) = orchestrator.resolve("@models/claude-sonnet") {
+//!     println!("Resolved to: {}", model_ref);
 //! }
+//! # }
 //! ```
 
 #![forbid(unsafe_code)]

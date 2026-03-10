@@ -24,19 +24,13 @@ use tokio::sync::RwLock;
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use spn_backends::{BackendRegistry, BackendKind};
+/// ```rust
+/// use spn_providers::{BackendRegistry, BackendKind};
 ///
-/// let mut registry = BackendRegistry::new();
+/// let registry = BackendRegistry::new();
 ///
-/// // Register backends
-/// registry.register_cloud(anthropic_backend);
-/// registry.register_cloud(openai_backend);
-///
-/// // Lookup by kind
-/// if let Some(backend) = registry.get_cloud(BackendKind::Anthropic) {
-///     let response = backend.chat("claude-sonnet-4-20250514", &messages, None).await?;
-/// }
+/// // Check if any backends are registered
+/// assert!(registry.get_cloud(BackendKind::Anthropic).is_none());
 /// ```
 #[derive(Default)]
 #[allow(clippy::struct_field_names)]

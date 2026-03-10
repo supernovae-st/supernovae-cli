@@ -56,23 +56,8 @@ pub type ProgressCallback = Box<dyn Fn(PullProgress) + Send + Sync>;
 ///
 /// # Example Implementation
 ///
-/// ```rust,ignore
-/// use spn_ollama::{ModelBackend, ProgressCallback};
-/// use spn_core::{BackendError, ModelInfo, LoadConfig};
-///
-/// struct MyBackend;
-///
-/// impl ModelBackend for MyBackend {
-///     fn id(&self) -> &'static str { "my-backend" }
-///
-///     async fn is_running(&self) -> bool {
-///         // Check if backend is running
-///         true
-///     }
-///
-///     // ... implement other methods
-/// }
-/// ```
+/// See the `OllamaBackend` implementation for a complete reference.
+/// The trait requires implementing async methods for model lifecycle management.
 pub trait ModelBackend: Send + Sync {
     /// Unique identifier for this backend (e.g., "ollama", "llama-cpp").
     fn id(&self) -> &'static str;

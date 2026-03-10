@@ -7,7 +7,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```text
 //! use spn::index::{IndexClient, DependencyResolver};
 //!
 //! let client = IndexClient::new();

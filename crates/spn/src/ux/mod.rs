@@ -13,7 +13,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```text
 //! use crate::ux::{design_system as ds, progress, tables, trees};
 //!
 //! // Semantic styling

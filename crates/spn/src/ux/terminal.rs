@@ -12,7 +12,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```text
 //! use crate::ux::terminal::{TerminalCaps, LayoutMode};
 //!
 //! let caps = TerminalCaps::detect();

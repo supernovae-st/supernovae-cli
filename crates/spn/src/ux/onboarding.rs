@@ -12,7 +12,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```text
 //! use crate::ux::onboarding::OnboardingState;
 //!
 //! let state = OnboardingState::detect();

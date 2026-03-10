@@ -159,21 +159,25 @@ impl ModelAlias {
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use spn_backends::{ModelOrchestrator, ModelAlias, ModelRef, BackendKind};
+/// ```rust
+/// use spn_providers::{ModelOrchestrator, ModelAlias, ModelRef, BackendKind, BackendRegistry};
+/// use std::sync::Arc;
+/// use tokio::sync::RwLock;
 ///
-/// let mut orchestrator = ModelOrchestrator::new();
+/// let registry = Arc::new(RwLock::new(BackendRegistry::new()));
+/// let mut orchestrator = ModelOrchestrator::new(registry);
 ///
-/// // Register aliases
+/// // Register a custom alias
 /// orchestrator.register_alias(
-///     ModelAlias::new("claude-sonnet", ModelRef::anthropic("claude-sonnet-4-20250514"))
+///     ModelAlias::new("my-model", ModelRef::anthropic("claude-sonnet-4-20250514"))
 ///         .with_fallback(ModelRef::openai("gpt-4o"))
 ///         .with_description("Best coding model")
 /// );
 ///
 /// // Resolve alias to model reference
-/// let model_ref = orchestrator.resolve("@models/claude-sonnet")?;
-/// assert_eq!(model_ref.backend, BackendKind::Anthropic);
+/// if let Ok(model_ref) = orchestrator.resolve("@models/my-model") {
+///     assert_eq!(model_ref.backend, BackendKind::Anthropic);
+/// }
 /// ```
 pub struct ModelOrchestrator {
     /// Registered model aliases.

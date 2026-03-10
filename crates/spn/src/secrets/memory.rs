@@ -18,7 +18,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```text
 //! use spn::secrets::memory::LockedBuffer;
 //!
 //! // Create a locked buffer for sensitive data

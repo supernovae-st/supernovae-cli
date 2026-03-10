@@ -5,7 +5,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```text
 //! use crate::sync::config_loader::{load_json_config, insert_mcp_server, write_json_config};
 //!
 //! // Load or create config
@@ -59,7 +59,7 @@ pub enum ConfigError {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```text
 /// // Returns {} if file doesn't exist
 /// let config = load_json_config(&path, None)?;
 ///
@@ -94,7 +94,7 @@ pub fn load_json_config(path: &Path, default_key: Option<&str>) -> Result<Value,
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```text
 /// let mut config = json!({});
 /// insert_mcp_server(&mut config, "my-server", json!({"command": "npx"}));
 /// // config is now {"mcpServers": {"my-server": {"command": "npx"}}}

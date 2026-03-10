@@ -42,7 +42,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```text
 //! use spn::secrets::{SpnKeyring, resolve_api_key};
 //!
 //! // Store a key in OS keychain

@@ -24,7 +24,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```text
 //! use supernovae_cli::mcp::{config_manager, McpScope, McpServer};
 //!
 //! // Add a server

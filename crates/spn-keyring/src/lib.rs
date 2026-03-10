@@ -15,9 +15,10 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use spn_keyring::SpnKeyring;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Store a key (validated against spn_core provider definitions)
 //! SpnKeyring::set("anthropic", "sk-ant-api03-...")?;
 //!
@@ -31,6 +32,8 @@
 //!
 //! // Delete
 //! SpnKeyring::delete("anthropic")?;
+//! # Ok(())
+//! # }
 //! ```
 
 #![forbid(unsafe_code)]
@@ -98,9 +101,10 @@ pub enum KeyringError {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use spn_keyring::SpnKeyring;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // Store
 /// SpnKeyring::set("anthropic", "sk-ant-...")?;
 ///
@@ -112,6 +116,8 @@ pub enum KeyringError {
 /// for provider in SpnKeyring::list() {
 ///     println!("Stored: {}", provider);
 /// }
+/// # Ok(())
+/// # }
 /// ```
 pub struct SpnKeyring;
 

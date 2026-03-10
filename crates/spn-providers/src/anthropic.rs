@@ -5,9 +5,10 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
-//! use spn_backends::anthropic::AnthropicBackend;
-//! use spn_backends::{CloudBackend, ChatMessage};
+//! ```rust,no_run
+//! use spn_providers::anthropic::AnthropicBackend;
+//! use spn_providers::CloudBackend;
+//! use spn_core::ChatMessage;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {

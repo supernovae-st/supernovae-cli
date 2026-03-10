@@ -63,7 +63,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```text
 //! use crate::ux::design_system::*;
 //!
 //! // Status messages

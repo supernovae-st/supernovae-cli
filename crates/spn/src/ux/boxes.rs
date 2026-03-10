@@ -5,7 +5,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,ignore
+//! ```text
 //! use crate::ux::boxes::{BoxChars, BoxBuilder};
 //!
 //! let chars = BoxChars::detect();

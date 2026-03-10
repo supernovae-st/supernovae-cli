@@ -7,7 +7,7 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```text
 //! use spn::daemon::service::ServiceManager;
 //!
 //! let manager = ServiceManager::detect()?;
