@@ -146,6 +146,13 @@ impl fmt::Display for Quantization {
     }
 }
 
+impl Default for Quantization {
+    /// Default to Q4_K_M as it provides the best balance of size and quality.
+    fn default() -> Self {
+        Self::Q4_K_M
+    }
+}
+
 /// Progress information during model pull/download.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -971,5 +978,11 @@ mod tests {
         assert!(!BackendError::InsufficientMemory.is_retryable());
         assert!(!BackendError::ProcessError("error".to_string()).is_retryable());
         assert!(!BackendError::BackendSpecific("error".to_string()).is_retryable());
+    }
+
+    #[test]
+    fn test_quantization_default() {
+        let quant = Quantization::default();
+        assert_eq!(quant, Quantization::Q4_K_M);
     }
 }

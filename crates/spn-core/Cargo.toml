@@ -23,8 +23,8 @@ dirs = { version = "6.0", optional = true }
 # None needed - pure unit tests
 
 [features]
-default = ["dirs"]
+default = []
 # Enable serde Serialize/Deserialize derives
 serde = ["dep:serde"]
-# Enable home directory detection for model storage
+# Enable home directory detection for model storage (not WASM-compatible)
 dirs = ["dep:dirs"]

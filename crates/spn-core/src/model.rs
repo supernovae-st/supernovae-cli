@@ -407,6 +407,7 @@ pub static KNOWN_MODELS: &[KnownModel] = &[
         name: "Llama 4 8B",
         model_type: ModelType::Text,
         architecture: ModelArchitecture::Llama4,
+        // TODO: Verify HF repo exists when Llama 4 GGUF is released
         hf_repo: "meta-llama/Llama-4-8B-GGUF",
         default_file: "llama-4-8b-q4_k_m.gguf",
         quantizations: &[
@@ -482,6 +483,7 @@ pub static KNOWN_MODELS: &[KnownModel] = &[
         name: "DeepSeek V3 7B",
         model_type: ModelType::Text,
         architecture: ModelArchitecture::DeepseekV3,
+        // TODO: Verify HF repo path - DeepSeek V3 may use different naming
         hf_repo: "deepseek-ai/DeepSeek-V3-7B-GGUF",
         default_file: "deepseek-v3-7b-q4_k_m.gguf",
         quantizations: &[(Quantization::Q4_K_M, "deepseek-v3-7b-q4_k_m.gguf")],
@@ -508,7 +510,8 @@ pub static KNOWN_MODELS: &[KnownModel] = &[
         id: "llama4-vision:8b",
         name: "Llama 4 Vision 8B",
         model_type: ModelType::Vision,
-        architecture: ModelArchitecture::Llama4,
+        architecture: ModelArchitecture::VLlama, // Vision uses VLlama, not Llama4
+        // TODO: Verify HF repo exists when Llama 4 Vision is released
         hf_repo: "meta-llama/Llama-4-Vision-8B-GGUF",
         default_file: "llama-4-vision-8b-q4_k_m.gguf",
         quantizations: &[(Quantization::Q4_K_M, "llama-4-vision-8b-q4_k_m.gguf")],
@@ -532,7 +535,8 @@ pub static KNOWN_MODELS: &[KnownModel] = &[
         id: "gemma3-vision:12b",
         name: "Gemma 3 Vision 12B",
         model_type: ModelType::Vision,
-        architecture: ModelArchitecture::Gemma3,
+        architecture: ModelArchitecture::Gemma3n, // Vision uses Gemma3n (native vision)
+        // TODO: Verify HF repo exists when Gemma 3 Vision GGUF is released
         hf_repo: "google/gemma-3-12b-vision-gguf",
         default_file: "gemma-3-12b-vision-q4_k_m.gguf",
         quantizations: &[(Quantization::Q4_K_M, "gemma-3-12b-vision-q4_k_m.gguf")],

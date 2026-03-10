@@ -8,7 +8,7 @@
 
 use crate::backend::{BackendError, ModelInfo, PullProgress, Quantization};
 use crate::model::KnownModel;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // ============================================================================
 // Storage Location
@@ -75,7 +75,7 @@ pub trait ModelStorage: Send + Sync {
     fn model_path(&self, model_id: &str) -> PathBuf;
 
     /// Get the storage root directory.
-    fn storage_dir(&self) -> &PathBuf;
+    fn storage_dir(&self) -> &Path;
 }
 
 // ============================================================================
