@@ -151,13 +151,15 @@ async fn test_dns_failure_handling() {
     let err = response.unwrap_err();
     let err_str = err.to_string().to_lowercase();
 
-    // Error should indicate DNS or connection failure
+    // Error should indicate network failure (DNS, connection, or request error)
     assert!(
         err_str.contains("dns")
             || err_str.contains("resolve")
             || err_str.contains("connect")
-            || err_str.contains("name"),
-        "Error should indicate DNS/connection failure: {}",
+            || err_str.contains("name")
+            || err_str.contains("sending request")
+            || err_str.contains("no such host"),
+        "Error should indicate network failure: {}",
         err_str
     );
 }

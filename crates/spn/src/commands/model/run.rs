@@ -261,27 +261,34 @@ mod tests {
     }
 
     // =========================================================================
-    // Integration tests (require daemon - marked as ignored)
+    // Integration tests (require daemon + Ollama + model)
+    // Run with: cargo test -p spn-cli -- --include-ignored
+    // Set SPN_TEST_MODEL env var to override model (default: llama3.2:1b)
     // =========================================================================
 
+    /// Get the model to use for integration tests.
+    /// Uses SPN_TEST_MODEL env var if set, otherwise defaults to llama3.2:1b
+    fn test_model() -> String {
+        std::env::var("SPN_TEST_MODEL").unwrap_or_else(|_| "llama3.2:1b".to_string())
+    }
+
     #[tokio::test]
-    #[ignore = "requires running daemon"]
+    #[ignore = "requires daemon + Ollama"]
     async fn test_run_basic_prompt() {
         let args = RunArgs {
-            model: "llama3.2".to_string(),
-            prompt: "Say hello".to_string(),
+            model: test_model(),
+            prompt: "Say hello in one word".to_string(),
             ..Default::default()
         };
 
         let result = run(args).await;
-        // Should succeed if daemon and model are available
-        assert!(result.is_ok() || result.unwrap_err().to_string().contains("Daemon"));
+        assert!(result.is_ok(), "Expected success, got: {:?}", result.err());
     }
 
     #[tokio::test]
     async fn test_run_empty_prompt_fails() {
         let args = RunArgs {
-            model: "llama3.2".to_string(),
+            model: test_model(),
             prompt: String::new(),
             ..Default::default()
         };
@@ -292,17 +299,16 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires running daemon"]
+    #[ignore = "requires daemon + Ollama"]
     async fn test_run_with_system_prompt() {
         let args = RunArgs {
-            model: "llama3.2".to_string(),
-            prompt: "What are you?".to_string(),
-            system: Some("You are a helpful pirate.".to_string()),
+            model: test_model(),
+            prompt: "Say ahoy in one word".to_string(),
+            system: Some("You are a pirate.".to_string()),
             ..Default::default()
         };
 
         let result = run(args).await;
-        // Should succeed if daemon and model are available
-        assert!(result.is_ok() || result.unwrap_err().to_string().contains("Daemon"));
+        assert!(result.is_ok(), "Expected success, got: {:?}", result.err());
     }
 }
