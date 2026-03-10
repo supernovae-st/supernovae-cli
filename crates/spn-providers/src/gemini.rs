@@ -124,16 +124,24 @@ impl GeminiBackend {
 
         let status = response.status();
         if !status.is_success() {
+            // Parse retry-after header BEFORE consuming body
+            let retry_after = response
+                .headers()
+                .get("retry-after")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| s.parse::<u64>().ok());
+
             let error_text = response.text().await.unwrap_or_default();
+
             if status.as_u16() == 429 {
                 return Err(BackendsError::RateLimited {
                     backend: BackendKind::Gemini,
-                    retry_after: None,
+                    retry_after,
                 });
             }
             return Err(BackendsError::ApiError {
                 backend: BackendKind::Gemini,
-                message: error_text,
+                message: crate::error::sanitize_api_error(&error_text),
                 status: Some(status.as_u16()),
             });
         }
@@ -208,16 +216,23 @@ impl GeminiBackend {
 
         let status = response.status();
         if !status.is_success() {
+            // Parse retry-after header BEFORE consuming body
+            let retry_after = response
+                .headers()
+                .get("retry-after")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| s.parse::<u64>().ok());
+
             let error_text = response.text().await.unwrap_or_default();
             if status.as_u16() == 429 {
                 return Err(BackendsError::RateLimited {
                     backend: BackendKind::Gemini,
-                    retry_after: None,
+                    retry_after,
                 });
             }
             return Err(BackendsError::ApiError {
                 backend: BackendKind::Gemini,
-                message: error_text,
+                message: crate::error::sanitize_api_error(&error_text),
                 status: Some(status.as_u16()),
             });
         }
@@ -295,7 +310,7 @@ impl GeminiBackend {
             let error_text = response.text().await.unwrap_or_default();
             return Err(BackendsError::ApiError {
                 backend: BackendKind::Gemini,
-                message: error_text,
+                message: crate::error::sanitize_api_error(&error_text),
                 status: Some(status.as_u16()),
             });
         }

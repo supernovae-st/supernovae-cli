@@ -90,6 +90,10 @@ impl FromStr for ModelRef {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Parse "backend:model" format
         if let Some((backend_str, model)) = s.split_once(':') {
+            // Reject empty model names
+            if model.is_empty() {
+                return Err(BackendsError::InvalidAlias(s.to_string()));
+            }
             let backend = BackendKind::from_str(backend_str)
                 .map_err(|_| BackendsError::InvalidAlias(s.to_string()))?;
             Ok(Self::new(backend, model))
@@ -406,6 +410,13 @@ mod tests {
     #[test]
     fn test_model_ref_from_str_invalid() {
         assert!("invalid".parse::<ModelRef>().is_err());
+    }
+
+    #[test]
+    fn test_model_ref_from_str_empty_model() {
+        // "anthropic:" should be rejected (empty model name)
+        assert!("anthropic:".parse::<ModelRef>().is_err());
+        assert!("openai:".parse::<ModelRef>().is_err());
     }
 
     #[test]

@@ -118,16 +118,23 @@ impl OpenAIBackend {
 
         let status = response.status();
         if !status.is_success() {
+            // Parse retry-after header BEFORE consuming body
+            let retry_after = response
+                .headers()
+                .get("retry-after")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| s.parse::<u64>().ok());
+
             let error_body = response.text().await.unwrap_or_default();
             if status.as_u16() == 429 {
                 return Err(BackendsError::RateLimited {
                     backend: BackendKind::OpenAI,
-                    retry_after: None,
+                    retry_after,
                 });
             }
             return Err(BackendsError::ApiError {
                 backend: BackendKind::OpenAI,
-                message: error_body,
+                message: crate::error::sanitize_api_error(&error_body),
                 status: Some(status.as_u16()),
             });
         }
@@ -191,10 +198,25 @@ impl OpenAIBackend {
 
         let status = response.status();
         if !status.is_success() {
+            // Parse retry-after header BEFORE consuming body
+            let retry_after = response
+                .headers()
+                .get("retry-after")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| s.parse::<u64>().ok());
+
             let error_body = response.text().await.unwrap_or_default();
+
+            if status.as_u16() == 429 {
+                return Err(BackendsError::RateLimited {
+                    backend: BackendKind::OpenAI,
+                    retry_after,
+                });
+            }
+
             return Err(BackendsError::ApiError {
                 backend: BackendKind::OpenAI,
-                message: error_body,
+                message: crate::error::sanitize_api_error(&error_body),
                 status: Some(status.as_u16()),
             });
         }
@@ -264,7 +286,7 @@ impl OpenAIBackend {
             let error_body = response.text().await.unwrap_or_default();
             return Err(BackendsError::ApiError {
                 backend: BackendKind::OpenAI,
-                message: error_body,
+                message: crate::error::sanitize_api_error(&error_body),
                 status: Some(status.as_u16()),
             });
         }
