@@ -98,3 +98,34 @@ pub use spn_core::{
     DownloadRequest, DownloadResult, KnownModel, LoadConfig, ModelArchitecture, ModelInfo,
     ModelStorage, ModelType, ProgressCallback, PullProgress, Quantization, ResolvedModel,
 };
+
+/// Extract quantization type from a filename.
+///
+/// Supports: Q2_K, Q3_K_S, Q3_K_M, Q3_K_L, Q4_K_S, Q4_K_M, Q5_K_S, Q5_K_M, Q6_K, Q8_0, F16, F32
+///
+/// # Example
+///
+/// ```
+/// use spn_native::extract_quantization;
+///
+/// assert_eq!(extract_quantization("model-q4_k_m.gguf"), Some("Q4_K_M".to_string()));
+/// assert_eq!(extract_quantization("model-Q8_0.gguf"), Some("Q8_0".to_string()));
+/// assert_eq!(extract_quantization("model.gguf"), None);
+/// ```
+#[must_use]
+pub fn extract_quantization(filename: &str) -> Option<String> {
+    let lower = filename.to_lowercase();
+    // Order from most specific to least specific (longer patterns first)
+    for quant in [
+        "q3_k_s", "q3_k_m", "q3_k_l", // Q3 variants
+        "q4_k_s", "q4_k_m", // Q4 variants
+        "q5_k_s", "q5_k_m", // Q5 variants
+        "q2_k", "q6_k", "q8_0", // Single variants
+        "f16", "f32", // Float variants
+    ] {
+        if lower.contains(quant) {
+            return Some(quant.to_uppercase());
+        }
+    }
+    None
+}

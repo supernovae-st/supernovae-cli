@@ -349,18 +349,8 @@ impl ModelStorage for HuggingFaceStorage {
 // Helpers
 // ============================================================================
 
-/// Extract quantization from filename.
-fn extract_quantization(filename: &str) -> Option<String> {
-    let lower = filename.to_lowercase();
-
-    for quant in ["q4_k_s", "q4_k_m", "q5_k_s", "q5_k_m", "q6_k", "q8_0", "f16", "f32"] {
-        if lower.contains(quant) {
-            return Some(quant.to_uppercase());
-        }
-    }
-
-    None
-}
+// Use the shared extract_quantization function from crate root.
+use crate::extract_quantization;
 
 // ============================================================================
 // Tests
