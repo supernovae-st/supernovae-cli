@@ -6407,7 +6407,7 @@ dependencies = [
 
 [[package]]
 name = "spn-client"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "dirs",
  "secrecy",
@@ -6430,7 +6430,7 @@ dependencies = [
 
 [[package]]
 name = "spn-keyring"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "keyring",
  "secrecy",
@@ -6442,7 +6442,7 @@ dependencies = [
 
 [[package]]
 name = "spn-mcp"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "async-trait",
