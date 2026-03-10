@@ -32,35 +32,9 @@ pub fn provider_env_var(provider: &str) -> &'static str {
     spn_keyring::provider_to_env_var(provider).unwrap_or("UNKNOWN_API_KEY")
 }
 
-/// Get LLM provider IDs (for backward compatibility with SUPPORTED_PROVIDERS constant).
-///
-/// Returns provider IDs for LLM and Local categories.
-pub fn llm_provider_ids() -> impl Iterator<Item = &'static str> {
-    KNOWN_PROVIDERS.iter().filter_map(|p| {
-        if matches!(p.category, ProviderCategory::Llm | ProviderCategory::Local) {
-            Some(p.id)
-        } else {
-            None
-        }
-    })
-}
-
-/// Get MCP provider IDs (for backward compatibility with MCP_SECRET_TYPES constant).
-///
-/// Returns provider IDs for MCP category.
-pub fn mcp_provider_ids() -> impl Iterator<Item = &'static str> {
-    KNOWN_PROVIDERS.iter().filter_map(|p| {
-        if p.category == ProviderCategory::Mcp {
-            Some(p.id)
-        } else {
-            None
-        }
-    })
-}
-
 /// Supported LLM providers with their key formats.
 ///
-/// DEPRECATED: Use `llm_provider_ids()` or `KNOWN_PROVIDERS` from spn_core instead.
+/// DEPRECATED: Use `KNOWN_PROVIDERS` from spn_core instead.
 /// This constant is kept for backward compatibility.
 pub const SUPPORTED_PROVIDERS: &[&str] = &[
     "anthropic", // ANTHROPIC_API_KEY (sk-ant-...)
@@ -74,7 +48,7 @@ pub const SUPPORTED_PROVIDERS: &[&str] = &[
 
 /// MCP-related secret types.
 ///
-/// DEPRECATED: Use `mcp_provider_ids()` or `KNOWN_PROVIDERS` from spn_core instead.
+/// DEPRECATED: Use `KNOWN_PROVIDERS` from spn_core instead.
 /// This constant is kept for backward compatibility.
 pub const MCP_SECRET_TYPES: &[&str] = &[
     "neo4j",      // NEO4J_PASSWORD
@@ -313,23 +287,6 @@ mod tests {
         assert_eq!(*secure, "secret");
         secure.zeroize();
         assert!(secure.is_empty());
-    }
-
-    #[test]
-    fn test_llm_provider_ids() {
-        let providers: Vec<_> = llm_provider_ids().collect();
-        assert!(providers.contains(&"anthropic"));
-        assert!(providers.contains(&"openai"));
-        assert!(providers.contains(&"ollama"));
-        assert!(!providers.contains(&"github")); // MCP, not LLM
-    }
-
-    #[test]
-    fn test_mcp_provider_ids() {
-        let providers: Vec<_> = mcp_provider_ids().collect();
-        assert!(providers.contains(&"github"));
-        assert!(providers.contains(&"neo4j"));
-        assert!(!providers.contains(&"anthropic")); // LLM, not MCP
     }
 
     #[test]

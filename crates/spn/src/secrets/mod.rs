@@ -104,6 +104,5 @@ pub use wizard::{run_quick_setup, run_wizard};
 // Reserved for extended provider API (not yet used in CLI commands)
 #[allow(unused_imports)]
 pub use types::{
-    find_provider, llm_provider_ids, mask_key, mcp_provider_ids, Provider, ProviderCategory,
-    ValidationResult, KNOWN_PROVIDERS,
+    find_provider, mask_key, Provider, ProviderCategory, ValidationResult, KNOWN_PROVIDERS,
 };
