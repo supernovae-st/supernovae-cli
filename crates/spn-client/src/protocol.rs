@@ -346,7 +346,7 @@ pub enum Request {
 }
 
 /// Response from the daemon.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Response {
     /// Successful ping response with version info.
@@ -463,6 +463,85 @@ pub enum Response {
         /// Scheduler stats
         stats: IpcSchedulerStats,
     },
+}
+
+impl std::fmt::Debug for Response {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            // SECURITY: Redact secret value to prevent exposure in logs
+            Response::Secret { .. } => write!(f, "Response::Secret {{ value: [REDACTED] }}"),
+            // All other variants use standard debug output
+            Response::Pong {
+                protocol_version,
+                version,
+            } => f
+                .debug_struct("Pong")
+                .field("protocol_version", protocol_version)
+                .field("version", version)
+                .finish(),
+            Response::Exists { exists } => {
+                f.debug_struct("Exists").field("exists", exists).finish()
+            }
+            Response::Providers { providers } => f
+                .debug_struct("Providers")
+                .field("providers", providers)
+                .finish(),
+            Response::Refreshed { refreshed, provider } => f
+                .debug_struct("Refreshed")
+                .field("refreshed", refreshed)
+                .field("provider", provider)
+                .finish(),
+            Response::Models { models } => {
+                f.debug_struct("Models").field("models", models).finish()
+            }
+            Response::RunningModels { running } => f
+                .debug_struct("RunningModels")
+                .field("running", running)
+                .finish(),
+            Response::Success { success } => {
+                f.debug_struct("Success").field("success", success).finish()
+            }
+            Response::ModelRunResult { content, stats } => f
+                .debug_struct("ModelRunResult")
+                .field("content", content)
+                .field("stats", stats)
+                .finish(),
+            Response::Error { message } => {
+                f.debug_struct("Error").field("message", message).finish()
+            }
+            Response::Progress { progress } => f
+                .debug_struct("Progress")
+                .field("progress", progress)
+                .finish(),
+            Response::StreamEnd { success, error } => f
+                .debug_struct("StreamEnd")
+                .field("success", success)
+                .field("error", error)
+                .finish(),
+            Response::WatcherStatusResult { status } => f
+                .debug_struct("WatcherStatusResult")
+                .field("status", status)
+                .finish(),
+            Response::JobSubmitted { job } => {
+                f.debug_struct("JobSubmitted").field("job", job).finish()
+            }
+            Response::JobStatusResult { job } => {
+                f.debug_struct("JobStatusResult").field("job", job).finish()
+            }
+            Response::JobListResult { jobs } => {
+                f.debug_struct("JobListResult").field("jobs", jobs).finish()
+            }
+            Response::JobCancelled { cancelled, job_id } => f
+                .debug_struct("JobCancelled")
+                .field("cancelled", cancelled)
+                .field("job_id", job_id)
+                .finish(),
+            Response::JobStatsResult { stats } => f
+                .debug_struct("JobStatsResult")
+                .field("stats", stats)
+                .finish(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -794,5 +873,49 @@ mod tests {
         let json = serde_json::to_string(&response).unwrap();
         assert!(json.contains("is_running"));
         assert!(json.contains("watched_count"));
+    }
+
+    // ==================== Security Tests ====================
+
+    #[test]
+    fn test_response_secret_debug_redacted() {
+        let secret = Response::Secret {
+            value: "sk-ant-api03-super-secret-key".to_string(),
+        };
+        let debug_output = format!("{:?}", secret);
+
+        // Secret value must NOT appear in debug output
+        assert!(
+            !debug_output.contains("sk-ant"),
+            "Secret value leaked in Debug output: {debug_output}"
+        );
+        assert!(
+            !debug_output.contains("super-secret"),
+            "Secret value leaked in Debug output: {debug_output}"
+        );
+
+        // Should show redacted placeholder
+        assert!(
+            debug_output.contains("[REDACTED]"),
+            "Debug output should contain [REDACTED]: {debug_output}"
+        );
+    }
+
+    #[test]
+    fn test_response_other_variants_debug_normal() {
+        // Verify other variants still have normal debug output
+        let pong = Response::Pong {
+            protocol_version: 1,
+            version: "0.15.0".to_string(),
+        };
+        let debug_output = format!("{:?}", pong);
+        assert!(debug_output.contains("protocol_version"));
+        assert!(debug_output.contains("0.15.0"));
+
+        let error = Response::Error {
+            message: "test error".to_string(),
+        };
+        let debug_output = format!("{:?}", error);
+        assert!(debug_output.contains("test error"));
     }
 }
