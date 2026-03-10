@@ -11,7 +11,7 @@ documentation = "https://docs.rs/spn-native"
 keywords = ["supernovae", "llm", "inference", "gguf", "huggingface"]
 categories = ["machine-learning", "filesystem"]
 readme = "README.md"
-rust-version = "1.75"
+rust-version = "1.85"  # Required by mistralrs 0.7.0 when inference feature enabled
 
 [dependencies]
 # Core types
