@@ -234,8 +234,8 @@ impl ModelManager {
         if let Some(name) = loaded.as_ref() {
             Ok(vec![RunningModel {
                 name: name.clone(),
-                vram_used: None, // TODO: Get from runtime
-                gpu_ids: vec![0], // Assume GPU 0 for now
+                vram_used: None, // TODO: Get from runtime when available
+                gpu_ids: vec![], // TODO: Get actual GPU IDs from runtime when available
             }])
         } else {
             Ok(vec![])
