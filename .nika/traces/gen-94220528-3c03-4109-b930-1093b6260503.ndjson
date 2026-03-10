@@ -1,0 +1,9 @@
+{"id":0,"timestamp_ms":13,"kind":{"type":"workflow_started","task_count":1,"generation_id":"gen-94220528-3c03-4109-b930-1093b6260503","workflow_hash":"17650d3852d78f0a","nika_version":"0.22.0"}}
+{"id":1,"timestamp_ms":13,"kind":{"type":"task_scheduled","task_id":"generate","dependencies":[]}}
+{"id":2,"timestamp_ms":14,"kind":{"type":"task_started","task_id":"generate","verb":"infer","inputs":{}}}
+{"id":3,"timestamp_ms":14,"kind":{"type":"template_resolved","task_id":"generate","template":"What is 2+2? Answer with just the number.","result":"What is 2+2? Answer with just the number."}}
+{"id":4,"timestamp_ms":14,"kind":{"type":"context_assembled","task_id":"generate","sources":[],"excluded":[],"total_tokens":10,"budget_used_pct":0.0,"truncated":false}}
+{"id":5,"timestamp_ms":16,"kind":{"type":"provider_called","task_id":"generate","provider":"ollama","model":"llava:7b","prompt_len":41}}
+{"id":6,"timestamp_ms":8719,"kind":{"type":"provider_responded","task_id":"generate","request_id":null,"input_tokens":21,"output_tokens":4,"cache_read_tokens":0,"ttft_ms":null,"finish_reason":"stop","cost_usd":0.0}}
+{"id":7,"timestamp_ms":8719,"kind":{"type":"task_completed","task_id":"generate","output":" 4 ","duration_ms":8705}}
+{"id":8,"timestamp_ms":8720,"kind":{"type":"workflow_completed","final_output":" 4 ","total_duration_ms":8709}}

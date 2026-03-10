@@ -1,7 +1,7 @@
 # SuperNovae CLI Specification
 
 **Project:** supernovae-cli (spn)
-**Version:** v0.15.5
+**Version:** v0.16.0
 **License:** AGPL-3.0-or-later
 **Language:** Rust (MSRV 1.85+)
 **Status:** Production-ready with 1563+ tests

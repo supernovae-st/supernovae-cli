@@ -146,7 +146,7 @@ Download from [GitHub Releases](https://github.com/supernovae-st/supernovae-cli/
 ### Verify Installation
 
 ```bash
-spn --version  # spn-cli 0.15.5
+spn --version  # spn-cli 0.16.0
 spn doctor     # Health check
 ```
 
@@ -508,7 +508,7 @@ flowchart TB
 
 | Project | Description | Version |
 |---------|-------------|---------|
-| **spn** 🌟 | The Agentic AI Toolkit | v0.15.5 |
+| **spn** 🌟 | The Agentic AI Toolkit | v0.16.0 |
 | **Nika** 🦋 | YAML workflow engine (5 semantic verbs) | v0.21.1 |
 | **NovaNet** 🧠 | Knowledge graph (Neo4j + MCP) | v0.17.2 |
 

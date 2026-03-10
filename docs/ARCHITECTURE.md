@@ -1,6 +1,6 @@
 # spn-cli Architecture Documentation
 
-**Version:** v0.15.0
+**Version:** v0.16.0
 **Last Updated:** 2026-03-10
 **Status:** Production
 

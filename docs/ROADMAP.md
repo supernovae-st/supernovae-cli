@@ -2,7 +2,7 @@
 
 > **The ULTIMATE AI Toolkit** - From package manager to full-stack AI development platform
 
-**Current Version:** v0.15.5
+**Current Version:** v0.16.0
 **Target:** v1.0.0
 **Timeline:** Q2 2026 - Q4 2026
 **Philosophy:** 0.x.x forever for rapid iteration, 1.0.0 = production-ready full-stack AI platform
