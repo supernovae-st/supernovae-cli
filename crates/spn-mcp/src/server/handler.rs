@@ -717,6 +717,45 @@ fn validate_payload_size(params: &Value) -> Result<()> {
     Ok(())
 }
 
+/// Maximum parameter name length.
+const MAX_PARAM_NAME_LENGTH: usize = 64;
+
+/// Validate a parameter name is safe for use in templates and URLs.
+///
+/// # Security
+/// Prevents injection attacks via malicious parameter names:
+/// - Template injection (keys injected into Tera context)
+/// - URL injection (keys used in path interpolation)
+fn validate_param_name(name: &str) -> Result<()> {
+    if name.is_empty() {
+        return Err(Error::ConfigValidation(
+            "Parameter name cannot be empty".into(),
+        ));
+    }
+
+    if name.len() > MAX_PARAM_NAME_LENGTH {
+        return Err(Error::ConfigValidation(format!(
+            "Parameter name '{}...' too long: {} chars (max: {})",
+            &name[..20.min(name.len())],
+            name.len(),
+            MAX_PARAM_NAME_LENGTH
+        )));
+    }
+
+    // Only allow alphanumeric, underscore, hyphen (safe for templates and URLs)
+    if !name
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        return Err(Error::ConfigValidation(format!(
+            "Invalid parameter name '{}': only alphanumeric, underscore, hyphen allowed",
+            name
+        )));
+    }
+
+    Ok(())
+}
+
 /// Validate parameter types match their definitions.
 ///
 /// # Security
@@ -724,6 +763,7 @@ fn validate_payload_size(params: &Value) -> Result<()> {
 /// - Type confusion attacks
 /// - Injection via unexpected types
 /// - DoS via oversized strings
+/// - Unknown parameter injection
 fn validate_parameters(param_defs: &[crate::config::ParamDef], params: &Value) -> Result<()> {
     let obj = match params.as_object() {
         Some(o) => o,
@@ -734,6 +774,22 @@ fn validate_parameters(param_defs: &[crate::config::ParamDef], params: &Value) -
             ))
         }
     };
+
+    // Build set of known parameter names
+    let known_params: HashSet<&str> = param_defs.iter().map(|d| d.name.as_str()).collect();
+
+    // Security: Reject unknown parameters to prevent injection
+    for key in obj.keys() {
+        validate_param_name(key)?;
+
+        if !known_params.contains(key.as_str()) {
+            return Err(Error::ConfigValidation(format!(
+                "Unknown parameter '{}'. Valid parameters: {:?}",
+                key,
+                known_params.iter().collect::<Vec<_>>()
+            )));
+        }
+    }
 
     for def in param_defs {
         match obj.get(&def.name) {
@@ -1310,5 +1366,84 @@ mod tests {
         )
         .is_ok());
         assert!(validate_param_type("o", &ParamType::Object, &serde_json::json!([1, 2])).is_err());
+    }
+
+    #[test]
+    fn test_validate_param_name_valid() {
+        assert!(validate_param_name("query").is_ok());
+        assert!(validate_param_name("user_id").is_ok());
+        assert!(validate_param_name("my-param").is_ok());
+        assert!(validate_param_name("param123").is_ok());
+        assert!(validate_param_name("ABC").is_ok());
+    }
+
+    #[test]
+    fn test_validate_param_name_empty() {
+        let result = validate_param_name("");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("cannot be empty"));
+    }
+
+    #[test]
+    fn test_validate_param_name_too_long() {
+        let long_name = "x".repeat(65);
+        let result = validate_param_name(&long_name);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("too long"));
+    }
+
+    #[test]
+    fn test_validate_param_name_invalid_chars() {
+        // Special characters not allowed
+        assert!(validate_param_name("query!").is_err());
+        assert!(validate_param_name("user@id").is_err());
+        assert!(validate_param_name("param.name").is_err());
+        assert!(validate_param_name("param/name").is_err());
+        assert!(validate_param_name("param name").is_err());
+        assert!(validate_param_name("param\nname").is_err());
+        assert!(validate_param_name("{% include").is_err()); // Template injection attempt
+    }
+
+    #[test]
+    fn test_validate_parameters_rejects_unknown() {
+        let params = vec![ParamDef {
+            name: "query".into(),
+            param_type: crate::config::ParamType::String,
+            items: None,
+            required: true,
+            default: None,
+            description: None,
+        }];
+
+        // Extra unknown parameter should be rejected
+        let args = serde_json::json!({
+            "query": "search term",
+            "injection_attempt": "malicious"
+        });
+        let result = validate_parameters(&params, &args);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unknown parameter"));
+    }
+
+    #[test]
+    fn test_validate_parameters_rejects_malicious_key() {
+        let params = vec![ParamDef {
+            name: "query".into(),
+            param_type: crate::config::ParamType::String,
+            items: None,
+            required: false,
+            default: None,
+            description: None,
+        }];
+
+        // Malicious parameter name should be rejected
+        let args = serde_json::json!({
+            "{% include 'secret' %}": "injection"
+        });
+        let result = validate_parameters(&params, &args);
+        assert!(result.is_err());
+        // Either rejected for invalid chars or as unknown
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Invalid") || err_msg.contains("Unknown"));
     }
 }
