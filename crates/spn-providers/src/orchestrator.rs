@@ -233,8 +233,7 @@ impl ModelOrchestrator {
     /// - `llama3.2:8b` → assumes Ollama
     pub fn resolve(&self, input: &str) -> Result<ModelRef, BackendsError> {
         // Handle @models/ alias
-        if input.starts_with("@models/") {
-            let alias_name = input.strip_prefix("@models/").unwrap();
+        if let Some(alias_name) = input.strip_prefix("@models/") {
             if let Some(alias) = self.aliases.get(alias_name) {
                 return Ok(alias.primary.clone());
             }

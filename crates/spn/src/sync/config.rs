@@ -112,7 +112,10 @@ impl SyncConfig {
             last_sync: None,
         });
 
-        self.projects.last_mut().unwrap()
+        // SAFETY: We just pushed to the vector, so last_mut() is guaranteed to return Some
+        self.projects
+            .last_mut()
+            .expect("just pushed; vec cannot be empty")
     }
 }
 
