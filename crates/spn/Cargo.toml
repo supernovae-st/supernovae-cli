@@ -47,7 +47,7 @@ docker = []
 
 [dependencies]
 # Workspace crates
-spn-client = { version = "0.3.3", path = "../spn-client" }
+spn-client = { version = "0.3.4", path = "../spn-client" }
 spn-core = { version = "0.2.0", path = "../spn-core" }
 spn-keyring = { version = "0.1.5", path = "../spn-keyring", default-features = false }
 spn-mcp = { version = "0.1.4", path = "../spn-mcp" }
