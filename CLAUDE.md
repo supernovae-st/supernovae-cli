@@ -1,12 +1,12 @@
 # supernovae-cli
 
-**SuperNovae CLI (`spn`)** v0.16.0 — The Agentic AI Toolkit for the SuperNovae ecosystem.
+**SuperNovae CLI (`spn`)** v0.17.0 — The Agentic AI Toolkit for the SuperNovae ecosystem.
 
 ## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  spn — The Agentic AI Toolkit v0.16.0                                           │
+│  spn — The Agentic AI Toolkit v0.17.0                                           │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
 │  Package Commands:                                                              │
@@ -27,18 +27,18 @@
 │  ├── spn provider migrate       Move env vars to keychain                       │
 │  └── spn provider test <name>   Validate key format                             │
 │                                                                                 │
-│  Model Commands (native inference via mistral.rs):                              │
+│  Model Commands (storage only, inference moved to Nika v0.26):                  │
 │  ├── spn model list             List local models                               │
 │  ├── spn model pull <name>      Download model from HuggingFace                 │
-│  ├── spn model load <name>      Load model into memory                          │
-│  ├── spn model unload <name>    Unload model from memory                        │
+│  ├── spn model search <query>   Search registry for models                      │
+│  ├── spn model info <name>      Show model details                              │
 │  └── spn model delete <name>    Delete local model                              │
 │                                                                                 │
 │  Skill/MCP Commands:                                                            │
 │  ├── spn skill add/remove/list  Manage skills (via skills.sh)                   │
 │  └── spn mcp add/remove/list    Manage MCP servers (via npm)                    │
 │                                                                                 │
-│  Setup Commands (v0.16.0):                                                      │
+│  Setup Commands (v0.17.0):                                                      │
 │  ├── spn setup                  Interactive onboarding wizard                   │
 │  ├── spn setup nika             Install and configure Nika workflow engine      │
 │  └── spn setup novanet          Install and configure NovaNet knowledge graph   │
@@ -63,7 +63,7 @@
 - **Security:** keyring (OS keychain), secrecy, zeroize, libc (mlock)
 - **Performance:** rustc-hash (FxHashMap)
 
-## Workspace Architecture (v0.16.0)
+## Workspace Architecture (v0.17.0)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -99,7 +99,7 @@
 │              │                                               │                  │
 │              ▼                                               ▼                  │
 │  ┌────────────────────────┐                   ┌────────────────────────┐        │
-│  │  spn-cli (v0.16.0)     │                   │  Nika (v0.21.1)        │        │
+│  │  spn-cli (v0.17.0)     │                   │  Nika (v0.21.1)        │        │
 │  │  • provider set/get    │                   │  • spn-daemon feature  │        │
 │  │  • model pull/load     │                   │  • KNOWN_PROVIDERS     │        │
 │  │  • setup wizard        │                   │  • Unified secrets     │        │
@@ -213,29 +213,28 @@ supernovae-cli/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Model Management (v0.10.0)
+## Model Management (v0.17.0)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  MODEL MANAGER — Local Model Lifecycle                                          │
+│  MODEL STORAGE — Download & Manage GGUF Models (v0.17.0)                        │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
-│  ModelBackend Trait:                                                            │
-│  ├── is_running()      Check if backend is available                           │
-│  ├── start() / stop()  Control backend process                                 │
-│  ├── list_models()     List installed models                                   │
-│  ├── model_info()      Get model details (size, quant, params)                │
-│  ├── pull()            Download model with progress callback                   │
+│  spn-native::HuggingFaceStorage:                                                │
+│  ├── list_models()     List installed GGUF models                              │
+│  ├── pull()            Download model from HuggingFace                         │
 │  ├── delete()          Remove local model                                      │
-│  ├── load() / unload() Control model memory residence                         │
-│  └── running_models()  List currently loaded models                           │
+│  └── model_info()      Get model details (size, quant, params)                │
 │                                                                                 │
-│  DynModelBackend:                                                               │
-│  └── Object-safe version for runtime polymorphism (Box<dyn DynModelBackend>)   │
+│  ⚠️ INFERENCE MOVED TO NIKA v0.26 (ADR-008)                                     │
+│  ├── load/unload/run/status commands removed from spn model                    │
+│  ├── Native inference now via Nika with provider: native                       │
+│  └── See: nika/tools/nika/src/provider/native/                                 │
 │                                                                                 │
-│  Backends:                                                                      │
-│  ├── Native (mistral.rs) — CPU/GPU inference via GGUF models                   │
-│  └── Ollama — via REST API (legacy, for compatibility)                         │
+│  Storage Locations:                                                             │
+│  ├── macOS: ~/Library/Application Support/spn/models/                          │
+│  ├── Linux: ~/.local/share/spn/models/                                         │
+│  └── Windows: %APPDATA%/spn/models/                                            │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -270,7 +269,7 @@ supernovae-cli/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Release Automation (v0.16.0)
+## Release Automation (v0.17.0)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -301,7 +300,7 @@ supernovae-cli/
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Feature Flags (v0.16.0)
+## Feature Flags (v0.17.0)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -349,7 +348,7 @@ cargo run -p spn-cli -- provider test all
 cargo run -p spn-cli -- model list
 cargo run -p spn-cli -- model pull llama3.2:7b
 
-# Setup (v0.16.0)
+# Setup (v0.17.0)
 cargo run -p spn-cli -- setup              # Interactive wizard
 cargo run -p spn-cli -- setup nika         # Install Nika
 cargo run -p spn-cli -- setup novanet      # Install NovaNet
@@ -380,7 +379,7 @@ cargo install --path crates/spn
 | spn-providers | 0.1.0 | [Published](https://crates.io/crates/spn-providers) |
 | spn-client | 0.3.4 | [Published](https://crates.io/crates/spn-client) |
 | spn-mcp | 0.1.5 | [Published](https://crates.io/crates/spn-mcp) |
-| spn-cli | 0.16.0 | [Published](https://crates.io/crates/spn-cli) |
+| spn-cli | 0.17.0 | [Published](https://crates.io/crates/spn-cli) |
 
 ## Storage Layout
 
