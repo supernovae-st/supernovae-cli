@@ -52,7 +52,7 @@ spn-core = { version = "0.2.0", path = "../spn-core" }
 spn-keyring = { version = "0.1.5", path = "../spn-keyring", default-features = false }
 spn-mcp = { version = "0.1.5", path = "../spn-mcp" }
 # Native model inference (mistral.rs)
-spn-native = { version = "0.1.0", path = "../spn-native", optional = true }
+spn-native = { version = "0.2.0", path = "../spn-native", optional = true }
 
 # CLI framework
 clap = { version = "4.5", features = ["derive", "env"] }
