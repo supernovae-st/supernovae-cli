@@ -36,6 +36,25 @@ mod welcome;
 // CLI STYLES - Colorized help for v0.14.0
 // ============================================================================
 
+// ============================================================================
+// DEPRECATION WARNING (v0.27 spn→nika fusion)
+// ============================================================================
+
+/// Print a deprecation warning for commands that have been migrated to nika.
+/// Shows yellow warning text with migration instructions.
+fn print_deprecation_warning(spn_cmd: &str, nika_cmd: &str) {
+    use console::style;
+    eprintln!(
+        "\n{} `spn {}` is deprecated. Use `{}` instead.",
+        style("⚠️  DEPRECATION:").yellow().bold(),
+        style(spn_cmd).cyan(),
+        style(nika_cmd).green().bold()
+    );
+    eprintln!(
+        "   This command will be removed in spn v0.20.0.\n"
+    );
+}
+
 /// Get the CLI color styles for consistent, readable help output
 fn cli_styles() -> Styles {
     Styles::styled()
@@ -1325,7 +1344,10 @@ async fn main() {
         Commands::Publish { dry_run } => commands::publish::run(dry_run).await,
         Commands::Version { bump } => commands::version::run(&bump).await,
         Commands::Skill { command } => commands::skill::run(command).await,
-        Commands::Mcp { command } => commands::mcp::run(command).await,
+        Commands::Mcp { command } => {
+            print_deprecation_warning("mcp", "nika mcp");
+            commands::mcp::run(command).await
+        }
         Commands::Nk { command } => commands::nk::run(command).await,
         Commands::Nv { command } => commands::nv::run(command).await,
         Commands::Sync {
@@ -1335,7 +1357,10 @@ async fn main() {
             target,
             dry_run,
             interactive,
-        } => commands::sync::run(enable, disable, status, target, dry_run, interactive).await,
+        } => {
+            print_deprecation_warning("sync", "nika sync");
+            commands::sync::run(enable, disable, status, target, dry_run, interactive).await
+        }
         Commands::Config { command } => commands::config::run(command).await,
         Commands::Schema { command } => commands::schema::run(command).await,
         Commands::Doctor => commands::doctor::run().await,
@@ -1343,7 +1368,10 @@ async fn main() {
             welcome::show_tour();
             Ok(())
         }
-        Commands::Provider { command } => commands::provider::run(command).await,
+        Commands::Provider { command } => {
+            print_deprecation_warning("provider", "nika provider");
+            commands::provider::run(command).await
+        }
         Commands::Status { json } => commands::status::run(json).await,
         Commands::Explore => commands::explore::run().await,
         Commands::Suggest {
@@ -1357,10 +1385,22 @@ async fn main() {
         } => commands::init::run(local, mcp, template).await,
         Commands::Topic { name } => commands::help::run(name.as_deref()).await,
         Commands::Secrets { command } => commands::secrets::run(command).await,
-        Commands::Setup { quick, command } => commands::setup::run(command, quick).await,
-        Commands::Daemon { command } => commands::daemon::run(command).await,
-        Commands::Jobs { command } => commands::jobs::run(command).await,
-        Commands::Backup { command } => commands::backup::run(command).await,
+        Commands::Setup { quick, command } => {
+            print_deprecation_warning("setup", "nika setup");
+            commands::setup::run(command, quick).await
+        }
+        Commands::Daemon { command } => {
+            print_deprecation_warning("daemon", "nika daemon");
+            commands::daemon::run(command).await
+        }
+        Commands::Jobs { command } => {
+            print_deprecation_warning("jobs", "nika jobs");
+            commands::jobs::run(command).await
+        }
+        Commands::Backup { command } => {
+            print_deprecation_warning("backup", "nika backup");
+            commands::backup::run(command).await
+        }
         Commands::Cache { command } => match command {
             CacheCommands::Clear => {
                 commands::cache::run(commands::cache::CacheCommand::Clear).await
@@ -1369,7 +1409,10 @@ async fn main() {
                 commands::cache::run(commands::cache::CacheCommand::Info { json }).await
             }
         },
-        Commands::Model { command } => commands::model::execute(command).await,
+        Commands::Model { command } => {
+            print_deprecation_warning("model", "nika model");
+            commands::model::execute(command).await
+        }
         Commands::Completion { command } => match command {
             CompletionCommands::Bash { output } => commands::completion::run("bash", output).await,
             CompletionCommands::Zsh { output } => commands::completion::run("zsh", output).await,
