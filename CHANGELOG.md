@@ -7,23 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Documentation
+## [0.17.0](https://github.com/supernovae-st/supernovae-cli/releases/tag/v0.17.0) - 2026-03-11
 
-- **docs**: Align all version references to v0.15.5 across CLAUDE.md and README.md
-- **docs**: Update crate versions table (spn-core 0.1.2, spn-keyring 0.1.4, spn-ollama 0.1.6, spn-client 0.3.3, spn-mcp 0.1.4, spn-cli 0.15.5)
-- **docs**: Fix broken protocol documentation reference in spn-client/README.md
-- **deps**: Fix spn-client version mismatch in spn-mcp/Cargo.toml (0.3.2 → 0.3.3)
+### Breaking Changes
 
-### Fixed
+- **model**: Remove inference commands (`spn model load/unload/run/status`) per ADR-008
+  - Native inference moved to Nika workflow engine
+  - Use `provider: native` in Nika workflows instead
+  - `spn model list/pull/delete` remain for model management
 
-- **ollama**: Extend retry logic to all network operations (d3eda95)
-  - Previously only `list_models()` and `model_info()` used `with_retry()`
-  - Now retry is applied to: `delete`, `running_models`, `generate_warmup`, `chat`, `embed`, `embed_batch`
-  - Streaming operations (`pull`, `chat_stream`) remain without retry as they handle connection errors differently
+### Removed
+
+- **spn-ollama**: Crate removed, Ollama no longer supported
+  - Replaced by native inference via mistral.rs in Nika
+  - See Nika v0.26.0 for native inference capabilities
 
 ### Changed
 
-- **ollama**: Add `Clone` derive to `ChatRequest`, `ChatMessageRequest`, `ChatOptionsRequest` for retry support
+- **architecture**: ADR-008 Inference Architecture Refactor
+  - spn becomes pure package manager (no runtime inference)
+  - Nika owns all inference via NativeRuntime + mistral.rs
+  - Clean separation: spn manages, Nika executes
+
+### Documentation
+
+- Update CLAUDE.md with v0.17.0 architecture changes
+- Remove spn-ollama references from all documentation
+- Add ADR-008 reference for inference refactor decision
 
 ## [0.15.4](https://github.com/supernovae-st/supernovae-cli/releases/tag/0.15.4) - 2026-03-09
 
