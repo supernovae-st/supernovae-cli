@@ -11,7 +11,9 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use spn_core::{BackendError, DownloadRequest, DownloadResult, ModelInfo, ModelStorage, PullProgress};
+use spn_core::{
+    BackendError, DownloadRequest, DownloadResult, ModelInfo, ModelStorage, PullProgress,
+};
 use std::path::{Path, PathBuf};
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
@@ -144,10 +146,7 @@ impl HuggingFaceStorage {
         let file_info = self.get_file_info(&repo, &filename).await?;
 
         // Download the file
-        let download_url = format!(
-            "https://huggingface.co/{}/resolve/main/{}",
-            repo, filename
-        );
+        let download_url = format!("https://huggingface.co/{}/resolve/main/{}", repo, filename);
 
         progress(PullProgress::new("downloading", 0, file_info.size));
 
@@ -192,7 +191,11 @@ impl HuggingFaceStorage {
             }
         }
 
-        progress(PullProgress::new("complete", file_info.size, file_info.size));
+        progress(PullProgress::new(
+            "complete",
+            file_info.size,
+            file_info.size,
+        ));
 
         Ok(DownloadResult {
             path: file_path,
@@ -205,17 +208,16 @@ impl HuggingFaceStorage {
     /// Resolve download request to HuggingFace repo and filename.
     fn resolve_request(&self, request: &DownloadRequest<'_>) -> Result<(String, String)> {
         if let Some(hf_repo) = &request.hf_repo {
-            let filename = request
-                .filename
-                .clone()
-                .ok_or_else(|| NativeError::InvalidConfig("HuggingFace download requires filename".into()))?;
+            let filename = request.filename.clone().ok_or_else(|| {
+                NativeError::InvalidConfig("HuggingFace download requires filename".into())
+            })?;
             return Ok((hf_repo.clone(), filename));
         }
 
         if let Some(model) = request.model {
-            let filename = request
-                .target_filename()
-                .ok_or_else(|| NativeError::InvalidConfig("No quantization available for model".into()))?;
+            let filename = request.target_filename().ok_or_else(|| {
+                NativeError::InvalidConfig("No quantization available for model".into())
+            })?;
             return Ok((model.hf_repo.to_string(), filename));
         }
 
@@ -226,10 +228,7 @@ impl HuggingFaceStorage {
 
     /// Get file info from HuggingFace API.
     async fn get_file_info(&self, repo: &str, filename: &str) -> Result<HfFileInfo> {
-        let api_url = format!(
-            "https://huggingface.co/api/models/{}/tree/main",
-            repo
-        );
+        let api_url = format!("https://huggingface.co/api/models/{}/tree/main", repo);
 
         let response = self.client.get(&api_url).send().await?;
 
@@ -308,8 +307,8 @@ impl ModelStorage for HuggingFaceStorage {
             return Err(BackendError::ModelNotFound(model_id.to_string()));
         }
 
-        let metadata = std::fs::metadata(&path)
-            .map_err(|e| BackendError::StorageError(e.to_string()))?;
+        let metadata =
+            std::fs::metadata(&path).map_err(|e| BackendError::StorageError(e.to_string()))?;
 
         let filename = path.file_name().unwrap_or_default().to_string_lossy();
 
@@ -328,8 +327,7 @@ impl ModelStorage for HuggingFaceStorage {
             return Err(BackendError::ModelNotFound(model_id.to_string()));
         }
 
-        std::fs::remove_file(&path)
-            .map_err(|e| BackendError::StorageError(e.to_string()))?;
+        std::fs::remove_file(&path).map_err(|e| BackendError::StorageError(e.to_string()))?;
 
         Ok(())
     }

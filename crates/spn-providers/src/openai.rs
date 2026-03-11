@@ -394,9 +394,10 @@ impl CloudBackend for OpenAIBackend {
         async move {
             let mut results = Vec::with_capacity(inputs.len());
             for input in inputs {
-                let result = self.embed_internal(&model, &input).await.map_err(|e| {
-                    BackendError::BackendSpecific(e.to_string())
-                })?;
+                let result = self
+                    .embed_internal(&model, &input)
+                    .await
+                    .map_err(|e| BackendError::BackendSpecific(e.to_string()))?;
                 results.push(result);
             }
             Ok(results)
@@ -485,9 +486,10 @@ impl DynCloudBackend for OpenAIBackend {
         Box::pin(async move {
             let mut results = Vec::with_capacity(inputs.len());
             for input in inputs {
-                let result = self.embed_internal(&model, &input).await.map_err(|e| {
-                    BackendError::BackendSpecific(e.to_string())
-                })?;
+                let result = self
+                    .embed_internal(&model, &input)
+                    .await
+                    .map_err(|e| BackendError::BackendSpecific(e.to_string()))?;
                 results.push(result);
             }
             Ok(results)

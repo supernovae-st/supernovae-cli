@@ -102,9 +102,7 @@ impl AnthropicBackend {
     }
 
     /// Convert internal messages to Anthropic format.
-    fn convert_messages(
-        messages: &[ChatMessage],
-    ) -> (Option<String>, Vec<AnthropicMessage>) {
+    fn convert_messages(messages: &[ChatMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
         let mut system_prompt = None;
         let mut api_messages = Vec::new();
 

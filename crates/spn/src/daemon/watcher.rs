@@ -458,7 +458,11 @@ impl WatcherService {
             self.foreign.add_pending(foreign.clone());
             self.notifier.notify_foreign_mcp(&name, source);
 
-            if self.event_tx.send(WatchEvent::ForeignMcpDetected(foreign)).is_err() {
+            if self
+                .event_tx
+                .send(WatchEvent::ForeignMcpDetected(foreign))
+                .is_err()
+            {
                 debug!("Event channel closed, foreign MCP event not delivered");
             }
         }

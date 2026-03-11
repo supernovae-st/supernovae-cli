@@ -122,7 +122,11 @@ impl ModelManager {
     }
 
     /// Pull a model with progress callback.
-    pub async fn pull_with_progress<F>(&self, name: &str, on_progress: F) -> Result<(), BackendError>
+    pub async fn pull_with_progress<F>(
+        &self,
+        name: &str,
+        on_progress: F,
+    ) -> Result<(), BackendError>
     where
         F: Fn(PullProgress) + Send + Sync + 'static,
     {
@@ -154,18 +158,15 @@ impl ModelManager {
     }
 
     /// Load a model into memory for inference.
-    pub async fn load(
-        &self,
-        name: &str,
-        config: Option<LoadConfig>,
-    ) -> Result<(), BackendError> {
+    pub async fn load(&self, name: &str, config: Option<LoadConfig>) -> Result<(), BackendError> {
         use spn_core::ModelStorage;
 
         // Get the model path
         let model_path = if let Some(model) = find_model(name) {
             // Curated model - construct path from repo/filename
             let filename = model.default_file;
-            self.storage.model_path(&format!("{}/{}", model.hf_repo, filename))
+            self.storage
+                .model_path(&format!("{}/{}", model.hf_repo, filename))
         } else {
             // Direct path or repo/filename format
             self.storage.model_path(name)
@@ -410,11 +411,7 @@ impl ModelManager {
     }
 
     /// Load a model into memory (returns error without feature).
-    pub async fn load(
-        &self,
-        _name: &str,
-        _config: Option<LoadConfig>,
-    ) -> Result<(), BackendError> {
+    pub async fn load(&self, _name: &str, _config: Option<LoadConfig>) -> Result<(), BackendError> {
         Err(BackendError::BackendSpecific(
             "Native inference not available. Rebuild with --features inference".to_string(),
         ))

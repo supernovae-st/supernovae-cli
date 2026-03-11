@@ -1111,7 +1111,6 @@ pub enum ModelCommands {
 
     // NOTE: Load/Unload commands removed in v0.17.0 (inference moved to Nika)
     // Use `nika` directly for model inference with native mistral.rs runtime
-
     /// Remove a model from local storage
     #[command(visible_alias = "rm", visible_alias = "delete")]
     Remove {
@@ -1125,7 +1124,6 @@ pub enum ModelCommands {
 
     // NOTE: Status command removed in v0.17.0 (inference moved to Nika)
     // Model memory management is now handled by Nika's native runtime
-
     /// Search available models in registry
     Search {
         /// Search query (e.g., "coding", "vision", "reasoning")
@@ -1152,7 +1150,6 @@ pub enum ModelCommands {
         #[arg(value_name = "USE_CASE")]
         use_case: Option<String>,
     },
-
     // NOTE: Run command removed in v0.17.0 (inference moved to Nika)
     // Use `nika` for inference with full workflow support and native mistral.rs runtime
 }

@@ -1422,7 +1422,10 @@ mod tests {
         });
         let result = validate_parameters(&params, &args);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Unknown parameter"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Unknown parameter"));
     }
 
     #[test]

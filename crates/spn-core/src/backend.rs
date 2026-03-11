@@ -398,10 +398,7 @@ impl fmt::Display for BackendError {
             Self::StorageError(msg) => write!(f, "Storage error: {msg}"),
             Self::DownloadError(msg) => write!(f, "Download error: {msg}"),
             Self::ChecksumError { expected, actual } => {
-                write!(
-                    f,
-                    "Checksum mismatch: expected {expected}, got {actual}"
-                )
+                write!(f, "Checksum mismatch: expected {expected}, got {actual}")
             }
         }
     }

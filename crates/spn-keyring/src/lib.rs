@@ -259,16 +259,17 @@ impl SpnKeyring {
         let _ = Self::delete(provider);
 
         // Get the login keychain path using PathBuf for safety
-        let home = std::env::var("HOME")
-            .map_err(|_| KeyringError::StoreError("HOME environment variable not set".to_string()))?;
+        let home = std::env::var("HOME").map_err(|_| {
+            KeyringError::StoreError("HOME environment variable not set".to_string())
+        })?;
         let keychain_path = std::path::PathBuf::from(&home)
             .join("Library")
             .join("Keychains")
             .join("login.keychain-db");
 
-        let keychain_str = keychain_path.to_str().ok_or_else(|| {
-            KeyringError::StoreError("Invalid keychain path".to_string())
-        })?;
+        let keychain_str = keychain_path
+            .to_str()
+            .ok_or_else(|| KeyringError::StoreError("Invalid keychain path".to_string()))?;
 
         // Use macOS security command to add with pre-authorized app
         let output = std::process::Command::new("security")
@@ -286,7 +287,9 @@ impl SpnKeyring {
                 keychain_str,
             ])
             .output()
-            .map_err(|e| KeyringError::StoreError(format!("Failed to run security command: {e}")))?;
+            .map_err(|e| {
+                KeyringError::StoreError(format!("Failed to run security command: {e}"))
+            })?;
 
         if output.status.success() {
             Ok(())

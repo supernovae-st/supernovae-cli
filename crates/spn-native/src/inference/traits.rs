@@ -69,8 +69,9 @@ pub trait InferenceBackend: Send + Sync {
         &self,
         prompt: &str,
         options: ChatOptions,
-    ) -> impl Future<Output = Result<impl Stream<Item = Result<String, NativeError>> + Send, NativeError>>
-           + Send;
+    ) -> impl Future<
+        Output = Result<impl Stream<Item = Result<String, NativeError>> + Send, NativeError>,
+    > + Send;
 }
 
 /// Object-safe version of InferenceBackend for dynamic dispatch.

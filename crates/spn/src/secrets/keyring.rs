@@ -170,13 +170,12 @@ pub fn migrate_env_to_keyring() -> MigrationReport {
     let mut report = MigrationReport::default();
 
     // Get the path to the spn binary for ACL pre-authorization
-    let spn_path: PathBuf = std::env::current_exe()
-        .unwrap_or_else(|_| {
-            // Fallback to ~/.cargo/bin/spn
-            dirs::home_dir()
-                .map(|h| h.join(".cargo/bin/spn"))
-                .unwrap_or_else(|| PathBuf::from("/usr/local/bin/spn"))
-        });
+    let spn_path: PathBuf = std::env::current_exe().unwrap_or_else(|_| {
+        // Fallback to ~/.cargo/bin/spn
+        dirs::home_dir()
+            .map(|h| h.join(".cargo/bin/spn"))
+            .unwrap_or_else(|| PathBuf::from("/usr/local/bin/spn"))
+    });
 
     for provider in MIGRATABLE_PROVIDERS {
         let env_var = provider_env_var(provider);

@@ -218,8 +218,7 @@ mod tests {
 
     #[test]
     fn test_download_request_huggingface() {
-        let request =
-            DownloadRequest::huggingface("bartowski/Model", "model-q4_k_m.gguf").force();
+        let request = DownloadRequest::huggingface("bartowski/Model", "model-q4_k_m.gguf").force();
 
         assert!(request.model.is_none());
         assert_eq!(request.hf_repo.as_deref(), Some("bartowski/Model"));

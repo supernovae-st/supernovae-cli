@@ -486,7 +486,10 @@ impl std::fmt::Debug for Response {
                 .debug_struct("Providers")
                 .field("providers", providers)
                 .finish(),
-            Response::Refreshed { refreshed, provider } => f
+            Response::Refreshed {
+                refreshed,
+                provider,
+            } => f
                 .debug_struct("Refreshed")
                 .field("refreshed", refreshed)
                 .field("provider", provider)

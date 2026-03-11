@@ -157,7 +157,9 @@ pub fn sanitize_api_error(raw: &str) -> String {
 
     // Redact sk-ant-xxx patterns (Anthropic)
     if let Some(start) = result.find("sk-ant-") {
-        if let Some(end) = result[start..].find(|c: char| c.is_whitespace() || c == '"' || c == '\'') {
+        if let Some(end) =
+            result[start..].find(|c: char| c.is_whitespace() || c == '"' || c == '\'')
+        {
             result.replace_range(start..start + end, "[REDACTED_API_KEY]");
         } else {
             result.replace_range(start.., "[REDACTED_API_KEY]");
@@ -167,7 +169,9 @@ pub fn sanitize_api_error(raw: &str) -> String {
     // Redact sk-xxx patterns (OpenAI)
     if let Some(start) = result.find("sk-") {
         if !result[start..].starts_with("sk-ant-") {
-            if let Some(end) = result[start..].find(|c: char| c.is_whitespace() || c == '"' || c == '\'') {
+            if let Some(end) =
+                result[start..].find(|c: char| c.is_whitespace() || c == '"' || c == '\'')
+            {
                 result.replace_range(start..start + end, "[REDACTED_API_KEY]");
             } else if result.len() > start + 20 {
                 // Only redact if it looks like a key (> 20 chars)

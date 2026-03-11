@@ -651,7 +651,9 @@ pub fn find_model(id: &str) -> Option<&'static KnownModel> {
 
 /// List all models of a specific type.
 pub fn models_by_type(model_type: ModelType) -> impl Iterator<Item = &'static KnownModel> {
-    KNOWN_MODELS.iter().filter(move |m| m.model_type == model_type)
+    KNOWN_MODELS
+        .iter()
+        .filter(move |m| m.model_type == model_type)
 }
 
 // ============================================================================
@@ -862,34 +864,19 @@ mod tests {
     #[test]
     fn test_model_architecture_model_type() {
         // Text architectures
-        assert_eq!(
-            ModelArchitecture::Qwen3.model_type(),
-            ModelType::Text
-        );
-        assert_eq!(
-            ModelArchitecture::Llama4.model_type(),
-            ModelType::Text
-        );
+        assert_eq!(ModelArchitecture::Qwen3.model_type(), ModelType::Text);
+        assert_eq!(ModelArchitecture::Llama4.model_type(), ModelType::Text);
 
         // Vision architectures
-        assert_eq!(
-            ModelArchitecture::Phi4MM.model_type(),
-            ModelType::Vision
-        );
-        assert_eq!(
-            ModelArchitecture::Qwen2_5VL.model_type(),
-            ModelType::Vision
-        );
+        assert_eq!(ModelArchitecture::Phi4MM.model_type(), ModelType::Vision);
+        assert_eq!(ModelArchitecture::Qwen2_5VL.model_type(), ModelType::Vision);
 
         // Embedding architectures
         assert_eq!(
             ModelArchitecture::NomicEmbed.model_type(),
             ModelType::Embedding
         );
-        assert_eq!(
-            ModelArchitecture::BGE.model_type(),
-            ModelType::Embedding
-        );
+        assert_eq!(ModelArchitecture::BGE.model_type(), ModelType::Embedding);
     }
 
     #[test]

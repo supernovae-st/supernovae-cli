@@ -270,12 +270,18 @@ impl ModelOrchestrator {
                 .with_description("Most capable Claude model"),
         );
         self.register_alias(
-            ModelAlias::new("claude-sonnet", ModelRef::anthropic("claude-sonnet-4-20250514"))
-                .with_description("Balanced Claude model"),
+            ModelAlias::new(
+                "claude-sonnet",
+                ModelRef::anthropic("claude-sonnet-4-20250514"),
+            )
+            .with_description("Balanced Claude model"),
         );
         self.register_alias(
-            ModelAlias::new("claude-haiku", ModelRef::anthropic("claude-haiku-3-5-20241022"))
-                .with_description("Fast, lightweight Claude model"),
+            ModelAlias::new(
+                "claude-haiku",
+                ModelRef::anthropic("claude-haiku-3-5-20241022"),
+            )
+            .with_description("Fast, lightweight Claude model"),
         );
 
         // OpenAI models
@@ -430,7 +436,10 @@ mod tests {
 
     #[test]
     fn test_model_alias_new() {
-        let alias = ModelAlias::new("claude-sonnet", ModelRef::anthropic("claude-sonnet-4-20250514"));
+        let alias = ModelAlias::new(
+            "claude-sonnet",
+            ModelRef::anthropic("claude-sonnet-4-20250514"),
+        );
         assert_eq!(alias.name, "claude-sonnet");
         assert_eq!(alias.primary.backend, BackendKind::Anthropic);
         assert!(alias.fallbacks.is_empty());
@@ -469,7 +478,9 @@ mod tests {
         let orchestrator = ModelOrchestrator::new(registry);
 
         // Resolve direct reference
-        let model = orchestrator.resolve("anthropic:claude-opus-4-20250514").unwrap();
+        let model = orchestrator
+            .resolve("anthropic:claude-opus-4-20250514")
+            .unwrap();
         assert_eq!(model.backend, BackendKind::Anthropic);
         assert_eq!(model.model, "claude-opus-4-20250514");
     }
@@ -515,9 +526,10 @@ mod tests {
         let registry = shared_registry();
         let mut orchestrator = ModelOrchestrator::new(registry);
 
-        orchestrator.register_alias(
-            ModelAlias::new("my-model", ModelRef::ollama("custom:latest")),
-        );
+        orchestrator.register_alias(ModelAlias::new(
+            "my-model",
+            ModelRef::ollama("custom:latest"),
+        ));
 
         let model = orchestrator.resolve("@models/my-model").unwrap();
         assert_eq!(model.backend, BackendKind::Ollama);

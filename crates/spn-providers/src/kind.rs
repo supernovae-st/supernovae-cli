@@ -224,22 +224,25 @@ mod tests {
 
     #[test]
     fn test_backend_kind_from_str() {
-        assert_eq!(BackendKind::from_str("ollama").unwrap(), BackendKind::Ollama);
+        assert_eq!(
+            BackendKind::from_str("ollama").unwrap(),
+            BackendKind::Ollama
+        );
         assert_eq!(
             BackendKind::from_str("anthropic").unwrap(),
             BackendKind::Anthropic
         );
-        assert_eq!(BackendKind::from_str("claude").unwrap(), BackendKind::Anthropic);
+        assert_eq!(
+            BackendKind::from_str("claude").unwrap(),
+            BackendKind::Anthropic
+        );
         assert_eq!(BackendKind::from_str("gpt").unwrap(), BackendKind::OpenAI);
         assert!(BackendKind::from_str("unknown").is_err());
     }
 
     #[test]
     fn test_backend_kind_env_var() {
-        assert_eq!(
-            BackendKind::Anthropic.env_var(),
-            Some("ANTHROPIC_API_KEY")
-        );
+        assert_eq!(BackendKind::Anthropic.env_var(), Some("ANTHROPIC_API_KEY"));
         assert_eq!(BackendKind::OpenAI.env_var(), Some("OPENAI_API_KEY"));
         assert_eq!(BackendKind::Ollama.env_var(), None);
     }
